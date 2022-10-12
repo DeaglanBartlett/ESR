@@ -48,24 +48,38 @@ Hfid = 67.4 * apu.km / apu.s / apu.Mpc
 mu_const =  astropy.constants.c / Hfid / (10 * apu.pc)
 mu_const = 5 * np.log10(mu_const.to(''))
 
-delta_z = 0.002
+delta_z = 0.02
+min_nz = 10
+data_x = None
+data_mask = None
+
 def get_mu(zp1, a, eq_numpy, integrated=False):
+    global data_x, data_mask
+
     if integrated:
         dL = eq_numpy(zp1, *a) - eq_numpy(1, *a)
     else:
+        if data_x is None or data_mask is None:
+            nx = int(np.ceil((zp1.max() - zp1.min()) / delta_z))
+            data_x = np.concatenate(
+                        (np.linspace(1, zp1.min(), min_nz),
+                        np.linspace(zp1.min() + delta_z, zp1.max() + delta_z, nx),
+                        zp1))
+            data_x = np.sort(np.unique(data_x))
+            data_mask = np.squeeze(np.array([np.where(data_x==d)[0] for d in zp1]))
+        
         if len(a) == 0:
-            lam = lambda x: 1 / np.sqrt(eq_numpy(x))
+            dL = 1 / np.sqrt(eq_numpy(data_x))
         else:
-            lam = lambda x: 1 / np.sqrt(eq_numpy(x, *a))
-        dL = np.ones(len(zp1)) * np.nan
-        for i in range(len(dL)):
-#            dL[i], _ = scipy.integrate.quad(lam, 1, zp1[i])
-            x = np.linspace(1, zp1[i], int((zp1[i]-1)/delta_z))
-            dL[i] = scipy.integrate.simpson(lam(x), x)
+            dL = 1 / np.sqrt(eq_numpy(data_x, *a))
+
+        dL = scipy.integrate.cumtrapz(dL, x=data_x, initial=0)
+        dL = dL[data_mask]
+    
     dL *= zp1
     mu = 5 * np.log10(dL) + mu_const
     return mu
-    
+
     
 def negloglike(a, eq_numpy, xvar, yvar, inv_cov, integrated=False):
     mu_pred = get_mu(xvar, np.atleast_1d(a), eq_numpy, integrated=integrated)

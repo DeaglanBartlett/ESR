@@ -61,7 +61,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, neglogl
     if ("a3" in fcn_i) and ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
         k=4
     
-        eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, "numpy")
+        eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
     
         Hfun = nd.Hessian(f4)
         Hmat = Hfun(theta_ML)
@@ -96,7 +96,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, neglogl
     
         theta_ML = theta_ML[:-1]            # Only keep as many params as we have for this fcn
     
-        eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, "numpy")
+        eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
     
         Hfun = nd.Hessian(f3)
         Hmat = Hfun(theta_ML)
@@ -131,7 +131,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, neglogl
     
         theta_ML = theta_ML[:-2]
     
-        eq_numpy = sympy.lambdify([x, a0, a1], eq, "numpy")
+        eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
         
         Hfun = nd.Hessian(f2)                       # Calculate the fcn in general
         Hmat = Hfun(theta_ML)       # Evaluate it at the ML point
@@ -167,7 +167,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, neglogl
         theta_ML = theta_ML[:-3]            # Only keep as many params as we have for this fcn
         
         try:
-            eq_numpy = sympy.lambdify([x, a0], eq, "numpy")
+            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
         except Exception:
             print("BAD:", fcn_i)
             Fisher_diag = np.nan
@@ -255,7 +255,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, neglogl
     return params, negloglike, deriv, codelen
 
     
-def main(comp, tmax=5):
+def main(comp, tmax=5, data=None):
 
     if comp==8:
         sys.setrecursionlimit(2000)
@@ -264,7 +264,11 @@ def main(comp, tmax=5):
     elif comp==10:
         sys.setrecursionlimit(3000)
 
-    xvar, yvar, inv_cov = test_all.load_data()
+    if data is None:
+        xvar, yvar, inv_cov = test_all.load_data()
+    else:
+        xvar, yvar, inv_cov = data
+
     fcn_list_proc, data_start, data_end = test_all.get_functions(comp)
     negloglike, param1_proc, param2_proc, param3_proc, param4_proc = load_loglike(comp, data_start, data_end)
 

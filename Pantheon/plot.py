@@ -77,32 +77,34 @@ def main(comp, tmax=5):
         
         k = simplifier.count_params([fcn_i], max_param)[0]
         measured = params[i,:k]
+
+        print('%i of %i:'%(i+1,len(fcn_list)), fcn_i)
         
         try:
             fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax)
             if k == 0:
-                eq_numpy = sympy.lambdify([x], eq, "numpy")
+                eq_numpy = sympy.lambdify([x], eq, modules=["numpy","sympy"])
             elif k==1:
-                eq_numpy = sympy.lambdify([x, a0], eq, "numpy")
+                eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
             elif k==2:
-                eq_numpy = sympy.lambdify([x, a0, a1], eq, "numpy")
+                eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
             elif k==3:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, "numpy")
+                eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
             elif k==4:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, "numpy")
+                eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
             ypred = likelihood.get_mu(xvar, measured, eq_numpy, integrated=integrated)
         except:
             fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax, try_integration=False)
             if k == 0:
-                eq_numpy = sympy.lambdify([x], eq, "numpy")
+                eq_numpy = sympy.lambdify([x], eq, modules=["numpy","sympy"])
             elif k==1:
-                eq_numpy = sympy.lambdify([x, a0], eq, "numpy")
+                eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
             elif k==2:
-                eq_numpy = sympy.lambdify([x, a0, a1], eq, "numpy")
+                eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
             elif k==3:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, "numpy")
+                eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
             elif k==4:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, "numpy")
+                eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
             ypred = likelihood.get_mu(xvar, measured, eq_numpy, integrated=integrated)
 
         ax1.plot(xvar-1, ypred, color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
@@ -111,6 +113,7 @@ def main(comp, tmax=5):
     ax1.set_xlabel(r'$z$')
     ax1.set_ylabel(r'$\mu \left( z \right)$')
     ax1.set_xlim(0, None)
+    #ax1.set_xscale('log')
 
     ax2  = fig.add_axes([0.85,0.10,0.05,0.85])
     cb1  = mpl.colorbar.ColorbarBase(ax2,cmap=cmap,norm=norm,orientation='vertical')

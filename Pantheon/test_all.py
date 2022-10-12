@@ -130,7 +130,7 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax):
             
         if ("a0" in fcn_i)==False:
             Nparams = 0
-            eq_numpy = sympy.lambdify(x, eq, "numpy")
+            eq_numpy = sympy.lambdify(x, eq, modules=["numpy","sympy"])
             chi2_i = likelihood.negloglike([], eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
             signal.alarm(0)
             return chi2_i, params
@@ -141,7 +141,7 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax):
             Nconv = Nconv_4
             flag_three = True           # In this case we don't have any mult_param
 
-            eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, "numpy")
+            eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
             if np.sum(np.isnan(eq_numpy(xvar,1,1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,-1,1)))>0  and np.sum(np.isnan(eq_numpy(xvar,1,-1,-1,1)))>0  and np.sum(np.isnan(eq_numpy(xvar,-1,-1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,-1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,-1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,1,-1,-1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,-1,-1,-1,-1)))>0:
                 chi2_i = np.inf            # Don't bother trying to optimise bc this fcn is clearly really bad
                 signal.alarm(0)
@@ -151,7 +151,7 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax):
             Niter = Niter_3
             Nconv = Nconv_3
             flag_three = True           # In this case we don't have any mult_param
-            eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, "numpy")
+            eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
             if np.sum(np.isnan(eq_numpy(xvar,1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,1,-1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,-1,-1,-1)))>0:
                 chi2_i = np.inf            # Don't bother trying to optimise bc this fcn is clearly really bad
                 signal.alarm(0)
@@ -160,7 +160,7 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax):
         elif ("a1" in fcn_i) and ("a0" in fcn_i):
             Niter = Niter_2
             Nconv = Nconv_2
-            eq_numpy = sympy.lambdify([x, a0, a1], eq, "numpy")
+            eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
             if np.sum(np.isnan(eq_numpy(xvar,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1)))>0:
                 chi2_i = np.inf
                 signal.alarm(0)
@@ -169,7 +169,7 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax):
         else:
             Niter = Niter_1
             Nconv = Nconv_1
-            eq_numpy = sympy.lambdify([x, a0], eq, "numpy")
+            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
             if np.sum(np.isnan(eq_numpy(xvar,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1)))>0:
                 chi2_i = np.inf
                 signal.alarm(0)
@@ -216,6 +216,7 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax):
                     res = res_pp
                     
             else:
+
                 inpt = np.random.uniform(pmin,pmax)
                 res_p = minimize(chi2_fcn_1arg_p, inpt, args=(xvar, yvar, inv_cov, eq_numpy, integrated), method="BFGS")
                 res_m = minimize(chi2_fcn_1arg_m, inpt, args=(xvar, yvar, inv_cov, eq_numpy, integrated), method="BFGS")
@@ -270,10 +271,14 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax):
     return chi2_i, params
     
     
-def main(comp, tmax=5, pmin=0, pmax=3):
+def main(comp, tmax=5, pmin=0, pmax=3, data=None):
     
     fcn_list_proc, _, _ = get_functions(comp)
-    xvar, yvar, inv_cov = load_data()
+
+    if data is None:
+        xvar, yvar, inv_cov = load_data()
+    else:
+        xvar, yvar, inv_cov = data
 
     chi2 = np.zeros(len(fcn_list_proc))     # This is now only for this proc
     params = np.zeros([len(fcn_list_proc), 4])
@@ -294,6 +299,8 @@ def main(comp, tmax=5, pmin=0, pmax=3):
         os.system(string)
         string = 'rm ' + temp_dir + '/chi2_comp'+str(comp)+'weights_*.dat'
         os.system(string)
+
+    return
         
 if __name__ == "__main__":
     comp = int(sys.argv[1])

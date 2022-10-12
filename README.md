@@ -5,5 +5,11 @@ One can then optimise the parameters for a given data set, and select the best f
 
 # Users are required to cite the Exhaustive Symbolic Regression Papers:
 
-* arXiv:PAPER1
-* arXiv:PAPER2
+* arXiv:PAPER1 (Paper 1)
+* arXiv:PAPER2 (Paper 2)
+
+# Examples
+
+To run the Pantheon example from Paper 1, one must download the
+[Pantheon data](https://github.com/PantheonPlusSH0ES/DataRelease)
+and place in the 'data' directory.

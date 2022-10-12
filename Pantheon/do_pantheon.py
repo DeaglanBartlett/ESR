@@ -17,7 +17,6 @@ def print_text(text):
     stars = ["*" * 20]
     print('\n')
     print(*stars)
-    print('\n')
     print(text)
     print(*stars)
     print('\n')
@@ -25,17 +24,22 @@ def print_text(text):
     
 compl = int(sys.argv[1])
 tmax = 5
-    
+
 print_text('COMPLEXITY = %i'%compl)
-#test_all.main(compl, tmax=tmax)
+
+print_text('Loading data')
+xvar, yvar, inv_cov = test_all.load_data() 
+
+print_text('test_all')
+test_all.main(compl, tmax=tmax, data=[xvar,yvar,inv_cov])
 comm.Barrier()
 
 print_text('test_all_Fisher')
-#test_all_Fisher.main(compl, tmax=tmax)
+test_all_Fisher.main(compl, tmax=tmax, data=[xvar,yvar,inv_cov])
 comm.Barrier()
 
 print_text('match')
-match.main(compl, tmax=tmax)
+match.main(compl, tmax=tmax, data=[xvar,yvar,inv_cov])
 comm.Barrier()
 
 print_text('combine_DL')

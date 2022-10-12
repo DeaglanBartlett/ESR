@@ -22,7 +22,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def main(comp, tmax=5):
+def main(comp, tmax=5, data=None):
 
     def f4(x):
         return panth_likelihood.negloglike(x,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
@@ -38,8 +38,12 @@ def main(comp, tmax=5):
         
     invsubs_file = fn_dir + "/compl_%i/inv_subs_%i.txt"%(comp,comp)
     match_file = fn_dir + "/compl_%i/matches_%i.txt"%(comp,comp)
-        
-    xvar, yvar, inv_cov = test_all.load_data()
+    
+    if data is None:
+        xvar, yvar, inv_cov = test_all.load_data()
+    else:
+        xvar, yvar, inv_cov = data
+
     fcn_list_proc, data_start, data_end = test_all.get_functions(comp, unique=False)
     negloglike, param1, param2, param3, param4 = test_all_Fisher.load_loglike(comp, data_start, data_end, split=False)
 
@@ -118,16 +122,16 @@ def main(comp, tmax=5):
                     
             try:            # It's possible that after putting params to 0 the likelihood is botched, in which case give it nan
                 if k==1:
-                    eq_numpy = sympy.lambdify([x, a0], eq, "numpy")
+                    eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
                     negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                 elif k==2:
-                    eq_numpy = sympy.lambdify([x, a0, a1], eq, "numpy")
+                    eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
                     negloglike_all[i] = f2(p)       # All params still here, just some of them might be 0
                 elif k==3:
-                    eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, "numpy")
+                    eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
                     negloglike_all[i] = f3(p)
                 elif k==4:
-                    eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, "numpy")
+                    eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
                     negloglike_all[i] = f4(p)
             except:
                 negloglike_all[i] = np.nan

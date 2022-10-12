@@ -1,4 +1,5 @@
 import sympy
+import sys
 from filenames import *
 sys.path.insert(0, esr_dir)
 from simplifier import time_limit
