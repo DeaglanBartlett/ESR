@@ -115,7 +115,7 @@ def load_data():
     return xvar, yvar, inv_cov
     
     
-def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax):
+def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax, try_integration=True):
 
     Niter_1, Niter_2, Niter_3, Niter_4 = 10, 10, 10, 10
     Nconv_1, Nconv_2, Nconv_3, Nconv_4 = 3, 3, 3, 3
@@ -126,7 +126,7 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax):
     params = np.zeros(4)
     
     try:
-        fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax)
+        fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
             
         if ("a0" in fcn_i)==False:
             Nparams = 0

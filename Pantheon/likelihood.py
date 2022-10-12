@@ -83,6 +83,8 @@ def get_mu(zp1, a, eq_numpy, integrated=False):
     
 def negloglike(a, eq_numpy, xvar, yvar, inv_cov, integrated=False):
     mu_pred = get_mu(xvar, np.atleast_1d(a), eq_numpy, integrated=integrated)
+    if not np.all(np.isreal(mu_pred)):
+        return np.inf
     nll = 0.5 * np.dot((mu_pred - yvar), np.dot(inv_cov,(mu_pred - yvar)))
     if np.isnan(nll):
         return np.inf

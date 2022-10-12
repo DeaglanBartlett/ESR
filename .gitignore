@@ -17,7 +17,7 @@ memory_test.py
 *.sh
 *.out
 
-__pycache__
+*__pycache__
 .bashrc
 .ipynb_checkpoints/
 

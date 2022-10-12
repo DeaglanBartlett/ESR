@@ -90,6 +90,8 @@ def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, neglogl
                     Delta, Nsteps = Delta_tmp, Nsteps_tmp
                     deriv[:] = np.array([Hmat[0,0], Hmat[0,1], Hmat[0,2], Hmat[0,3], Hmat[1,1], Hmat[1,2], Hmat[1,3], Hmat[2,2], Hmat[2,3], Hmat[3,3]])
                     break
+
+        negloglike = f4(params[:k])
     
     elif ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
         k=3
@@ -125,6 +127,8 @@ def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, neglogl
                     Delta, Nsteps = Delta_tmp, Nsteps_tmp
                     deriv[:] = np.array([Hmat[0,0], Hmat[0,1], Hmat[0,2], np.nan, Hmat[1,1], Hmat[1,2], np.nan, Hmat[2,2], np.nan, np.nan])
                     break
+
+        negloglike = f3(params[:k])
     
     elif ("a1" in fcn_i) and ("a0" in fcn_i):
         k=2
@@ -160,6 +164,8 @@ def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, neglogl
                     Delta, Nsteps = Delta_tmp, Nsteps_tmp
                     deriv[:] = np.array([Hmat[0,0], Hmat[0,1], np.nan, np.nan, Hmat[1,1], np.nan, np.nan, np.nan, np.nan, np.nan])
                     break
+
+        negloglike = f2(params[:k])
 
     elif ("a0" in fcn_i):
         k=1
@@ -201,11 +207,13 @@ def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, neglogl
                     Delta, Nsteps = Delta_tmp, Nsteps_tmp
                     deriv[:] = np.array([Hmat[0,0], np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
                     break
+
+        negloglike = f1(params[:k])
     
     else:                   # No params
         codelen = 0
         return params, negloglike, deriv, codelen
-    
+
     # Must indicate a bad fcn, so just need to make sure it doesn't have a good -log(L)
     if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0):
         if negloglike<0.:
@@ -287,8 +295,9 @@ def main(comp, tmax=5, data=None):
         fcn_i = fcn_list_proc[i].replace('\n', '')
         fcn_i = fcn_list_proc[i].replace('\'', '')
         
-        theta_ML = np.array([param1_proc[i], param2_proc[i], param3_proc[i], param4_proc[i]])
         
+        theta_ML = np.array([param1_proc[i], param2_proc[i], param3_proc[i], param4_proc[i]])
+
         try:
            fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax)
         except Exception as ex:
@@ -297,8 +306,14 @@ def main(comp, tmax=5, data=None):
             print(template.format(type(ex).__name__, ex.args), flush=True)
             chi2[i] = np.inf
             continue
-            
-        params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, negloglike[i])
+
+
+        try:
+            params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, negloglike[i])
+        except:
+            params[i,:] = 0.
+            deriv[i,:] = 0.
+            codelen[i] = 0
         
     out_arr = np.transpose(np.vstack([codelen, negloglike, params[:,0], params[:,1], params[:,2], params[:,3]]))
 
