@@ -11,9 +11,15 @@ import signal
 from mpi4py import MPI
 from scipy.optimize import minimize
 
-import likelihood
 from filenames import *
-from sympy_symbols import *
+
+sys.path.insert(0, like_dir)
+likelihood = __import__(like_file)
+
+name = __name__
+import importlib
+globals().update(importlib.import_module(sym_file).__dict__)
+__name__ = name
 
 warnings.filterwarnings("ignore")
 
@@ -121,7 +127,8 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax, try_integration=T
     Nconv_1, Nconv_2, Nconv_3, Nconv_4 = 3, 3, 3, 3
 
     signal.signal(signal.SIGALRM, handler)
-    signal.alarm(2700)          # 45 mins
+    #signal.alarm(2700)          # 45 mins
+    signal.alarm(600)           # 10 mins
     
     params = np.zeros(4)
     
@@ -176,7 +183,7 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax, try_integration=T
                 return chi2_i, params
 
         chi2_min = np.inf            # Reset chi2 for this fcn to make sure that every attempt at minimisation improves on this
-        
+
         mult_arr = np.array([1,1,1,1])
         count_lowest = 0
         inf_count = 0
@@ -295,7 +302,7 @@ def main(comp, tmax=5, pmin=0, pmax=3, data=None):
     comm.Barrier()
 
     if rank == 0:
-        string = 'cat `find ./' + temp_dir + '/ -name "chi2_comp'+str(comp)+'weights_*.dat" | sort -V` > ' + out_dir + '/negloglike_comp'+str(comp)+'.dat'
+        string = 'cat `find ' + temp_dir + '/ -name "chi2_comp'+str(comp)+'weights_*.dat" | sort -V` > ' + out_dir + '/negloglike_comp'+str(comp)+'.dat'
         os.system(string)
         string = 'rm ' + temp_dir + '/chi2_comp'+str(comp)+'weights_*.dat'
         os.system(string)
@@ -305,4 +312,3 @@ def main(comp, tmax=5, pmin=0, pmax=3, data=None):
 if __name__ == "__main__":
     comp = int(sys.argv[1])
     main(comp)
-

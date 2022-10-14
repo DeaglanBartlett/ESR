@@ -53,7 +53,7 @@ min_nz = 10
 data_x = None
 data_mask = None
 
-def get_mu(zp1, a, eq_numpy, integrated=False):
+def get_pred(zp1, a, eq_numpy, integrated=False):
     global data_x, data_mask
 
     if integrated:
@@ -82,7 +82,7 @@ def get_mu(zp1, a, eq_numpy, integrated=False):
 
     
 def negloglike(a, eq_numpy, xvar, yvar, inv_cov, integrated=False):
-    mu_pred = get_mu(xvar, np.atleast_1d(a), eq_numpy, integrated=integrated)
+    mu_pred = get_pred(xvar, np.atleast_1d(a), eq_numpy, integrated=integrated)
     if not np.all(np.isreal(mu_pred)):
         return np.inf
     nll = 0.5 * np.dot((mu_pred - yvar), np.dot(inv_cov,(mu_pred - yvar)))

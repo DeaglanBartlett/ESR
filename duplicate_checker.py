@@ -29,18 +29,18 @@ def main(compl, track_memory=False):
                     ["square", "exp", "inv", "sqrt_abs", "log_abs"],  # type1
                     ["+", "*", "-", "/", "pow"]]  # type2
     """
-    """
+    #"""
     dirname = 'core_maths/'
     basis_functions = [["x", "a"],  # type0
                     ["inv"],  # type1
                     ["+", "*", "-", "/", "pow"]]  # type2
-    """
     #"""
+    """
     dirname = 'ext_maths/'
     basis_functions = [["x", "a"],  # type0
                     ["inv", "sqrt_abs", "square", "exp"],  # type1
                     ["+", "*", "-", "/", "pow"]]  # type2
-    #"""
+    """
     """
     dirname = 'osc_maths/'
     basis_functions = [["x", "a"],  # type0
@@ -326,8 +326,8 @@ if __name__ == "__main__":
     #for c in [8, 9]:
     #    main(c)
     #for c in range(4, 11):
-    for c in range(4, 9):
-        main(c)
+    #for c in range(4, 9):
+    #    main(c)
     #main(5)
     #main(6)
     #main(7)
@@ -335,6 +335,9 @@ if __name__ == "__main__":
     #simplifier.check_results('osc_maths/compl_9/', 9)
     #main(10)
     #main(9, track_memory=True)
+    #main(9)
+    for c in [2, 3]:
+        main(c)
 
 """
 TO DO

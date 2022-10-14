@@ -9,10 +9,16 @@ import sys
 import itertools
 import numdifftools as nd
 
-import likelihood
 import test_all
 from filenames import *
-from sympy_symbols import *
+
+sys.path.insert(0, like_dir)
+likelihood = __import__(like_file)
+
+name = __name__
+import importlib
+globals().update(importlib.import_module(sym_file).__dict__)
+__name__ = name
 
 warnings.filterwarnings("ignore")
 
@@ -325,12 +331,12 @@ def main(comp, tmax=5, data=None):
     comm.Barrier()
 
     if rank == 0:
-        string = 'cat `find ./' + temp_dir + '/ -name "codelen_deriv_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/codelen_comp'+str(comp)+'_deriv.dat'
+        string = 'cat `find ' + temp_dir + '/ -name "codelen_deriv_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/codelen_comp'+str(comp)+'_deriv.dat'
         os.system(string)
         string = 'rm ' + temp_dir + '/codelen_deriv_'+str(comp)+'_*.dat'
         os.system(string)
 
-        string = 'cat `find ./' + temp_dir + '/ -name "derivs_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/derivs_comp'+str(comp)+'.dat'
+        string = 'cat `find ' + temp_dir + '/ -name "derivs_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/derivs_comp'+str(comp)+'.dat'
         os.system(string)
         string = 'rm ' + temp_dir + '/derivs_'+str(comp)+'_*.dat'
         os.system(string)

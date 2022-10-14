@@ -28,8 +28,8 @@ osc_maths/
 Pantheon/figs_panth/
 Pantheon/output_panth/
 Pantheon/partial_panth/
-cosmic_chronometers/figs_CC/
-cosmic_chronometers/output_CC/
-cosmic_chronometers/partial_CC/
+Pantheon/figs_cc/
+Pantheon/output_cc/
+Pantheon/partial_cc/
 
 cosmic_chronometers/

@@ -10,12 +10,18 @@ import matplotlib.cm as cm
 import matplotlib as mpl
 import os
 
-import likelihood
 from filenames import *
-from sympy_symbols import *
 
 sys.path.insert(0, esr_dir)
 import simplifier
+
+sys.path.insert(0, like_dir)
+likelihood = __import__(like_file)
+
+name = __name__
+import importlib
+globals().update(importlib.import_module(sym_file).__dict__)
+__name__ = name
 
 warnings.filterwarnings("ignore")
 
@@ -71,7 +77,7 @@ def main(comp, tmax=5):
     cmap = cm.hot_r
     norm = mpl.colors.LogNorm(vmin=vmin,vmax=vmax)
 
-    for i in range(len(fcn_list)):                 # The part of all eqs analysed by this proc
+    for i in range(min(len(fcn_list),50)):                 # The part of all eqs analysed by this proc
 
         fcn_i = fcn_list[i].replace('\'', '')
         
@@ -92,7 +98,7 @@ def main(comp, tmax=5):
                 eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
             elif k==4:
                 eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
-            ypred = likelihood.get_mu(xvar, measured, eq_numpy, integrated=integrated)
+            ypred = likelihood.get_pred(xvar, measured, eq_numpy, integrated=integrated)
         except:
             fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax, try_integration=False)
             if k == 0:
@@ -105,13 +111,16 @@ def main(comp, tmax=5):
                 eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
             elif k==4:
                 eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
-            ypred = likelihood.get_mu(xvar, measured, eq_numpy, integrated=integrated)
+            ypred = likelihood.get_pred(xvar, measured, eq_numpy, integrated=integrated)
 
-        ax1.plot(xvar-1, ypred, color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
+        if np.isscalar(ypred):
+            ax1.plot(xvar-1, [ypred]*len(xvar), color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
+        else:
+            ax1.plot(xvar-1, ypred, color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
         
     ax1.errorbar(xvar-1, yvar, yerr=yerr, fmt='.', markersize=5, zorder=len(fcn_list)+1, capsize=1, elinewidth=1, color='k', alpha=1)
     ax1.set_xlabel(r'$z$')
-    ax1.set_ylabel(r'$\mu \left( z \right)$')
+    #ax1.set_ylabel(r'$\mu \left( z \right)$')
     ax1.set_xlim(0, None)
     #ax1.set_xscale('log')
 

@@ -90,12 +90,12 @@ def main(comp):
         comm.Send(buff, dest=0)
 
     if rank == 0:
-        string = 'cat `find ./' + temp_dir + '/ -name "combine_DL_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/combine_DL_comp'+str(comp)+'.dat'
+        string = 'cat `find ' + temp_dir + '/ -name "combine_DL_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/combine_DL_comp'+str(comp)+'.dat'
         os.system(string)
         string = 'rm ' + temp_dir + '/combine_DL_'+str(comp)+'_*.dat'
         os.system(string)
         
-        string = 'cat `find ./' + temp_dir + '/ -name "combine_DL_fcn_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/combine_DL_fcn_comp'+str(comp)+'.dat'
+        string = 'cat `find ' + temp_dir + '/ -name "combine_DL_fcn_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/combine_DL_fcn_comp'+str(comp)+'.dat'
         os.system(string)
         string = 'rm ' + temp_dir + '/combine_DL_fcn_'+str(comp)+'_*.dat'
         os.system(string)
