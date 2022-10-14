@@ -1,6 +1,4 @@
 # This optimises in log-space, with separate +ve and -ve branch (except when there are 3 params in which case it does it in linear)
-# Uses the weights properly of the function under investigation, not the RAR IF
-# Also uses -log(L) as the accuracy metric, not reduced chi2, to prevent the gradient blowing up to formally increase the errors masses
 
 import numpy as np
 import sympy
@@ -10,16 +8,7 @@ import sys
 import signal
 from mpi4py import MPI
 from scipy.optimize import minimize
-
-from filenames import *
-
-sys.path.insert(0, like_dir)
-likelihood = __import__(like_file)
-
-name = __name__
-import importlib
-globals().update(importlib.import_module(sym_file).__dict__)
-__name__ = name
+from sympy_symbols import *
 
 warnings.filterwarnings("ignore")
 
@@ -31,42 +20,42 @@ def handler(signum, frame):
     print("A function timed out: ", i, fcn_i, flush=True)
     raise Exception("end of time")
 
-def chi2_fcn_4args(x, xvar, yvar, inv_cov, eq_numpy, integrated):
-    return likelihood.negloglike(x,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+def chi2_fcn_4args(x, likelihood, eq_numpy, integrated):
+    return likelihood.negloglike(x,eq_numpy, integrated=integrated)
 
-def chi2_fcn_3args(x, xvar, yvar, inv_cov, eq_numpy, integrated):
-    return likelihood.negloglike(x,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+def chi2_fcn_3args(x, likelihood, eq_numpy, integrated):
+    return likelihood.negloglike(x,eq_numpy, integrated=integrated)
     
-def chi2_fcn_2args_pp(x, xvar, yvar, inv_cov, eq_numpy, integrated):
+def chi2_fcn_2args_pp(x, likelihood, eq_numpy, integrated):
     p = [10.**x[0], 10.**x[1]]
-    return likelihood.negloglike(p,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
 
-def chi2_fcn_2args_pm(x, xvar, yvar, inv_cov, eq_numpy, integrated):
+def chi2_fcn_2args_pm(x, likelihood, eq_numpy, integrated):
     p = [10.**x[0], -10.**x[1]]
-    return likelihood.negloglike(p,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
 
-def chi2_fcn_2args_mp(x, xvar, yvar, inv_cov, eq_numpy, integrated):
+def chi2_fcn_2args_mp(x, likelihood, eq_numpy, integrated):
     p = [-10.**x[0], 10.**x[1]]
-    return likelihood.negloglike(p,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
     
-def chi2_fcn_2args_mm(x, xvar, yvar, inv_cov, eq_numpy, integrated):
+def chi2_fcn_2args_mm(x, likelihood, eq_numpy, integrated):
     p = [-10.**x[0], -10.**x[1]]
-    return likelihood.negloglike(p,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
     
-def chi2_fcn_1arg_p(x, xvar, yvar, inv_cov, eq_numpy, integrated):
+def chi2_fcn_1arg_p(x, likelihood, eq_numpy, integrated):
     p = [10.**x[0]]
-    return likelihood.negloglike(p,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
 
-def chi2_fcn_1arg_m(x, xvar, yvar, inv_cov, eq_numpy, integrated):
+def chi2_fcn_1arg_m(x, likelihood, eq_numpy, integrated):
     p = [-10.**x[0]]
-    return likelihood.negloglike(p,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
     
-def get_functions(comp, unique=True):
+def get_functions(comp, likelihood, unique=True):
 
     if unique:
-        unifn_file = fn_dir + "/compl_%i/unique_equations_%i.txt"%(comp,comp)
+        unifn_file = likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt"%(comp,comp)
     else:
-        unifn_file = fn_dir + "/compl_%i/all_equations_%i.txt"%(comp,comp)
+        unifn_file = likelihood.fn_dir + "/compl_%i/all_equations_%i.txt"%(comp,comp)
     
     if comp==8:
         sys.setrecursionlimit(2000)
@@ -76,7 +65,7 @@ def get_functions(comp, unique=True):
         sys.setrecursionlimit(3000)
 
     if rank == 0:
-        for dirname in [out_dir, temp_dir]:
+        for dirname in [likelihood.out_dir, likelihood.temp_dir]:
             if not os.path.isdir(dirname):
                 print('Making dir:', dirname)
                 os.mkdir(dirname)
@@ -107,21 +96,11 @@ def get_functions(comp, unique=True):
     
     return fcn_list[data_start:data_end], data_start, data_end
     
-def load_data():
-    if rank == 0:
-        print("\nLoading data", flush=True)
-        xvar, yvar, inv_cov, _ = likelihood.load_data()
-        xvar += 1  # now x = 1 + z
-        print("Loaded", flush=True)
-    else:
-        xvar, yvar, inv_cov = [None] * 3
-    xvar = comm.bcast(xvar, root=0)
-    yvar = comm.bcast(yvar, root=0)
-    inv_cov = comm.bcast(inv_cov, root=0)
-    return xvar, yvar, inv_cov
     
-    
-def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax, try_integration=True):
+def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=True):
+
+    xvar, yvar, inv_cov = likelihood.xvar, likelihood.yvar, likelihood.inv_cov
+    #xvar += 1  # now x = 1 + z
 
     Niter_1, Niter_2, Niter_3, Niter_4 = 10, 10, 10, 10
     Nconv_1, Nconv_2, Nconv_3, Nconv_4 = 3, 3, 3, 3
@@ -133,12 +112,12 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax, try_integration=T
     params = np.zeros(4)
     
     try:
-        fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
+        fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
             
         if ("a0" in fcn_i)==False:
             Nparams = 0
             eq_numpy = sympy.lambdify(x, eq, modules=["numpy","sympy"])
-            chi2_i = likelihood.negloglike([], eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+            chi2_i = likelihood.negloglike([], eq_numpy, integrated=integrated)
             signal.alarm(0)
             return chi2_i, params
 
@@ -194,16 +173,16 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax, try_integration=T
                 print('\t', j, Niter, flush=True)
             if ("a3" in fcn_i) and ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
                 inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]
-                res = minimize(chi2_fcn_4args, inpt, args=(xvar, yvar, inv_cov, eq_numpy, integrated), method="BFGS", options={'maxiter': 7000})    # Default=3000
+                res = minimize(chi2_fcn_4args, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 7000})    # Default=3000
             elif ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
                 inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]      # Larger range bc linear search here
-                res = minimize(chi2_fcn_3args, inpt, args=(xvar, yvar, inv_cov, eq_numpy, integrated), method="BFGS", options={'maxiter': 5000})    # Default=3000
+                res = minimize(chi2_fcn_3args, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 5000})    # Default=3000
             elif ("a1" in fcn_i) and ("a0" in fcn_i):
                 inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]           # These are now in log-space, so this is 1e-1 -- 1e1; was -10:10
-                res_pp = minimize(chi2_fcn_2args_pp, inpt, args=(xvar, yvar, inv_cov, eq_numpy, integrated), method="BFGS")
-                res_mp = minimize(chi2_fcn_2args_mp, inpt, args=(xvar, yvar, inv_cov, eq_numpy, integrated), method="BFGS")
-                res_pm = minimize(chi2_fcn_2args_pm, inpt, args=(xvar, yvar, inv_cov, eq_numpy, integrated), method="BFGS")
-                res_mm = minimize(chi2_fcn_2args_mm, inpt, args=(xvar, yvar, inv_cov, eq_numpy, integrated), method="BFGS")
+                res_pp = minimize(chi2_fcn_2args_pp, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                res_mp = minimize(chi2_fcn_2args_mp, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                res_pm = minimize(chi2_fcn_2args_pm, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                res_mm = minimize(chi2_fcn_2args_mm, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
                 
                 choose = np.argmin([res_pp['fun'], res_mp['fun'], res_pm['fun'], res_mm['fun']])
                 if choose==0:
@@ -225,8 +204,8 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax, try_integration=T
             else:
 
                 inpt = np.random.uniform(pmin,pmax)
-                res_p = minimize(chi2_fcn_1arg_p, inpt, args=(xvar, yvar, inv_cov, eq_numpy, integrated), method="BFGS")
-                res_m = minimize(chi2_fcn_1arg_m, inpt, args=(xvar, yvar, inv_cov, eq_numpy, integrated), method="BFGS")
+                res_p = minimize(chi2_fcn_1arg_p, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                res_m = minimize(chi2_fcn_1arg_m, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
 
                 if res_p['fun']<res_m['fun']:
                     res = res_p
@@ -278,37 +257,29 @@ def optimise_fun(fcn_i, xvar, yvar, inv_cov, tmax, pmin, pmax, try_integration=T
     return chi2_i, params
     
     
-def main(comp, tmax=5, pmin=0, pmax=3, data=None):
+def main(comp, likelihood, tmax=5, pmin=0, pmax=3):
     
-    fcn_list_proc, _, _ = get_functions(comp)
-
-    if data is None:
-        xvar, yvar, inv_cov = load_data()
-    else:
-        xvar, yvar, inv_cov = data
+    fcn_list_proc, _, _ = get_functions(comp, likelihood)
 
     chi2 = np.zeros(len(fcn_list_proc))     # This is now only for this proc
     params = np.zeros([len(fcn_list_proc), 4])
     for i in range(len(fcn_list_proc)):           # Consider all possible complexities
         if rank == 0:
             print(i, len(fcn_list_proc), flush=True)
-        chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], xvar, yvar, inv_cov, tmax, pmin, pmax)
+        chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], likelihood, tmax, pmin, pmax)
 
     out_arr = np.transpose(np.vstack([chi2, params[:,0], params[:,1], params[:,2], params[:,3]]))
 
     # Save the data for this proc in Partial
-    np.savetxt(temp_dir + '/chi2_comp'+str(comp)+'weights_'+str(rank)+'.dat', out_arr, fmt='%.7e')
+    np.savetxt(likelihood.temp_dir + '/chi2_comp'+str(comp)+'weights_'+str(rank)+'.dat', out_arr, fmt='%.7e')
 
     comm.Barrier()
 
     if rank == 0:
-        string = 'cat `find ' + temp_dir + '/ -name "chi2_comp'+str(comp)+'weights_*.dat" | sort -V` > ' + out_dir + '/negloglike_comp'+str(comp)+'.dat'
+        string = 'cat `find ' + likelihood.temp_dir + '/ -name "chi2_comp'+str(comp)+'weights_*.dat" | sort -V` > ' + likelihood.out_dir + '/negloglike_comp'+str(comp)+'.dat'
         os.system(string)
-        string = 'rm ' + temp_dir + '/chi2_comp'+str(comp)+'weights_*.dat'
+        string = 'rm ' + likelihood.temp_dir + '/chi2_comp'+str(comp)+'weights_*.dat'
         os.system(string)
 
     return
-        
-if __name__ == "__main__":
-    comp = int(sys.argv[1])
-    main(comp)
+

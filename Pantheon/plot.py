@@ -10,18 +10,10 @@ import matplotlib.cm as cm
 import matplotlib as mpl
 import os
 
-from filenames import *
+from sympy_symbols import *
 
-sys.path.insert(0, esr_dir)
+sys.path.insert(0, '../')
 import simplifier
-
-sys.path.insert(0, like_dir)
-likelihood = __import__(like_file)
-
-name = __name__
-import importlib
-globals().update(importlib.import_module(sym_file).__dict__)
-__name__ = name
 
 warnings.filterwarnings("ignore")
 
@@ -29,7 +21,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def main(comp, tmax=5):
+def main(comp, likelihood, tmax=5):
 
     if rank != 0:
         return
@@ -45,13 +37,13 @@ def main(comp, tmax=5):
     elif comp==10:
         sys.setrecursionlimit(3000)
 
-    if not os.path.isdir(fig_dir):
-        print('Making:', fig_dir)
-        os.mkdir(fig_dir)
+    if not os.path.isdir(likelihood.fig_dir):
+        print('Making:', likelihood.fig_dir)
+        os.mkdir(likelihood.fig_dir)
 
     max_param = 4
 
-    with open(out_dir + '/final_'+str(comp)+'.dat', "r") as f:
+    with open(likelihood.out_dir + '/final_'+str(comp)+'.dat', "r") as f:
         reader = csv.reader(f, delimiter=';')
         data = [row for row in reader]
         
@@ -67,11 +59,6 @@ def main(comp, tmax=5):
     params = params[m,:]
     alpha = alpha[m]
 
-    print('Loading data')
-    xvar, yvar, inv_cov, yerr = likelihood.load_data()
-    xvar += 1  # now x = 1 + z
-    print('Loaded')
-    
     fig  = plt.figure(figsize=(7,5))
     ax1  = fig.add_axes([0.10,0.10,0.70,0.85])
     cmap = cm.hot_r
@@ -87,7 +74,7 @@ def main(comp, tmax=5):
         print('%i of %i:'%(i+1,len(fcn_list)), fcn_i)
         
         try:
-            fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax)
+            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax)
             if k == 0:
                 eq_numpy = sympy.lambdify([x], eq, modules=["numpy","sympy"])
             elif k==1:
@@ -98,9 +85,9 @@ def main(comp, tmax=5):
                 eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
             elif k==4:
                 eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
-            ypred = likelihood.get_pred(xvar, measured, eq_numpy, integrated=integrated)
+            ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
         except:
-            fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax, try_integration=False)
+            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False)
             if k == 0:
                 eq_numpy = sympy.lambdify([x], eq, modules=["numpy","sympy"])
             elif k==1:
@@ -111,16 +98,16 @@ def main(comp, tmax=5):
                 eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
             elif k==4:
                 eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
-            ypred = likelihood.get_pred(xvar, measured, eq_numpy, integrated=integrated)
+            ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
 
         if np.isscalar(ypred):
-            ax1.plot(xvar-1, [ypred]*len(xvar), color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
+            ax1.plot(likelihood.xvar-1, [ypred]*len(likelihood.xvar), color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
         else:
-            ax1.plot(xvar-1, ypred, color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
+            ax1.plot(likelihood.xvar-1, ypred, color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
         
-    ax1.errorbar(xvar-1, yvar, yerr=yerr, fmt='.', markersize=5, zorder=len(fcn_list)+1, capsize=1, elinewidth=1, color='k', alpha=1)
+    ax1.errorbar(likelihood.xvar-1, likelihood.yvar, yerr=likelihood.yerr, fmt='.', markersize=5, zorder=len(fcn_list)+1, capsize=1, elinewidth=1, color='k', alpha=1)
     ax1.set_xlabel(r'$z$')
-    #ax1.set_ylabel(r'$\mu \left( z \right)$')
+    ax1.set_ylabel(likelihood.ylabel)
     ax1.set_xlim(0, None)
     #ax1.set_xscale('log')
 
@@ -128,10 +115,6 @@ def main(comp, tmax=5):
     cb1  = mpl.colorbar.ColorbarBase(ax2,cmap=cmap,norm=norm,orientation='vertical')
     cb1.set_label(r'$\exp \left( MDL - DL \right)$')
     fig.tight_layout()
-    fig.savefig(fig_dir + '/plot_%i.png'%comp)
+    fig.savefig(likelihood.fig_dir + '/plot_%i.png'%comp)
 
     return
-        
-if __name__ == "__main__":
-    comp = int(sys.argv[1])
-    main(comp)

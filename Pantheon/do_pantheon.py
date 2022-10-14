@@ -7,6 +7,8 @@ import match
 import combine_DL
 import plot
 
+from likelihood import CCLikelihood, PanthLikelihood
+
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
@@ -22,30 +24,31 @@ def print_text(text):
     print('\n')
     return
     
-compl = int(sys.argv[1])
+comp = int(sys.argv[1])
 tmax = 5
 
-print_text('COMPLEXITY = %i'%compl)
+print_text('COMPLEXITY = %i'%comp)
 
 print_text('Loading data')
-xvar, yvar, inv_cov = test_all.load_data() 
+#likelihood = CCLikelihood() 
+likelihood = PanthLikelihood()
 
 print_text('test_all')
-test_all.main(compl, tmax=tmax, data=[xvar,yvar,inv_cov])
+test_all.main(comp, likelihood, tmax=5)
 comm.Barrier()
 
 print_text('test_all_Fisher')
-test_all_Fisher.main(compl, tmax=tmax, data=[xvar,yvar,inv_cov])
+test_all_Fisher.main(comp, likelihood, tmax=tmax)
 comm.Barrier()
 
 print_text('match')
-match.main(compl, tmax=tmax, data=[xvar,yvar,inv_cov])
+match.main(comp, likelihood, tmax=tmax)
 comm.Barrier()
 
 print_text('combine_DL')
-combine_DL.main(compl)
+combine_DL.main(comp, likelihood)
 comm.Barrier()
 
 print_text('plot')
 if rank == 0:
-    plot.main(compl, tmax=tmax)
+    plot.main(comp, likelihood, tmax=tmax)

@@ -9,18 +9,9 @@ import numdifftools as nd
 
 import test_all
 import test_all_Fisher
-from filenames import *
 
-sys.path.insert(0, esr_dir)
+sys.path.insert(0, '../')
 import simplifier
-
-sys.path.insert(0, like_dir)
-likelihood = __import__(like_file)
-
-name = __name__
-import importlib
-globals().update(importlib.import_module(sym_file).__dict__)
-__name__ = name
 
 warnings.filterwarnings("ignore")
 
@@ -28,37 +19,32 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def main(comp, tmax=5, data=None):
+def main(comp, likelihood, tmax=5):
 
     def f4(x):
-        return panth_likelihood.negloglike(x,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
 
     def f3(x):
-        return panth_likelihood.negloglike(x,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
 
     def f2(x):
-        return panth_likelihood.negloglike(x,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
 
     def f1(x):
-        return panth_likelihood.negloglike([x],eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+        return likelihood.negloglike([x],eq_numpy, integrated=integrated)
         
-    invsubs_file = fn_dir + "/compl_%i/inv_subs_%i.txt"%(comp,comp)
-    match_file = fn_dir + "/compl_%i/matches_%i.txt"%(comp,comp)
+    invsubs_file = likelihood.fn_dir + "/compl_%i/inv_subs_%i.txt"%(comp,comp)
+    match_file = likelihood.fn_dir + "/compl_%i/matches_%i.txt"%(comp,comp)
     
-    if data is None:
-        xvar, yvar, inv_cov = test_all.load_data()
-    else:
-        xvar, yvar, inv_cov = data
-
-    fcn_list_proc, data_start, data_end = test_all.get_functions(comp, unique=False)
-    negloglike, param1, param2, param3, param4 = test_all_Fisher.load_loglike(comp, data_start, data_end, split=False)
+    fcn_list_proc, data_start, data_end = test_all.get_functions(comp, likelihood, unique=False)
+    negloglike, param1, param2, param3, param4 = test_all_Fisher.load_loglike(comp, likelihood, data_start, data_end, split=False)
 
     max_param = 4
 
     all_inv_subs_proc = simplifier.load_subs(invsubs_file, max_param)[data_start:data_end]
     matches_proc = np.atleast_1d(np.loadtxt(match_file).astype(int))[data_start:data_end]
 
-    all_fish = np.loadtxt(out_dir + '/derivs_comp'+str(comp)+'.dat')   # 2D array of shape (# unique fcns, 10)
+    all_fish = np.loadtxt(likelihood.out_dir + '/derivs_comp'+str(comp)+'.dat')   # 2D array of shape (# unique fcns, 10)
     all_fish = np.atleast_2d(all_fish)
 
     codelen = np.zeros(len(fcn_list_proc))              # Both of these are also just for this proc
@@ -124,7 +110,7 @@ def main(comp, tmax=5, data=None):
             except (IndexError, TypeError):
                 p=0.
             
-            fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax)
+            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax)
                     
             try:            # It's possible that after putting params to 0 the likelihood is botched, in which case give it nan
                 if k==1:
@@ -168,18 +154,15 @@ def main(comp, tmax=5, data=None):
 
     out_arr = np.transpose(np.vstack([negloglike_all, codelen, index_arr, params[:,0], params[:,1], params[:,2], params[:,3]]))
 
-    np.savetxt(temp_dir + '/codelen_matches_'+str(comp)+'_'+str(rank)+'.dat', out_arr, fmt='%.7e')        # Save the data for this proc in Partial
+    np.savetxt(likelihood.temp_dir + '/codelen_matches_'+str(comp)+'_'+str(rank)+'.dat', out_arr, fmt='%.7e')        # Save the data for this proc in Partial
 
     comm.Barrier()
 
     if rank == 0:
-        string = 'cat `find ' + temp_dir + '/ -name "codelen_matches_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/codelen_matches_comp'+str(comp)+'.dat'
+        string = 'cat `find ' + likelihood.temp_dir + '/ -name "codelen_matches_'+str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + '/codelen_matches_comp'+str(comp)+'.dat'
         os.system(string)
-        string = 'rm ' + temp_dir + '/codelen_matches_'+str(comp)+'_*.dat'
+        string = 'rm ' + likelihood.temp_dir + '/codelen_matches_'+str(comp)+'_*.dat'
         os.system(string)
         
     return
-    
-if __name__ == "__main__":
-    comp = int(sys.argv[1])
-    main(comp)
+

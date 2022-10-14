@@ -10,15 +10,7 @@ import itertools
 import numdifftools as nd
 
 import test_all
-from filenames import *
-
-sys.path.insert(0, like_dir)
-likelihood = __import__(like_file)
-
-name = __name__
-import importlib
-globals().update(importlib.import_module(sym_file).__dict__)
-__name__ = name
+from sympy_symbols import *
 
 warnings.filterwarnings("ignore")
 
@@ -28,8 +20,8 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
     
-def load_loglike(comp, data_start, data_end, split=True):
-    negloglike, param1, param2, param3, param4 = np.genfromtxt(out_dir + "/negloglike_comp"+str(comp)+".dat", unpack=True)
+def load_loglike(comp, likelihood, data_start, data_end, split=True):
+    negloglike, param1, param2, param3, param4 = np.genfromtxt(likelihood.out_dir + "/negloglike_comp"+str(comp)+".dat", unpack=True)
     negloglike = np.atleast_1d(negloglike)
     param1 = np.atleast_1d(param1)
     param2 = np.atleast_1d(param2)
@@ -44,19 +36,19 @@ def load_loglike(comp, data_start, data_end, split=True):
     return negloglike, param1, param2, param3, param4
 
 
-def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, negloglike):
+def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
 
     def f4(x):
-        return likelihood.negloglike(x,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
 
     def f3(x):
-        return likelihood.negloglike(x,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
 
     def f2(x):
-        return likelihood.negloglike(x,eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
 
     def f1(x):
-        return likelihood.negloglike([x],eq_numpy, xvar, yvar, inv_cov, integrated=integrated)
+        return likelihood.negloglike([x],eq_numpy, integrated=integrated)
 
     params = np.zeros(4)
     deriv = np.zeros(10)
@@ -269,7 +261,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, neglogl
     return params, negloglike, deriv, codelen
 
     
-def main(comp, tmax=5, data=None):
+def main(comp, likelihood, tmax=5):
 
     if comp==8:
         sys.setrecursionlimit(2000)
@@ -278,13 +270,8 @@ def main(comp, tmax=5, data=None):
     elif comp==10:
         sys.setrecursionlimit(3000)
 
-    if data is None:
-        xvar, yvar, inv_cov = test_all.load_data()
-    else:
-        xvar, yvar, inv_cov = data
-
-    fcn_list_proc, data_start, data_end = test_all.get_functions(comp)
-    negloglike, param1_proc, param2_proc, param3_proc, param4_proc = load_loglike(comp, data_start, data_end)
+    fcn_list_proc, data_start, data_end = test_all.get_functions(comp, likelihood)
+    negloglike, param1_proc, param2_proc, param3_proc, param4_proc = load_loglike(comp, likelihood, data_start, data_end)
 
     codelen = np.zeros(len(fcn_list_proc))          # This is now only for this proc
     params = np.zeros([len(fcn_list_proc), 4])
@@ -301,11 +288,10 @@ def main(comp, tmax=5, data=None):
         fcn_i = fcn_list_proc[i].replace('\n', '')
         fcn_i = fcn_list_proc[i].replace('\'', '')
         
-        
         theta_ML = np.array([param1_proc[i], param2_proc[i], param3_proc[i], param4_proc[i]])
 
         try:
-           fcn_i, eq, integrated = run_sympify(fcn_i, tmax=tmax)
+            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax)
         except Exception as ex:
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             print("Failed sympification", fcn_i, flush=True)
@@ -315,7 +301,7 @@ def main(comp, tmax=5, data=None):
 
 
         try:
-            params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, xvar, yvar, inv_cov, negloglike[i])
+            params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i])
         except:
             params[i,:] = 0.
             deriv[i,:] = 0.
@@ -325,22 +311,20 @@ def main(comp, tmax=5, data=None):
 
     out_arr_deriv = np.transpose(np.vstack([deriv[:,0], deriv[:,1], deriv[:,2], deriv[:,3], deriv[:,4], deriv[:,5], deriv[:,6], deriv[:,7], deriv[:,8], deriv[:,9]]))
 
-    np.savetxt(temp_dir + '/codelen_deriv_'+str(comp)+'_'+str(rank)+'.dat', out_arr, fmt='%.7e')
-    np.savetxt(temp_dir + '/derivs_'+str(comp)+'_'+str(rank)+'.dat', out_arr_deriv, fmt='%.7e')
+    np.savetxt(likelihood.temp_dir + '/codelen_deriv_'+str(comp)+'_'+str(rank)+'.dat', out_arr, fmt='%.7e')
+    np.savetxt(likelihood.temp_dir + '/derivs_'+str(comp)+'_'+str(rank)+'.dat', out_arr_deriv, fmt='%.7e')
 
     comm.Barrier()
 
     if rank == 0:
-        string = 'cat `find ' + temp_dir + '/ -name "codelen_deriv_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/codelen_comp'+str(comp)+'_deriv.dat'
+        string = 'cat `find ' + likelihood.temp_dir + '/ -name "codelen_deriv_'+str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + '/codelen_comp'+str(comp)+'_deriv.dat'
         os.system(string)
-        string = 'rm ' + temp_dir + '/codelen_deriv_'+str(comp)+'_*.dat'
-        os.system(string)
-
-        string = 'cat `find ' + temp_dir + '/ -name "derivs_'+str(comp)+'_*.dat" | sort -V` > ' + out_dir + '/derivs_comp'+str(comp)+'.dat'
-        os.system(string)
-        string = 'rm ' + temp_dir + '/derivs_'+str(comp)+'_*.dat'
+        string = 'rm ' + likelihood.temp_dir + '/codelen_deriv_'+str(comp)+'_*.dat'
         os.system(string)
 
-if __name__ == "__main__":
-    comp = int(sys.argv[1])
-    main(comp)
+        string = 'cat `find ' + likelihood.temp_dir + '/ -name "derivs_'+str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + '/derivs_comp'+str(comp)+'.dat'
+        os.system(string)
+        string = 'rm ' + likelihood.temp_dir + '/derivs_'+str(comp)+'_*.dat'
+        os.system(string)
+
+    return
