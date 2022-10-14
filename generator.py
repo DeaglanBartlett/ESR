@@ -20,6 +20,10 @@ class Node:
         self.parent = None
         self.left = None
         self.right = None
+        self.op = None
+        self.val = None
+        self.node_name = None
+        self.tree = None
     
     def copy(self):
         new_node = Node(self.type)
@@ -36,6 +40,14 @@ class Node:
         elif (self.type == 2) and (self.left is None) and (self.right is None):
             return False
         return True
+
+    def assign_op(self, op):
+        self.op = op
+        v = op
+        if v.lstrip("-").isdigit():
+            self.val = int(v)
+        elif v.lstrip("-").lstrip("/").isnumeric():
+            self.val = float(v)
 
         
 def check_tree(s):
