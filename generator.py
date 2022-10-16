@@ -122,13 +122,15 @@ def get_allowed_shapes(compl):
         cand = np.array([list(t) for t in itertools.product('012', repeat=compl)], dtype=int)
 
         # Graph cannot start with a type0 node
-        cand = cand[cand[:,0] != 0]
+        if compl > 1:
+            cand = cand[cand[:,0] != 0]
 
         # Graph must end at a type0 node
         cand = cand[cand[:,-1] == 0]
 
         # The penultimate node cannot be of type2
-        cand = cand[cand[:,-2] != 2]
+        if cand.shape[1] > 1:
+            cand = cand[cand[:,-2] != 2]
 
         msk = np.ones(cand.shape[0], dtype=bool)
 
