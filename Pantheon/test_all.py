@@ -5,20 +5,19 @@ import sympy
 import warnings
 import os
 import sys
-import signal
+#import signal
 from mpi4py import MPI
 from scipy.optimize import minimize
 from sympy_symbols import *
+
+sys.path.insert(0, '../')
+import simplifier
 
 warnings.filterwarnings("ignore")
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
-
-def handler(signum, frame):
-    print("A function timed out: ", i, fcn_i, flush=True)
-    raise Exception("end of time")
 
 def chi2_fcn_4args(x, likelihood, eq_numpy, integrated):
     return likelihood.negloglike(x,eq_numpy, integrated=integrated)
@@ -105,10 +104,18 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=True):
     Niter_1, Niter_2, Niter_3, Niter_4 = 10, 10, 10, 10
     Nconv_1, Nconv_2, Nconv_3, Nconv_4 = 3, 3, 3, 3
 
+    """
+    def handler(signum, frame):
+        print("A function timed out: ", fcn_i, flush=True)
+        raise Exception("end of time")
+
     signal.signal(signal.SIGALRM, handler)
     #signal.alarm(2700)          # 45 mins
-    signal.alarm(600)           # 10 mins
-    
+    #signal.alarm(600)           # 10 mins
+    #signal.alarm(10)
+    signal.alarm(1)
+    """
+
     params = np.zeros(4)
     
     try:
@@ -116,9 +123,10 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=True):
             
         if ("a0" in fcn_i)==False:
             Nparams = 0
-            eq_numpy = sympy.lambdify(x, eq, modules=["numpy","sympy"])
+            #eq_numpy = sympy.lambdify(x, eq, modules=["numpy","sympy"])
+            eq_numpy = sympy.lambdify(x, eq, modules=["numpy"])
             chi2_i = likelihood.negloglike([], eq_numpy, integrated=integrated)
-            signal.alarm(0)
+            #signal.alarm(0)
             return chi2_i, params
 
         flag_three = False
@@ -127,38 +135,42 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=True):
             Nconv = Nconv_4
             flag_three = True           # In this case we don't have any mult_param
 
-            eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
+            #eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
+            eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
             if np.sum(np.isnan(eq_numpy(xvar,1,1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,-1,1)))>0  and np.sum(np.isnan(eq_numpy(xvar,1,-1,-1,1)))>0  and np.sum(np.isnan(eq_numpy(xvar,-1,-1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,-1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,-1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,1,-1,-1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,-1,-1,-1,-1)))>0:
                 chi2_i = np.inf            # Don't bother trying to optimise bc this fcn is clearly really bad
-                signal.alarm(0)
+                #signal.alarm(0)
                 return chi2_i, params
                 
         elif ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
             Niter = Niter_3
             Nconv = Nconv_3
             flag_three = True           # In this case we don't have any mult_param
-            eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
+            #eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
+            eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
             if np.sum(np.isnan(eq_numpy(xvar,1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,1,-1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,-1,-1,-1)))>0:
                 chi2_i = np.inf            # Don't bother trying to optimise bc this fcn is clearly really bad
-                signal.alarm(0)
+                #signal.alarm(0)
                 return chi2_i, params
                 
         elif ("a1" in fcn_i) and ("a0" in fcn_i):
             Niter = Niter_2
             Nconv = Nconv_2
-            eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
+            #eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
+            eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
             if np.sum(np.isnan(eq_numpy(xvar,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1)))>0:
                 chi2_i = np.inf
-                signal.alarm(0)
+                #signal.alarm(0)
                 return chi2_i, params
 
         else:
             Niter = Niter_1
             Nconv = Nconv_1
-            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
+            #eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
+            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
             if np.sum(np.isnan(eq_numpy(xvar,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1)))>0:
                 chi2_i = np.inf
-                signal.alarm(0)
+                #signal.alarm(0)
                 return chi2_i, params
 
         chi2_min = np.inf            # Reset chi2 for this fcn to make sure that every attempt at minimisation improves on this
@@ -169,8 +181,8 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=True):
         exception_count = 0
         
         for j in range(Niter):
-            if rank == 0:
-                print('\t', j, Niter, flush=True)
+            #if rank == 0:
+            #    print('\t', j, Niter, flush=True)
             if ("a3" in fcn_i) and ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
                 inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]
                 res = minimize(chi2_fcn_4args, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 7000})    # Default=3000
@@ -220,7 +232,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=True):
                 inf_count += 1
 
             if inf_count==50 and np.isinf(chi2_min):        # If you get inf all of the first 50 times, consider this a failure
-                signal.alarm(0)
+                #signal.alarm(0)
                 break
 
             if res['fun']-chi2_min < -2.:     # negloglike has got better by 2, so reset the count to 0
@@ -236,7 +248,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=True):
 
             # We've converged the required number of times, so we call this a success
             if count_lowest==Nconv:
-                signal.alarm(0)
+                #signal.alarm(0)
                 break
                 
             
@@ -247,12 +259,17 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=True):
                 params = np.pad(10.**np.array(best.x), (0, 4-len(best.x))) * mult_arr_best      # Params put in linear space and sign added back in
                         
         chi2_i = chi2_min       # This is after all the iterations, so it's the best we have; reduced chi2
+
+    except NameError:
+        # Occurs if function produced not implemented in numpy
+        #signal.alarm(0)
+        raise NameError
     
     except Exception:
-        signal.alarm(0)
+        #signal.alarm(0)
         return np.nan, params
 
-    signal.alarm(0)
+    #signal.alarm(0)
 
     return chi2_i, params
     
@@ -264,9 +281,18 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3):
     chi2 = np.zeros(len(fcn_list_proc))     # This is now only for this proc
     params = np.zeros([len(fcn_list_proc), 4])
     for i in range(len(fcn_list_proc)):           # Consider all possible complexities
-        if rank == 0:
-            print(i, len(fcn_list_proc), flush=True)
-        chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], likelihood, tmax, pmin, pmax)
+        #if rank == 0:
+        try:
+            with simplifier.time_limit(10):
+                print(rank, i, len(fcn_list_proc), flush=True)
+                try:
+                    chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], likelihood, tmax, pmin, pmax, try_integration=True)
+                except:
+                    chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], likelihood, tmax, pmin, pmax, try_integration=False)
+        except:
+            print("TIMEOUT:", rank, fcn_list_proc[i])
+            chi2[i] = np.nan
+            params[i,:] = 0.
 
     out_arr = np.transpose(np.vstack([chi2, params[:,0], params[:,1], params[:,2], params[:,3]]))
 

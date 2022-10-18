@@ -76,28 +76,28 @@ def main(comp, likelihood, tmax=5):
         try:
             fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax)
             if k == 0:
-                eq_numpy = sympy.lambdify([x], eq, modules=["numpy","sympy"])
+                eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
             elif k==1:
-                eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
+                eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
             elif k==2:
-                eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
+                eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
             elif k==3:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
+                eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
             elif k==4:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
+                eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
             ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
         except:
             fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False)
             if k == 0:
-                eq_numpy = sympy.lambdify([x], eq, modules=["numpy","sympy"])
+                eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
             elif k==1:
-                eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
+                eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
             elif k==2:
-                eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
+                eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
             elif k==3:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
+                eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
             elif k==4:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
+                eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
             ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
 
         if np.isscalar(ypred):

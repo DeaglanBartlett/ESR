@@ -152,7 +152,8 @@ def main(comp, likelihood):
             
         for i in range(len(DL_sort)):
             if negloglike_sort[i] == negloglike_previous:
-                print("DUPLICATE:", i, fcn_min_sort[i], "  ", DL_sort[i], Prel[i], "  ", negloglike_sort[i], codelen_sort[i], aifeyn_sort[i], "  ", param1_sort[i], param2_sort[i], param3_sort[i], param4_sort[i])         # All of these should have Prel=0
+                #print("DUPLICATE:", i, fcn_min_sort[i], "  ", DL_sort[i], Prel[i], "  ", negloglike_sort[i], codelen_sort[i], aifeyn_sort[i], "  ", param1_sort[i], param2_sort[i], param3_sort[i], param4_sort[i])         # All of these should have Prel=0
+                print("DUPLICATE:", i, fcn_min_sort[i], fcn_min_sort[i-1])
                 continue
             
             # Only happens for non-duplicates; all Prels should be non-zero

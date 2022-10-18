@@ -110,21 +110,37 @@ def main(comp, likelihood, tmax=5):
             except (IndexError, TypeError):
                 p=0.
             
-            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax)
                     
             try:            # It's possible that after putting params to 0 the likelihood is botched, in which case give it nan
+                fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax)
                 if k==1:
-                    eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
+                    eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                     negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                 elif k==2:
-                    eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
+                    eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
                     negloglike_all[i] = f2(p)       # All params still here, just some of them might be 0
                 elif k==3:
-                    eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
+                    eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
                     negloglike_all[i] = f3(p)
                 elif k==4:
-                    eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
+                    eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
                     negloglike_all[i] = f4(p)
+
+            except NameError:
+                fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False)
+                if k==1:
+                    eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+                    negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
+                elif k==2:
+                    eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
+                    negloglike_all[i] = f2(p)       # All params still here, just some of them might be 0
+                elif k==3:
+                    eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
+                    negloglike_all[i] = f3(p)
+                elif k==4:
+                    eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
+                    negloglike_all[i] = f4(p)
+
             except:
                 negloglike_all[i] = np.nan
 

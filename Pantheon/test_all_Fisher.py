@@ -59,7 +59,14 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
     if ("a3" in fcn_i) and ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
         k=4
     
-        eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
+        try:
+            #eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
+            eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
+        except Exception:
+            print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
+            Fisher_diag = np.nan
+            deriv[:] = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
+            return params, negloglike, deriv, codelen
     
         Hfun = nd.Hessian(f4)
         Hmat = Hfun(theta_ML)
@@ -96,7 +103,14 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
     
         theta_ML = theta_ML[:-1]            # Only keep as many params as we have for this fcn
     
-        eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
+        try:
+            #eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
+            eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
+        except Exception:
+            print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
+            Fisher_diag = np.nan
+            deriv[:] = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
+            return params, negloglike, deriv, codelen
     
         Hfun = nd.Hessian(f3)
         Hmat = Hfun(theta_ML)
@@ -133,7 +147,14 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
     
         theta_ML = theta_ML[:-2]
     
-        eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
+        try:
+            #eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
+            eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
+        except Exception:
+            print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
+            Fisher_diag = np.nan
+            deriv[:] = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
+            return params, negloglike, deriv, codelen
         
         Hfun = nd.Hessian(f2)                       # Calculate the fcn in general
         Hmat = Hfun(theta_ML)       # Evaluate it at the ML point
@@ -171,9 +192,10 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
         theta_ML = theta_ML[:-3]            # Only keep as many params as we have for this fcn
         
         try:
-            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
+            #eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
+            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
         except Exception:
-            print("BAD:", fcn_i)
+            print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
             Fisher_diag = np.nan
             deriv[:] = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
             return params, negloglike, deriv, codelen
@@ -284,24 +306,21 @@ def main(comp, likelihood, tmax=5):
         if np.isnan(negloglike[i]) or np.isinf(negloglike[i]):
             codelen[i]=np.nan
             continue
-            
-        fcn_i = fcn_list_proc[i].replace('\n', '')
-        fcn_i = fcn_list_proc[i].replace('\'', '')
-        
+
         theta_ML = np.array([param1_proc[i], param2_proc[i], param3_proc[i], param4_proc[i]])
-
+            
         try:
+            fcn_i = fcn_list_proc[i].replace('\n', '')
+            fcn_i = fcn_list_proc[i].replace('\'', '')
             fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax)
-        except Exception as ex:
-            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-            print("Failed sympification", fcn_i, flush=True)
-            print(template.format(type(ex).__name__, ex.args), flush=True)
-            chi2[i] = np.inf
-            continue
-
-
-        try:
             params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i])
+        except NameError:
+            # Occurs if function produced not implemented in numpy
+            fcn_i = fcn_list_proc[i].replace('\n', '')
+            fcn_i = fcn_list_proc[i].replace('\'', '')
+            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False) 
+            params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i])
+
         except:
             params[i,:] = 0.
             deriv[i,:] = 0.
