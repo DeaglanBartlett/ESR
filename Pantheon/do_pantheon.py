@@ -9,6 +9,8 @@ import plot
 
 from likelihood import CCLikelihood, PanthLikelihood
 
+try_integration=False
+
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
@@ -30,19 +32,19 @@ tmax = 5
 print_text('COMPLEXITY = %i'%comp)
 
 print_text('Loading data')
-#likelihood = CCLikelihood() 
-likelihood = PanthLikelihood()
+likelihood = CCLikelihood() 
+#likelihood = PanthLikelihood()
 
 print_text('test_all')
-test_all.main(comp, likelihood, tmax=5)
+test_all.main(comp, likelihood, tmax=5, try_integration=try_integration)
 comm.Barrier()
 
 print_text('test_all_Fisher')
-test_all_Fisher.main(comp, likelihood, tmax=tmax)
+test_all_Fisher.main(comp, likelihood, tmax=tmax, try_integration=try_integration)
 comm.Barrier()
 
 print_text('match')
-match.main(comp, likelihood, tmax=tmax)
+match.main(comp, likelihood, tmax=tmax, try_integration=try_integration)
 comm.Barrier()
 
 print_text('combine_DL')
@@ -51,4 +53,4 @@ comm.Barrier()
 
 print_text('plot')
 if rank == 0:
-    plot.main(comp, likelihood, tmax=tmax)
+    plot.main(comp, likelihood, tmax=tmax, try_integration=try_integration)

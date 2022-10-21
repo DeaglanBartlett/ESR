@@ -20,17 +20,38 @@ class CCLikelihood:
         self.data_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/data/'
         self.data_file = self.data_dir + '/CC_Hubble.dat'
         self.fn_dir = esr_dir + "core_maths/"
-        self.temp_dir = esr_dir + "/Pantheon/partial_cc"
-        self.out_dir = esr_dir + "/Pantheon/output_cc"
-        self.fig_dir = esr_dir + "/Pantheon/figs_cc"
         self.like_dir = esr_dir + "/Pantheon/"
         self.like_file = "likelihood_cc"
         self.sym_file = "symbols_cc"
 
+        """
+        self.temp_dir = esr_dir + "/Pantheon/partial_cc"
+        self.out_dir = esr_dir + "/Pantheon/output_cc"
+        self.fig_dir = esr_dir + "/Pantheon/figs_cc"
+        self.Hfid = 67.4
+        """
+    
+        #"""
+        self.temp_dir = esr_dir + "/Pantheon/partial_cc_dimful"
+        self.out_dir = esr_dir + "/Pantheon/output_cc_dimful"
+        self.fig_dir = esr_dir + "/Pantheon/figs_cc_dimful"
+        self.Hfid = 1.
+        #"""
+
+        """
+        self.temp_dir = esr_dir + "/Pantheon/partial_cc_h"
+        self.out_dir = esr_dir + "/Pantheon/output_cc_h"
+        self.fig_dir = esr_dir + "/Pantheon/figs_cc_h"
+        self.Hfid = 100.
+        """
+        
+        self.ylabel = r'$H \left( z \right) \ / \ H_{\rm fid}$'  # for plotting
+
         self.xvar, self.yvar, self.yerr = np.genfromtxt(self.data_file, unpack=True)
-        #self.xvar -= 1
+        self.xvar += 1
+        self.yvar /= self.Hfid
+        self.yerr /= self.Hfid
         self.inv_cov = 1 / self.yerr ** 2
-        self.ylabel = r'$H \left( z \right) \ / \ H_0$'  # for plotting
 
 
     def get_pred(self, zp1, a, eq_numpy, **kwargs):
@@ -76,10 +97,28 @@ class PanthLikelihood:
         self.data_file = self.data_dir + 'Pantheon+SH0ES.dat'
         self.cov_file = self.data_dir + 'Pantheon+SH0ES_STAT+SYS.cov'
         self.fn_dir = esr_dir + "core_maths/"
+        self.like_dir = esr_dir + "/Pantheon/"
+
+        """
         self.temp_dir = esr_dir + "/Pantheon/partial_panth"
         self.out_dir = esr_dir + "/Pantheon/output_panth"
         self.fig_dir = esr_dir + "/Pantheon/figs_panth"
-        self.like_dir = esr_dir + "/Pantheon/"
+        self.Hfid = 67.4 * apu.km / apu.s / apu.Mpc
+        """
+
+        """
+        self.temp_dir = esr_dir + "/Pantheon/partial_panth_h"
+        self.out_dir = esr_dir + "/Pantheon/output_panth_h"
+        self.fig_dir = esr_dir + "/Pantheon/figs_panth_h"
+        self.Hfid = 100. * apu.km / apu.s / apu.Mpc
+        """
+
+        #"""
+        self.temp_dir = esr_dir + "/Pantheon/partial_panth_dimful"
+        self.out_dir = esr_dir + "/Pantheon/output_panth_dimful"
+        self.fig_dir = esr_dir + "/Pantheon/figs_panth_dimful"
+        self.Hfid = 1.0 * apu.km / apu.s / apu.Mpc
+        #"""
 
         data = pd.read_csv(self.data_file, delim_whitespace=True)
         origlen = len(data)
@@ -114,7 +153,6 @@ class PanthLikelihood:
         self.inv_cov = np.linalg.inv(C)
         self.yerr = mu_err.to_numpy()
 
-        self.Hfid = 67.4 * apu.km / apu.s / apu.Mpc
         self.mu_const =  astropy.constants.c / self.Hfid / (10 * apu.pc)
         self.mu_const = 5 * np.log10(self.mu_const.to(''))
 

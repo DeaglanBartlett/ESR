@@ -9,6 +9,7 @@ import numdifftools as nd
 
 import test_all
 import test_all_Fisher
+from sympy_symbols import *
 
 sys.path.insert(0, '../')
 import simplifier
@@ -19,7 +20,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def main(comp, likelihood, tmax=5):
+def main(comp, likelihood, tmax=5, try_integration=False):
 
     def f4(x):
         return likelihood.negloglike(x,eq_numpy, integrated=integrated)
@@ -100,8 +101,14 @@ def main(comp, likelihood, tmax=5):
             codelen[i] = np.inf
             continue
         
-        Delta = np.sqrt(12./fish)
-        Nsteps = abs(np.array(p))/Delta
+        Delta = np.zeros(fish.shape)
+        m = (fish != 0)
+        Delta[m] = np.atleast_1d(np.sqrt(12./fish[m]))
+        Delta[~m] = np.inf
+        Nsteps = np.atleast_1d(np.abs(np.array(p)))
+        m = (Delta != 0)
+        Nsteps[m] /= Delta[m]
+        Nsteps[~m] = np.nan
         
         if np.sum(Nsteps<1)>0:         # should reevaluate -log(L) with the param(s) set to 0, but doesn't matter unless the fcn is a very good one
             
@@ -110,9 +117,8 @@ def main(comp, likelihood, tmax=5):
             except (IndexError, TypeError):
                 p=0.
             
-                    
             try:            # It's possible that after putting params to 0 the likelihood is botched, in which case give it nan
-                fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax)
+                fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
                 if k==1:
                     eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                     negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
@@ -127,19 +133,22 @@ def main(comp, likelihood, tmax=5):
                     negloglike_all[i] = f4(p)
 
             except NameError:
-                fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False)
-                if k==1:
-                    eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
-                    negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
-                elif k==2:
-                    eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
-                    negloglike_all[i] = f2(p)       # All params still here, just some of them might be 0
-                elif k==3:
-                    eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
-                    negloglike_all[i] = f3(p)
-                elif k==4:
-                    eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
-                    negloglike_all[i] = f4(p)
+                if try_integration:
+                    fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False)
+                    if k==1:
+                        eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+                        negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
+                    elif k==2:
+                        eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
+                        negloglike_all[i] = f2(p)       # All params still here, just some of them might be 0
+                    elif k==3:
+                        eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
+                        negloglike_all[i] = f3(p)
+                    elif k==4:
+                        eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
+                        negloglike_all[i] = f4(p)
+                else:
+                    negloglike_all[i] = np.nan
 
             except:
                 negloglike_all[i] = np.nan
@@ -166,7 +175,10 @@ def main(comp, likelihood, tmax=5):
         
         assert len(params[i,:])==4
         
-        codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish) + np.log(abs(np.array(p))) )
+        try:
+            codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish) + np.log(abs(np.array(p))) )
+        except:
+            codelen[i] = np.nan
 
     out_arr = np.transpose(np.vstack([negloglike_all, codelen, index_arr, params[:,0], params[:,1], params[:,2], params[:,3]]))
 

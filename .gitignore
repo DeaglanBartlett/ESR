@@ -25,15 +25,15 @@ core_maths/
 ext_maths/
 osc_maths/
 
-Pantheon/figs_panth/
-Pantheon/output_panth/
-Pantheon/partial_panth/
-Pantheon/figs_cc/
-Pantheon/output_cc/
-Pantheon/partial_cc/
-Pantheon/old_panth/
-Pantheon/output_cc_bad/
-Pantheon/output_panth_bad/
+Pantheon/figs_panth*
+Pantheon/output_panth*
+Pantheon/partial_panth*
+Pantheon/figs_cc*
+Pantheon/output_cc*
+Pantheon/partial_cc*
+Pantheon/old_panth*
+Pantheon/output_cc_bad*
+Pantheon/output_panth_bad*
 
 cosmic_chronometers/
 

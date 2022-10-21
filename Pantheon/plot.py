@@ -21,7 +21,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def main(comp, likelihood, tmax=5):
+def main(comp, likelihood, tmax=5, try_integration=False):
 
     if rank != 0:
         return
@@ -74,7 +74,7 @@ def main(comp, likelihood, tmax=5):
         print('%i of %i:'%(i+1,len(fcn_list)), fcn_i)
         
         try:
-            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax)
+            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
             if k == 0:
                 eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
             elif k==1:
@@ -87,18 +87,21 @@ def main(comp, likelihood, tmax=5):
                 eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
             ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
         except:
-            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False)
-            if k == 0:
-                eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
-            elif k==1:
-                eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
-            elif k==2:
-                eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
-            elif k==3:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
-            elif k==4:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
-            ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
+            if try_integration:
+                fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False)
+                if k == 0:
+                    eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
+                elif k==1:
+                    eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+                elif k==2:
+                    eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
+                elif k==3:
+                    eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
+                elif k==4:
+                    eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
+                ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
+            else:
+                continue
 
         if np.isscalar(ypred):
             ax1.plot(likelihood.xvar-1, [ypred]*len(likelihood.xvar), color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)

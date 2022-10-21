@@ -60,7 +60,6 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
         k=4
     
         try:
-            #eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy","sympy"])
             eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
         except Exception:
             print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
@@ -104,7 +103,6 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
         theta_ML = theta_ML[:-1]            # Only keep as many params as we have for this fcn
     
         try:
-            #eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy","sympy"])
             eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
         except Exception:
             print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
@@ -148,7 +146,6 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
         theta_ML = theta_ML[:-2]
     
         try:
-            #eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy","sympy"])
             eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
         except Exception:
             print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
@@ -192,7 +189,6 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
         theta_ML = theta_ML[:-3]            # Only keep as many params as we have for this fcn
         
         try:
-            #eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy","sympy"])
             eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
         except Exception:
             print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
@@ -283,7 +279,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
     return params, negloglike, deriv, codelen
 
     
-def main(comp, likelihood, tmax=5):
+def main(comp, likelihood, tmax=5, try_integration=False):
 
     if comp==8:
         sys.setrecursionlimit(2000)
@@ -312,14 +308,19 @@ def main(comp, likelihood, tmax=5):
         try:
             fcn_i = fcn_list_proc[i].replace('\n', '')
             fcn_i = fcn_list_proc[i].replace('\'', '')
-            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax)
+            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
             params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i])
         except NameError:
             # Occurs if function produced not implemented in numpy
-            fcn_i = fcn_list_proc[i].replace('\n', '')
-            fcn_i = fcn_list_proc[i].replace('\'', '')
-            fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False) 
-            params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i])
+            if try_integration:
+                fcn_i = fcn_list_proc[i].replace('\n', '')
+                fcn_i = fcn_list_proc[i].replace('\'', '')
+                fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False) 
+                params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i])
+            else:
+                params[i,:] = 0.
+                deriv[i,:] = 0.
+                codelen[i] = 0
 
         except:
             params[i,:] = 0.
