@@ -185,11 +185,36 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
 
     # We have to gather these, although won't do this again
     if parallel:
+
+        """
+        old_fun = str_fun.copy()
         str_fun = comm.gather(str_fun, root=0)
         if rank == 0:
             str_fun = list(itertools.chain(*str_fun))
         str_fun = comm.bcast(str_fun, root=0)
+        #final_fun = str_fun.copy()
+        """
 
+        #str_fun = old_fun
+        
+        #"""
+        # First find which ranks contain which indices
+        start_idx = len(str_fun)
+        start_idx = comm.gather(start_idx, root=0)
+        if rank == 0:
+            start_idx = np.array([0] + start_idx, dtype=int)
+            start_idx = np.squeeze(np.cumsum(start_idx))
+        start_idx = comm.bcast(start_idx, root=0)
+
+        # Now send each rank to everyone else
+        all_fun = [None] * start_idx[-1]
+        for r in range(size):
+            all_fun[start_idx[r]:start_idx[r+1]] = comm.bcast(str_fun, root=r) 
+        str_fun = all_fun
+
+        #"""
+
+        """
         if save_sympy:
             sym_keys = comm.gather(list(sym_fun.keys()), root=0)
             sym_vals = comm.gather(list(sym_fun.values()), root=0)
@@ -205,6 +230,22 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
                 del sym_vals, sym_keys
                 gc.collect()
             sym_fun = comm.bcast(sym_fun, root=0)
+        """
+
+        #"""
+        if save_sympy:
+            all_sym = OrderedDict()
+            for r in range(size):
+                sym_keys = comm.bcast(list(sym_fun.keys()), root=r)
+                sym_vals = comm.bcast(list(sym_fun.values()), root=r)
+                for i in range(len(sym_keys)):
+                    key = sym_keys[i]
+                    if not key in all_sym:
+                        all_sym[key] = sym_vals[i]
+        
+            sym_fun = all_sym
+        #"""
+    #"""
 
     return str_fun, sym_fun
     
