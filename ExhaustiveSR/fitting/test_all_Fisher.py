@@ -95,7 +95,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
                     deriv[:] = np.array([Hmat[0,0], Hmat[0,1], Hmat[0,2], Hmat[0,3], Hmat[1,1], Hmat[1,2], Hmat[1,3], Hmat[2,2], Hmat[2,3], Hmat[3,3]])
                     break
 
-        negloglike = f4(params[:k])
+        #negloglike = f4(params[:k])
     
     elif ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
         k=3
@@ -138,7 +138,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
                     deriv[:] = np.array([Hmat[0,0], Hmat[0,1], Hmat[0,2], np.nan, Hmat[1,1], Hmat[1,2], np.nan, Hmat[2,2], np.nan, np.nan])
                     break
 
-        negloglike = f3(params[:k])
+        #negloglike = f3(params[:k])
     
     elif ("a1" in fcn_i) and ("a0" in fcn_i):
         k=2
@@ -181,7 +181,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
                     deriv[:] = np.array([Hmat[0,0], Hmat[0,1], np.nan, np.nan, Hmat[1,1], np.nan, np.nan, np.nan, np.nan, np.nan])
                     break
 
-        negloglike = f2(params[:k])
+        #negloglike = f2(params[:k])
 
     elif ("a0" in fcn_i):
         k=1
@@ -224,7 +224,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
                     deriv[:] = np.array([Hmat[0,0], np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
                     break
 
-        negloglike = f1(params[:k])
+        #negloglike = f1(params[:k])
     
     else:                   # No params
         codelen = 0
@@ -272,7 +272,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
     codelen = -k/2.*math.log(3.) + np.sum( 0.5*np.log(Fisher_diag) + np.log(abs(np.array(theta_ML))) )
 
     params[:] = np.pad(theta_ML, (0, 4-len(theta_ML)))            # New params after the setting to 0, padded to length 4 as always
-    
+
     if (np.isinf(codelen) or codelen>200.) and negloglike<-1500.:
         print("ATTENTION, a relative good function has a very big codelength:", fcn_i, k, Fisher_diag, theta_ML, Delta, Nsteps, negloglike, codelen, flush=True)
 

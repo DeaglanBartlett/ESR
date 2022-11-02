@@ -1156,6 +1156,25 @@ def shape_to_functions(s, basis_functions):
     return all_fun, all_tree, extra_fun, extra_tree, extra_orig
 
 
+def labels_to_shape(labels, basis_functions):
+
+    basis_dict = {}
+    for i in range(len(basis_functions)):
+        for f in basis_functions[i]:
+            basis_dict[f] = i
+
+    s = [None] * len(labels)
+    for i, t in enumerate(labels):
+        try:
+            s[i] = basis_dict[t]
+        except:
+            if (t.startswith('a') and t[1:].isdigit()) or (t.isdigit()):
+                s[i] = 0
+            else:
+                raise ValueError
+    return s
+
+
 def aifeyn_complexity(tree, param_list):
     t = [tt for tt in tree if (tt not in param_list) and (not tt.lstrip("-").isdigit())]  # Operators
     n = np.array([int(tt) for tt in tree if tt.lstrip("-").isdigit()])  # Integers
