@@ -11,7 +11,7 @@ import test_all
 import test_all_Fisher
 from sympy_symbols import *
 
-sys.path.insert(0, '../')
+sys.path.insert(0, '../generation/')
 import simplifier
 
 warnings.filterwarnings("ignore")

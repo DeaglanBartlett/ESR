@@ -45,6 +45,8 @@ elif dirname == 'osc_maths/':
     basis_functions = [["x", "a"],  # type0
                 ["inv", "sin"],  # type1
                 ["+", "*", "-", "/", "pow"]]  # type2
+
+dirname = '../function_library/' + dirname
     
 if (rank == 0) and (not os.path.isdir(dirname)):
     print('Making output directory:', dirname)

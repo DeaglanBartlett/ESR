@@ -12,7 +12,7 @@ import os
 
 from sympy_symbols import *
 
-sys.path.insert(0, '../')
+sys.path.insert(0, '../generation/')
 import simplifier
 
 warnings.filterwarnings("ignore")

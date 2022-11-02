@@ -1,12 +1,13 @@
 Old/
 backup/
 cmplx_simp/
-data/DataRelease/
 keep_duplicates/
+final_eqs/
 test_dir/
 outfiles/
-figs/
-final_eqs/
+
+ExhaustiveSR/data/DataRelease/
+ExhaustiveSR/plotting/figs/
 
 test_inv_subs.py
 test_new_trees.py
@@ -16,25 +17,17 @@ memory_test.py
 
 *.sh
 *.out
+*.swp
+*.DS_Store
 
 *__pycache__
 .bashrc
 .ipynb_checkpoints/
 
-core_maths/
-ext_maths/
-osc_maths/
+ExhaustiveSR/function_library/core_maths/
+ExhaustiveSR/function_library/ext_maths/
+ExhaustiveSR/function_library/osc_maths/
 
-Pantheon/figs_panth*
-Pantheon/output_panth*
-Pantheon/partial_panth*
-Pantheon/figs_cc*
-Pantheon/output_cc*
-Pantheon/partial_cc*
-Pantheon/old_panth*
-Pantheon/output_cc_bad*
-Pantheon/output_panth_bad*
-
-cosmic_chronometers/
-
-test_script.py
+ExhaustiveSR/fitting/output
+ExhaustiveSR/fitting/old_panth
+ExhaustiveSR/fitting/test_script.py

@@ -9,39 +9,39 @@ import sys
 
 from sympy_symbols import *
 
-sys.path.insert(0, '../')
+sys.path.insert(0, '../generation/')
 from simplifier import time_limit
 
 class CCLikelihood:
 
     def __init__(self):
 
-        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/'
-        self.data_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/data/'
+        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/'
+        self.data_dir = esr_dir + '/data/'
         self.data_file = self.data_dir + '/CC_Hubble.dat'
-        self.fn_dir = esr_dir + "core_maths/"
-        self.like_dir = esr_dir + "/Pantheon/"
+        self.fn_dir = esr_dir + "function_library/core_maths/"
+        self.like_dir = esr_dir + "/fitting/"
         self.like_file = "likelihood_cc"
         self.sym_file = "symbols_cc"
 
         """
-        self.temp_dir = esr_dir + "/Pantheon/partial_cc"
-        self.out_dir = esr_dir + "/Pantheon/output_cc"
-        self.fig_dir = esr_dir + "/Pantheon/figs_cc"
+        self.temp_dir = self.like_dir + "/output/partial_cc"
+        self.out_dir = self.like_dir + "/output/output_cc"
+        self.fig_dir = self.like_dir + "/output/figs_cc"
         self.Hfid = 67.4
         """
     
         #"""
-        self.temp_dir = esr_dir + "/Pantheon/partial_cc_dimful"
-        self.out_dir = esr_dir + "/Pantheon/output_cc_dimful"
-        self.fig_dir = esr_dir + "/Pantheon/figs_cc_dimful"
+        self.temp_dir = self.like_dir + "/output/partial_cc_dimful"
+        self.out_dir = self.like_dir + "/output/output_cc_dimful"
+        self.fig_dir = self.like_dir + "/output/figs_cc_dimful"
         self.Hfid = 1.
         #"""
 
         """
-        self.temp_dir = esr_dir + "/Pantheon/partial_cc_h"
-        self.out_dir = esr_dir + "/Pantheon/output_cc_h"
-        self.fig_dir = esr_dir + "/Pantheon/figs_cc_h"
+        self.temp_dir = self.like_dir + "/output/partial_cc_h"
+        self.out_dir = self.like_dir + "/output/output_cc_h"
+        self.fig_dir = self.like_dir + "/output/figs_cc_h"
         self.Hfid = 100.
         """
         
@@ -92,31 +92,32 @@ class PanthLikelihood:
 
     def __init__(self):
 
-        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/'
-        self.data_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/data/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/'
+        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/'
+        self.data_dir = esr_dir + '/data/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/'
+
         self.data_file = self.data_dir + 'Pantheon+SH0ES.dat'
         self.cov_file = self.data_dir + 'Pantheon+SH0ES_STAT+SYS.cov'
-        self.fn_dir = esr_dir + "core_maths/"
-        self.like_dir = esr_dir + "/Pantheon/"
+        self.fn_dir = esr_dir + "function_library/core_maths/"
+        self.like_dir = esr_dir + "/fitting/"
 
         """
-        self.temp_dir = esr_dir + "/Pantheon/partial_panth"
-        self.out_dir = esr_dir + "/Pantheon/output_panth"
-        self.fig_dir = esr_dir + "/Pantheon/figs_panth"
+        self.temp_dir = self.like_dir + "/output/partial_panth"
+        self.out_dir = self.like_dir + "/output/output_panth"
+        self.fig_dir = self.like_dir + "/output/figs_panth"
         self.Hfid = 67.4 * apu.km / apu.s / apu.Mpc
         """
 
         """
-        self.temp_dir = esr_dir + "/Pantheon/partial_panth_h"
-        self.out_dir = esr_dir + "/Pantheon/output_panth_h"
-        self.fig_dir = esr_dir + "/Pantheon/figs_panth_h"
+        self.temp_dir = self.like_dir + "/output/partial_panth_h"
+        self.out_dir = self.like_dir + "/output/output_panth_h"
+        self.fig_dir = self.like_dir + "/output/figs_panth_h"
         self.Hfid = 100. * apu.km / apu.s / apu.Mpc
         """
 
         #"""
-        self.temp_dir = esr_dir + "/Pantheon/partial_panth_dimful"
-        self.out_dir = esr_dir + "/Pantheon/output_panth_dimful"
-        self.fig_dir = esr_dir + "/Pantheon/figs_panth_dimful"
+        self.temp_dir = self.like_dir + "/output/partial_panth_dimful"
+        self.out_dir = self.like_dir + "/output/output_panth_dimful"
+        self.fig_dir = self.like_dir + "/output/figs_panth_dimful"
         self.Hfid = 1.0 * apu.km / apu.s / apu.Mpc
         #"""
 
