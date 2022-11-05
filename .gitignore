@@ -27,6 +27,7 @@ memory_test.py
 ExhaustiveSR/function_library/core_maths/
 ExhaustiveSR/function_library/ext_maths/
 ExhaustiveSR/function_library/osc_maths/
+ExhaustiveSR/function_library/tests/
 
 ExhaustiveSR/fitting/output
 ExhaustiveSR/fitting/old_panth

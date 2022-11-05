@@ -145,16 +145,24 @@ def main(comp, likelihood):
         Prel = np.exp(-Prel_DL)             # Don't want to use every fcn here bc they could be inf or nan, but the best 1000 should be fine
         Prel /= np.sum(Prel)                # Relative probability of fcn, normalised over the top 1000 functions just of this complexity
 
-        negloglike_previous = np.nan
-        
         ptab = PrettyTable()
         ptab.field_names = ["Rank", "Function", "L(D)", "Prel", "-logL", "Codelen", "AIFeyn", "a0", "a1", "a2", "a3"]
-            
+
+        negloglike_previous = np.nan
+
+        # Remove duplicates since these should have same logL
+        #_, uniq_idx = np.unique(np.array(negloglike_sort), return_index=True)
+        #uniq_idx = np.sort(uniq_idx)
+
         for i in range(len(DL_sort)):
+        #for j in range(len(uniq_idx)):
+
+            """
+            i = uniq_idx[j]
             if negloglike_sort[i] == negloglike_previous:
-                #print("DUPLICATE:", i, fcn_min_sort[i], "  ", DL_sort[i], Prel[i], "  ", negloglike_sort[i], codelen_sort[i], aifeyn_sort[i], "  ", param1_sort[i], param2_sort[i], param3_sort[i], param4_sort[i])         # All of these should have Prel=0
                 print("DUPLICATE:", i, fcn_min_sort[i], fcn_min_sort[i-1])
                 continue
+            """
             
             # Only happens for non-duplicates; all Prels should be non-zero
             if i < Nfuncs:
@@ -166,7 +174,6 @@ def main(comp, likelihood):
                 writer.writerow([i, fcn_min_sort[i], DL_sort[i], Prel[i], negloglike_sort[i], codelen_sort[i], aifeyn_sort[i], param1_sort[i], param2_sort[i], param3_sort[i], param4_sort[i]])
                 
             negloglike_previous = negloglike_sort[i]
-            
         print(ptab)
         
     return

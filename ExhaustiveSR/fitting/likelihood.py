@@ -236,3 +236,64 @@ class PanthLikelihood:
 
         return fcn_i, eq, integrated
 
+
+
+
+class MockLikelihood:
+
+    def __init__(self, nz, yfracerr):
+
+        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/'
+        self.data_dir = esr_dir + '/data/mock/'
+        self.data_file = self.data_dir + '/CC_Hubble_%i_'%nz + str(yfracerr) + '.dat'
+        self.fn_dir = esr_dir + "function_library/core_maths/"
+        self.like_dir = esr_dir + "/fitting/"
+        self.like_file = "likelihood_cc"
+        self.sym_file = "symbols_cc"
+
+        self.temp_dir = self.like_dir + "/output/partial_mock_%i_"%nz + str(yfracerr)
+        self.out_dir = self.like_dir + "/output/output_mock_%i_"%nz + str(yfracerr)
+        self.fig_dir = self.like_dir + "/output/figs_mock_%i_"%nz + str(yfracerr) 
+        self.Hfid = 1.
+
+        self.ylabel = r'$H \left( z \right) \ / \ H_{\rm fid}$'  # for plotting
+
+        self.xvar, self.yvar, self.yerr = np.genfromtxt(self.data_file, unpack=True)
+        self.xvar += 1
+        self.yvar /= self.Hfid
+        self.yerr /= self.Hfid
+        self.inv_cov = 1 / self.yerr ** 2
+
+
+    def get_pred(self, zp1, a, eq_numpy, **kwargs):
+        return np.sqrt(eq_numpy(zp1, *a))
+
+    def clear_data(self):
+        pass
+
+
+    def negloglike(self, a, eq_numpy, **kwargs):
+        H = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
+        if not np.all(np.isreal(H)):
+            return np.inf
+        nll = np.sum(0.5 * (H - self.yvar) ** 2 * self.inv_cov)  # inv_cov diagonal, so is vector here
+        if np.isnan(nll):
+            return np.inf
+        return nll
+
+    def run_sympify(self, fcn_i, **kwargs):
+        fcn_i = fcn_i.replace('\n', '')
+        fcn_i = fcn_i.replace('\'', '')
+
+        eq = sympy.sympify(fcn_i,
+                    locals={"inv": inv,
+                            "square": square,
+                            "cube": cube,
+                            "sqrt": sqrt,
+                            "log": log,
+                            "pow": pow,
+                            "x": x,
+                            "a0": a0,
+                            "a1": a1,
+                            "a2": a2})
+        return fcn_i, eq, False

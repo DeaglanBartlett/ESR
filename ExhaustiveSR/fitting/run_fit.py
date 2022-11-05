@@ -7,7 +7,7 @@ import match
 import combine_DL
 import plot
 
-from likelihood import CCLikelihood, PanthLikelihood
+from likelihood import CCLikelihood, PanthLikelihood, MockLikelihood
 
 try_integration=False
 
@@ -25,7 +25,7 @@ def print_text(text):
     print(*stars)
     print('\n')
     return
-    
+
 comp = int(sys.argv[1])
 tmax = 5
 
@@ -34,6 +34,9 @@ print_text('COMPLEXITY = %i'%comp)
 print_text('Loading data')
 likelihood = CCLikelihood() 
 #likelihood = PanthLikelihood()
+#nz = 3200 # 320, 640, 800, 1000, 3200
+#yfracerr = 0.2  # 0.01, 0.05, 0.1, 0.2
+#likelihood = MockLikelihood(nz, yfracerr)
 
 print_text('test_all')
 test_all.main(comp, likelihood, tmax=5, try_integration=try_integration)
@@ -54,3 +57,4 @@ comm.Barrier()
 print_text('plot')
 if rank == 0:
     plot.main(comp, likelihood, tmax=tmax, try_integration=try_integration)
+
