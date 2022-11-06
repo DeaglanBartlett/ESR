@@ -36,8 +36,8 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
                 ["inv", "sin"],  # type1
                 ["+", "*", "-", "/", "pow"]]  # type2
 
-    #dirname = '../function_library/' + runname + '/'
-    dirname = '../function_library/tests/'
+    dirname = '../function_library/' + runname + '/'
+    #dirname = '../function_library/tests/'
     
     if (rank == 0) and (not os.path.isdir(dirname)):
         print('Making output directory:', dirname)

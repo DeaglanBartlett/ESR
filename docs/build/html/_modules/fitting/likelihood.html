@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fitting.likelihood &mdash; ExhaustiveSR 0.0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> ExhaustiveSR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">ExhaustiveSR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>fitting.likelihood</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for fitting.likelihood</h1><div class="highlight"><pre>
+<span></span><span class="c1">#import astropy.constants</span>
+<span class="c1">#import astropy.units as apu</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">scipy.integrate</span>
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
+<span class="kn">import</span> <span class="nn">sympy</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">sympy_symbols</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;../generation/&#39;</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">simplifier</span> <span class="kn">import</span> <span class="n">time_limit</span>
+
+<div class="viewcode-block" id="CCLikelihood"><a class="viewcode-back" href="../../api.html#fitting.likelihood.CCLikelihood">[docs]</a><span class="k">class</span> <span class="nc">CCLikelihood</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="n">esr_dir</span> <span class="o">=</span> <span class="s1">&#39;/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_dir</span> <span class="o">=</span> <span class="n">esr_dir</span> <span class="o">+</span> <span class="s1">&#39;/data/&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_dir</span> <span class="o">+</span> <span class="s1">&#39;/CC_Hubble.dat&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn_dir</span> <span class="o">=</span> <span class="n">esr_dir</span> <span class="o">+</span> <span class="s2">&quot;function_library/core_maths/&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">=</span> <span class="n">esr_dir</span> <span class="o">+</span> <span class="s2">&quot;/fitting/&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">like_file</span> <span class="o">=</span> <span class="s2">&quot;likelihood_cc&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sym_file</span> <span class="o">=</span> <span class="s2">&quot;symbols_cc&quot;</span>
+    
+        <span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">+</span> <span class="s2">&quot;/output/partial_cc_dimful&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">+</span> <span class="s2">&quot;/output/output_cc_dimful&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">+</span> <span class="s2">&quot;/output/figs_cc_dimful&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Hfid</span> <span class="o">=</span> <span class="mf">1.</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">ylabel</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;$H \left( z \right) \ / \ H_{\rm fid}$&#39;</span>  <span class="c1"># for plotting</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xvar</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yvar</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yerr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_file</span><span class="p">,</span> <span class="n">unpack</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xvar</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yvar</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hfid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yerr</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hfid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">yerr</span> <span class="o">**</span> <span class="mi">2</span>
+
+
+<div class="viewcode-block" id="CCLikelihood.get_pred"><a class="viewcode-back" href="../../api.html#fitting.likelihood.CCLikelihood.get_pred">[docs]</a>    <span class="k">def</span> <span class="nf">get_pred</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zp1</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">eq_numpy</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">eq_numpy</span><span class="p">(</span><span class="n">zp1</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="CCLikelihood.clear_data"><a class="viewcode-back" href="../../api.html#fitting.likelihood.CCLikelihood.clear_data">[docs]</a>    <span class="k">def</span> <span class="nf">clear_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="CCLikelihood.negloglike"><a class="viewcode-back" href="../../api.html#fitting.likelihood.CCLikelihood.negloglike">[docs]</a>    <span class="k">def</span> <span class="nf">negloglike</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">eq_numpy</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">H</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pred</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xvar</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">eq_numpy</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isreal</span><span class="p">(</span><span class="n">H</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="n">nll</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">H</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">yvar</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov</span><span class="p">)</span>  <span class="c1"># inv_cov diagonal, so is vector here</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">nll</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">return</span> <span class="n">nll</span></div>
+
+<div class="viewcode-block" id="CCLikelihood.run_sympify"><a class="viewcode-back" href="../../api.html#fitting.likelihood.CCLikelihood.run_sympify">[docs]</a>    <span class="k">def</span> <span class="nf">run_sympify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fcn_i</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">fcn_i</span> <span class="o">=</span> <span class="n">fcn_i</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">fcn_i</span> <span class="o">=</span> <span class="n">fcn_i</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="n">eq</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">fcn_i</span><span class="p">,</span>
+                    <span class="nb">locals</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;inv&quot;</span><span class="p">:</span> <span class="n">inv</span><span class="p">,</span>
+                            <span class="s2">&quot;square&quot;</span><span class="p">:</span> <span class="n">square</span><span class="p">,</span>
+                            <span class="s2">&quot;cube&quot;</span><span class="p">:</span> <span class="n">cube</span><span class="p">,</span>
+                            <span class="s2">&quot;sqrt&quot;</span><span class="p">:</span> <span class="n">sqrt</span><span class="p">,</span>
+                            <span class="s2">&quot;log&quot;</span><span class="p">:</span> <span class="n">log</span><span class="p">,</span>
+                            <span class="s2">&quot;pow&quot;</span><span class="p">:</span> <span class="nb">pow</span><span class="p">,</span>
+                            <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+                            <span class="s2">&quot;a0&quot;</span><span class="p">:</span> <span class="n">a0</span><span class="p">,</span>
+                            <span class="s2">&quot;a1&quot;</span><span class="p">:</span> <span class="n">a1</span><span class="p">,</span>
+                            <span class="s2">&quot;a2&quot;</span><span class="p">:</span> <span class="n">a2</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">fcn_i</span><span class="p">,</span> <span class="n">eq</span><span class="p">,</span> <span class="kc">False</span></div></div>
+
+
+<div class="viewcode-block" id="PanthLikelihood"><a class="viewcode-back" href="../../api.html#fitting.likelihood.PanthLikelihood">[docs]</a><span class="k">class</span> <span class="nc">PanthLikelihood</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="n">esr_dir</span> <span class="o">=</span> <span class="s1">&#39;/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_dir</span> <span class="o">=</span> <span class="n">esr_dir</span> <span class="o">+</span> <span class="s1">&#39;/data/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_dir</span> <span class="o">+</span> <span class="s1">&#39;Pantheon+SH0ES.dat&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cov_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_dir</span> <span class="o">+</span> <span class="s1">&#39;Pantheon+SH0ES_STAT+SYS.cov&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn_dir</span> <span class="o">=</span> <span class="n">esr_dir</span> <span class="o">+</span> <span class="s2">&quot;function_library/core_maths/&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">=</span> <span class="n">esr_dir</span> <span class="o">+</span> <span class="s2">&quot;/fitting/&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">+</span> <span class="s2">&quot;/output/partial_panth_dimful&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">+</span> <span class="s2">&quot;/output/output_panth_dimful&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">+</span> <span class="s2">&quot;/output/figs_panth_dimful&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Hfid</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">apu</span><span class="o">.</span><span class="n">km</span> <span class="o">/</span> <span class="n">apu</span><span class="o">.</span><span class="n">s</span> <span class="o">/</span> <span class="n">apu</span><span class="o">.</span><span class="n">Mpc</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_file</span><span class="p">,</span> <span class="n">delim_whitespace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">origlen</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">ww</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;zHD&#39;</span><span class="p">]</span><span class="o">&gt;</span><span class="mf">0.01</span><span class="p">)</span>
+        <span class="n">zCMB</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;zHD&#39;</span><span class="p">][</span><span class="n">ww</span><span class="p">]</span>
+        <span class="n">mu_obs</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;MU_SH0ES&#39;</span><span class="p">][</span><span class="n">ww</span><span class="p">]</span>
+        <span class="n">mu_err</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;MU_SH0ES_ERR_DIAG&#39;</span><span class="p">][</span><span class="n">ww</span><span class="p">]</span>  <span class="c1"># for plotting</span>
+        
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cov_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">zCMB</span><span class="p">))</span>
+            <span class="n">C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span><span class="n">n</span><span class="p">))</span>
+            <span class="n">ii</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">jj</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">mine</span> <span class="o">=</span> <span class="mi">999</span>
+            <span class="n">maxe</span> <span class="o">=</span> <span class="o">-</span><span class="mi">999</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">origlen</span><span class="p">):</span>
+                <span class="n">jj</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="k">if</span> <span class="n">ww</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                    <span class="n">ii</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">origlen</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">ww</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span>
+                        <span class="n">jj</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">val</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">readline</span><span class="p">())</span>
+                    <span class="k">if</span> <span class="n">ww</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="n">ww</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span>
+                            <span class="n">C</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span><span class="n">jj</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">ylabel</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;$\mu \left( z \right)$&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xvar</span> <span class="o">=</span> <span class="n">zCMB</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yvar</span> <span class="o">=</span> <span class="n">mu_obs</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">C</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yerr</span> <span class="o">=</span> <span class="n">mu_err</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_const</span> <span class="o">=</span>  <span class="n">astropy</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">c</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hfid</span> <span class="o">/</span> <span class="p">(</span><span class="mi">10</span> <span class="o">*</span> <span class="n">apu</span><span class="o">.</span><span class="n">pc</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_const</span> <span class="o">=</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu_const</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">delta_z</span> <span class="o">=</span> <span class="mf">0.02</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_nz</span> <span class="o">=</span> <span class="mi">10</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_x</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_mask</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="PanthLikelihood.clear_data"><a class="viewcode-back" href="../../api.html#fitting.likelihood.PanthLikelihood.clear_data">[docs]</a>    <span class="k">def</span> <span class="nf">clear_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_x</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_mask</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="PanthLikelihood.get_pred"><a class="viewcode-back" href="../../api.html#fitting.likelihood.PanthLikelihood.get_pred">[docs]</a>    <span class="k">def</span> <span class="nf">get_pred</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zp1</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">eq_numpy</span><span class="p">,</span> <span class="n">integrated</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">integrated</span><span class="p">:</span>
+            <span class="n">dL</span> <span class="o">=</span> <span class="n">eq_numpy</span><span class="p">(</span><span class="n">zp1</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">)</span> <span class="o">-</span> <span class="n">eq_numpy</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_mask</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">nx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">zp1</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">zp1</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta_z</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">zp1</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_nz</span><span class="p">),</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">zp1</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta_z</span><span class="p">,</span> <span class="n">zp1</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta_z</span><span class="p">,</span> <span class="n">nx</span><span class="p">),</span>
+                        <span class="n">zp1</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_x</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_x</span><span class="o">==</span><span class="n">d</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">zp1</span><span class="p">]))</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">dL</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">eq_numpy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_x</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dL</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">eq_numpy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_x</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">))</span>
+
+            <span class="n">dL</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">integrate</span><span class="o">.</span><span class="n">cumtrapz</span><span class="p">(</span><span class="n">dL</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data_x</span><span class="p">,</span> <span class="n">initial</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">dL</span> <span class="o">=</span> <span class="n">dL</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_mask</span><span class="p">]</span>
+
+        <span class="n">dL</span> <span class="o">*=</span> <span class="n">zp1</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">dL</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_const</span>
+
+        <span class="k">return</span> <span class="n">mu</span></div>
+
+
+<div class="viewcode-block" id="PanthLikelihood.negloglike"><a class="viewcode-back" href="../../api.html#fitting.likelihood.PanthLikelihood.negloglike">[docs]</a>    <span class="k">def</span> <span class="nf">negloglike</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">eq_numpy</span><span class="p">,</span> <span class="n">integrated</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">mu_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pred</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xvar</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">eq_numpy</span><span class="p">,</span> <span class="n">integrated</span><span class="o">=</span><span class="n">integrated</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isreal</span><span class="p">(</span><span class="n">mu_pred</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="n">nll</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">((</span><span class="n">mu_pred</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">yvar</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_cov</span><span class="p">,(</span><span class="n">mu_pred</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">yvar</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">nll</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">return</span> <span class="n">nll</span></div>
+
+
+<div class="viewcode-block" id="PanthLikelihood.run_sympify"><a class="viewcode-back" href="../../api.html#fitting.likelihood.PanthLikelihood.run_sympify">[docs]</a>    <span class="k">def</span> <span class="nf">run_sympify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fcn_i</span><span class="p">,</span> <span class="n">tmax</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">try_integration</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">fcn_i</span> <span class="o">=</span> <span class="n">fcn_i</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">fcn_i</span> <span class="o">=</span> <span class="n">fcn_i</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="n">eq</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">fcn_i</span><span class="p">,</span>
+                    <span class="nb">locals</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;inv&quot;</span><span class="p">:</span> <span class="n">inv</span><span class="p">,</span>
+                            <span class="s2">&quot;square&quot;</span><span class="p">:</span> <span class="n">square</span><span class="p">,</span>
+                            <span class="s2">&quot;cube&quot;</span><span class="p">:</span> <span class="n">cube</span><span class="p">,</span>
+                            <span class="s2">&quot;sqrt&quot;</span><span class="p">:</span> <span class="n">sqrt</span><span class="p">,</span>
+                            <span class="s2">&quot;log&quot;</span><span class="p">:</span> <span class="n">log</span><span class="p">,</span>
+                            <span class="s2">&quot;pow&quot;</span><span class="p">:</span> <span class="nb">pow</span><span class="p">,</span>
+                            <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+                            <span class="s2">&quot;a0&quot;</span><span class="p">:</span> <span class="n">a0</span><span class="p">,</span>
+                            <span class="s2">&quot;a1&quot;</span><span class="p">:</span> <span class="n">a1</span><span class="p">,</span>
+                            <span class="s2">&quot;a2&quot;</span><span class="p">:</span> <span class="n">a2</span><span class="p">})</span>
+
+        <span class="k">if</span> <span class="n">try_integration</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">time_limit</span><span class="p">(</span><span class="n">tmax</span><span class="p">):</span>
+                    <span class="n">eq2</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">eq</span><span class="p">),</span> <span class="n">x</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">eq2</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="n">sympy</span><span class="o">.</span><span class="n">Integral</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span>
+                    <span class="n">eq</span> <span class="o">=</span> <span class="n">eq2</span>
+                    <span class="n">integrated</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">integrated</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">integrated</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="n">fcn_i</span><span class="p">,</span> <span class="n">eq</span><span class="p">,</span> <span class="n">integrated</span></div></div>
+
+
+
+
+<div class="viewcode-block" id="MockLikelihood"><a class="viewcode-back" href="../../api.html#fitting.likelihood.MockLikelihood">[docs]</a><span class="k">class</span> <span class="nc">MockLikelihood</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nz</span><span class="p">,</span> <span class="n">yfracerr</span><span class="p">):</span>
+
+        <span class="n">esr_dir</span> <span class="o">=</span> <span class="s1">&#39;/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_dir</span> <span class="o">=</span> <span class="n">esr_dir</span> <span class="o">+</span> <span class="s1">&#39;/data/mock/&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_dir</span> <span class="o">+</span> <span class="s1">&#39;/CC_Hubble_</span><span class="si">%i</span><span class="s1">_&#39;</span><span class="o">%</span><span class="n">nz</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">yfracerr</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.dat&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn_dir</span> <span class="o">=</span> <span class="n">esr_dir</span> <span class="o">+</span> <span class="s2">&quot;function_library/core_maths/&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">=</span> <span class="n">esr_dir</span> <span class="o">+</span> <span class="s2">&quot;/fitting/&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">like_file</span> <span class="o">=</span> <span class="s2">&quot;likelihood_cc&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sym_file</span> <span class="o">=</span> <span class="s2">&quot;symbols_cc&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">+</span> <span class="s2">&quot;/output/partial_mock_</span><span class="si">%i</span><span class="s2">_&quot;</span><span class="o">%</span><span class="n">nz</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">yfracerr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">+</span> <span class="s2">&quot;/output/output_mock_</span><span class="si">%i</span><span class="s2">_&quot;</span><span class="o">%</span><span class="n">nz</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">yfracerr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">like_dir</span> <span class="o">+</span> <span class="s2">&quot;/output/figs_mock_</span><span class="si">%i</span><span class="s2">_&quot;</span><span class="o">%</span><span class="n">nz</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">yfracerr</span><span class="p">)</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">Hfid</span> <span class="o">=</span> <span class="mf">1.</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ylabel</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;$H \left( z \right) \ / \ H_{\rm fid}$&#39;</span>  <span class="c1"># for plotting</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xvar</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yvar</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yerr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_file</span><span class="p">,</span> <span class="n">unpack</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xvar</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yvar</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hfid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yerr</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Hfid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">yerr</span> <span class="o">**</span> <span class="mi">2</span>
+
+
+<div class="viewcode-block" id="MockLikelihood.get_pred"><a class="viewcode-back" href="../../api.html#fitting.likelihood.MockLikelihood.get_pred">[docs]</a>    <span class="k">def</span> <span class="nf">get_pred</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zp1</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">eq_numpy</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">eq_numpy</span><span class="p">(</span><span class="n">zp1</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="MockLikelihood.clear_data"><a class="viewcode-back" href="../../api.html#fitting.likelihood.MockLikelihood.clear_data">[docs]</a>    <span class="k">def</span> <span class="nf">clear_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="MockLikelihood.negloglike"><a class="viewcode-back" href="../../api.html#fitting.likelihood.MockLikelihood.negloglike">[docs]</a>    <span class="k">def</span> <span class="nf">negloglike</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">eq_numpy</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">H</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pred</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xvar</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">eq_numpy</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isreal</span><span class="p">(</span><span class="n">H</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="n">nll</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">H</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">yvar</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov</span><span class="p">)</span>  <span class="c1"># inv_cov diagonal, so is vector here</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">nll</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">return</span> <span class="n">nll</span></div>
+
+<div class="viewcode-block" id="MockLikelihood.run_sympify"><a class="viewcode-back" href="../../api.html#fitting.likelihood.MockLikelihood.run_sympify">[docs]</a>    <span class="k">def</span> <span class="nf">run_sympify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fcn_i</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">fcn_i</span> <span class="o">=</span> <span class="n">fcn_i</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">fcn_i</span> <span class="o">=</span> <span class="n">fcn_i</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="n">eq</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">fcn_i</span><span class="p">,</span>
+                    <span class="nb">locals</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;inv&quot;</span><span class="p">:</span> <span class="n">inv</span><span class="p">,</span>
+                            <span class="s2">&quot;square&quot;</span><span class="p">:</span> <span class="n">square</span><span class="p">,</span>
+                            <span class="s2">&quot;cube&quot;</span><span class="p">:</span> <span class="n">cube</span><span class="p">,</span>
+                            <span class="s2">&quot;sqrt&quot;</span><span class="p">:</span> <span class="n">sqrt</span><span class="p">,</span>
+                            <span class="s2">&quot;log&quot;</span><span class="p">:</span> <span class="n">log</span><span class="p">,</span>
+                            <span class="s2">&quot;pow&quot;</span><span class="p">:</span> <span class="nb">pow</span><span class="p">,</span>
+                            <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+                            <span class="s2">&quot;a0&quot;</span><span class="p">:</span> <span class="n">a0</span><span class="p">,</span>
+                            <span class="s2">&quot;a1&quot;</span><span class="p">:</span> <span class="n">a1</span><span class="p">,</span>
+                            <span class="s2">&quot;a2&quot;</span><span class="p">:</span> <span class="n">a2</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">fcn_i</span><span class="p">,</span> <span class="n">eq</span><span class="p">,</span> <span class="kc">False</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Deaglan Bartlett.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

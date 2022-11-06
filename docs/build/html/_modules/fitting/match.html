@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fitting.match &mdash; ExhaustiveSR 0.0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> ExhaustiveSR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">ExhaustiveSR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>fitting.match</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for fitting.match</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">sympy</span>
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numdifftools</span> <span class="k">as</span> <span class="nn">nd</span>
+
+<span class="kn">import</span> <span class="nn">test_all</span>
+<span class="kn">import</span> <span class="nn">test_all_Fisher</span>
+<span class="kn">from</span> <span class="nn">sympy_symbols</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;../generation/&#39;</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">simplifier</span>
+
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+
+<span class="n">comm</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
+<span class="n">rank</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
+<span class="n">size</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span>
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../api.html#fitting.match.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">,</span> <span class="n">tmax</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">try_integration</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">f4</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">negloglike</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">eq_numpy</span><span class="p">,</span> <span class="n">integrated</span><span class="o">=</span><span class="n">integrated</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">f3</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">negloglike</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">eq_numpy</span><span class="p">,</span> <span class="n">integrated</span><span class="o">=</span><span class="n">integrated</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">f2</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">negloglike</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">eq_numpy</span><span class="p">,</span> <span class="n">integrated</span><span class="o">=</span><span class="n">integrated</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">f1</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">negloglike</span><span class="p">([</span><span class="n">x</span><span class="p">],</span><span class="n">eq_numpy</span><span class="p">,</span> <span class="n">integrated</span><span class="o">=</span><span class="n">integrated</span><span class="p">)</span>
+        
+    <span class="n">invsubs_file</span> <span class="o">=</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">fn_dir</span> <span class="o">+</span> <span class="s2">&quot;/compl_</span><span class="si">%i</span><span class="s2">/inv_subs_</span><span class="si">%i</span><span class="s2">.txt&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span><span class="n">comp</span><span class="p">)</span>
+    <span class="n">match_file</span> <span class="o">=</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">fn_dir</span> <span class="o">+</span> <span class="s2">&quot;/compl_</span><span class="si">%i</span><span class="s2">/matches_</span><span class="si">%i</span><span class="s2">.txt&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span><span class="n">comp</span><span class="p">)</span>
+    
+    <span class="n">fcn_list_proc</span><span class="p">,</span> <span class="n">data_start</span><span class="p">,</span> <span class="n">data_end</span> <span class="o">=</span> <span class="n">test_all</span><span class="o">.</span><span class="n">get_functions</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">negloglike</span><span class="p">,</span> <span class="n">param1</span><span class="p">,</span> <span class="n">param2</span><span class="p">,</span> <span class="n">param3</span><span class="p">,</span> <span class="n">param4</span> <span class="o">=</span> <span class="n">test_all_Fisher</span><span class="o">.</span><span class="n">load_loglike</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">,</span> <span class="n">data_start</span><span class="p">,</span> <span class="n">data_end</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="n">max_param</span> <span class="o">=</span> <span class="mi">4</span>
+
+    <span class="n">all_inv_subs_proc</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">load_subs</span><span class="p">(</span><span class="n">invsubs_file</span><span class="p">,</span> <span class="n">max_param</span><span class="p">)[</span><span class="n">data_start</span><span class="p">:</span><span class="n">data_end</span><span class="p">]</span>
+    <span class="n">matches_proc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">match_file</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))[</span><span class="n">data_start</span><span class="p">:</span><span class="n">data_end</span><span class="p">]</span>
+
+    <span class="n">all_fish</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">likelihood</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">+</span> <span class="s1">&#39;/derivs_comp&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;.dat&#39;</span><span class="p">)</span>   <span class="c1"># 2D array of shape (# unique fcns, 10)</span>
+    <span class="n">all_fish</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">all_fish</span><span class="p">)</span>
+
+    <span class="n">codelen</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fcn_list_proc</span><span class="p">))</span>              <span class="c1"># Both of these are also just for this proc</span>
+    <span class="n">negloglike_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fcn_list_proc</span><span class="p">))</span>
+    <span class="n">index_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fcn_list_proc</span><span class="p">))</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">fcn_list_proc</span><span class="p">),</span> <span class="mi">4</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fcn_list_proc</span><span class="p">)):</span>                 <span class="c1"># The part of all eqs analysed by this proc</span>
+        <span class="k">if</span> <span class="n">i</span><span class="o">%</span><span class="mi">1000</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="n">rank</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+        <span class="n">fcn_i</span> <span class="o">=</span> <span class="n">fcn_list_proc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        
+        <span class="n">nparams</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">count_params</span><span class="p">([</span><span class="n">fcn_i</span><span class="p">],</span> <span class="n">max_param</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">index</span> <span class="o">=</span> <span class="n">matches_proc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>          <span class="c1"># Index in total unique eqs file, common to all procs</span>
+
+        <span class="n">index_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+
+        <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">negloglike</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>           <span class="c1"># Assign the likelihood of this variant to the that of the unique eq</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">negloglike</span><span class="p">[</span><span class="n">index</span><span class="p">])</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">negloglike</span><span class="p">[</span><span class="n">index</span><span class="p">]):</span>          <span class="c1"># Element of the unique eqs file, common to all procs</span>
+            <span class="n">codelen</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="n">nparams</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">elif</span> <span class="n">nparams</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">k</span><span class="o">=</span><span class="mi">1</span>
+            <span class="n">measured</span> <span class="o">=</span> <span class="p">[</span><span class="n">param1</span><span class="p">[</span><span class="n">index</span><span class="p">]]</span>
+        <span class="k">elif</span> <span class="n">nparams</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="n">k</span><span class="o">=</span><span class="mi">2</span>
+            <span class="n">measured</span> <span class="o">=</span> <span class="p">[</span><span class="n">param1</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">param2</span><span class="p">[</span><span class="n">index</span><span class="p">]]</span>
+        <span class="k">elif</span> <span class="n">nparams</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+            <span class="n">k</span><span class="o">=</span><span class="mi">3</span>
+            <span class="n">measured</span> <span class="o">=</span> <span class="p">[</span><span class="n">param1</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">param2</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">param3</span><span class="p">[</span><span class="n">index</span><span class="p">]]</span>
+        <span class="k">elif</span> <span class="n">nparams</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span>
+            <span class="n">k</span><span class="o">=</span><span class="mi">4</span>
+            <span class="n">measured</span> <span class="o">=</span> <span class="p">[</span><span class="n">param1</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">param2</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">param3</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">param4</span><span class="p">[</span><span class="n">index</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Bad number of params&quot;</span><span class="p">)</span>
+            <span class="n">quit</span><span class="p">()</span>
+        
+        <span class="n">fish_measured</span> <span class="o">=</span> <span class="n">all_fish</span><span class="p">[</span><span class="n">index</span><span class="p">,:]</span>               <span class="c1"># Access from the unique eqs all_fish array, common to all procs</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">p</span><span class="p">,</span> <span class="n">fish</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">convert_params</span><span class="p">(</span><span class="n">measured</span><span class="p">,</span> <span class="n">fish_measured</span><span class="p">,</span> <span class="n">all_inv_subs_proc</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+            <span class="n">codelen</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+            <span class="k">continue</span>
+        
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">fish</span><span class="o">&lt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">codelen</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+            <span class="k">continue</span>
+        
+        <span class="n">Delta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">fish</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="p">(</span><span class="n">fish</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">Delta</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">12.</span><span class="o">/</span><span class="n">fish</span><span class="p">[</span><span class="n">m</span><span class="p">]))</span>
+        <span class="n">Delta</span><span class="p">[</span><span class="o">~</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="n">Nsteps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p</span><span class="p">)))</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="p">(</span><span class="n">Delta</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">Nsteps</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">/=</span> <span class="n">Delta</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+        <span class="n">Nsteps</span><span class="p">[</span><span class="o">~</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Nsteps</span><span class="o">&lt;</span><span class="mi">1</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>         <span class="c1"># should reevaluate -log(L) with the param(s) set to 0, but doesn&#39;t matter unless the fcn is a very good one</span>
+            
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">p</span><span class="p">[</span><span class="n">Nsteps</span><span class="o">&lt;</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>         <span class="c1"># Set any parameter to 0 that doesn&#39;t have at least one precision step, and recompute -log(L).</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">IndexError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+                <span class="n">p</span><span class="o">=</span><span class="mf">0.</span>
+            
+            <span class="k">try</span><span class="p">:</span>            <span class="c1"># It&#39;s possible that after putting params to 0 the likelihood is botched, in which case give it nan</span>
+                <span class="n">fcn_i</span><span class="p">,</span> <span class="n">eq</span><span class="p">,</span> <span class="n">integrated</span> <span class="o">=</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">run_sympify</span><span class="p">(</span><span class="n">fcn_i</span><span class="p">,</span> <span class="n">tmax</span><span class="o">=</span><span class="n">tmax</span><span class="p">,</span> <span class="n">try_integration</span><span class="o">=</span><span class="n">try_integration</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">k</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="n">eq_numpy</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">lambdify</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">a0</span><span class="p">],</span> <span class="n">eq</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;numpy&quot;</span><span class="p">])</span>
+                    <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">f1</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>               <span class="c1"># Modified here for this variant, but if this doesn&#39;t happen it stays the same as the unique eq</span>
+                <span class="k">elif</span> <span class="n">k</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+                    <span class="n">eq_numpy</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">lambdify</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">a1</span><span class="p">],</span> <span class="n">eq</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;numpy&quot;</span><span class="p">])</span>
+                    <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">f2</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>       <span class="c1"># All params still here, just some of them might be 0</span>
+                <span class="k">elif</span> <span class="n">k</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+                    <span class="n">eq_numpy</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">lambdify</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">a1</span><span class="p">,</span> <span class="n">a2</span><span class="p">],</span> <span class="n">eq</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;numpy&quot;</span><span class="p">])</span>
+                    <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">f3</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">k</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span>
+                    <span class="n">eq_numpy</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">lambdify</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">a1</span><span class="p">,</span> <span class="n">a2</span><span class="p">,</span> <span class="n">a3</span><span class="p">],</span> <span class="n">eq</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;numpy&quot;</span><span class="p">])</span>
+                    <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">f4</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+            <span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">try_integration</span><span class="p">:</span>
+                    <span class="n">fcn_i</span><span class="p">,</span> <span class="n">eq</span><span class="p">,</span> <span class="n">integrated</span> <span class="o">=</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">run_sympify</span><span class="p">(</span><span class="n">fcn_i</span><span class="p">,</span> <span class="n">tmax</span><span class="o">=</span><span class="n">tmax</span><span class="p">,</span> <span class="n">try_integration</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">k</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+                        <span class="n">eq_numpy</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">lambdify</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">a0</span><span class="p">],</span> <span class="n">eq</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;numpy&quot;</span><span class="p">])</span>
+                        <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">f1</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>               <span class="c1"># Modified here for this variant, but if this doesn&#39;t happen it stays the same as the unique eq</span>
+                    <span class="k">elif</span> <span class="n">k</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+                        <span class="n">eq_numpy</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">lambdify</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">a1</span><span class="p">],</span> <span class="n">eq</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;numpy&quot;</span><span class="p">])</span>
+                        <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">f2</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>       <span class="c1"># All params still here, just some of them might be 0</span>
+                    <span class="k">elif</span> <span class="n">k</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+                        <span class="n">eq_numpy</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">lambdify</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">a1</span><span class="p">,</span> <span class="n">a2</span><span class="p">],</span> <span class="n">eq</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;numpy&quot;</span><span class="p">])</span>
+                        <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">f3</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="n">k</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span>
+                        <span class="n">eq_numpy</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">lambdify</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">a1</span><span class="p">,</span> <span class="n">a2</span><span class="p">,</span> <span class="n">a3</span><span class="p">],</span> <span class="n">eq</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;numpy&quot;</span><span class="p">])</span>
+                        <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">f4</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">negloglike_all</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+            <span class="n">k</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Nsteps</span><span class="o">&lt;</span><span class="mi">1</span><span class="p">)</span>       <span class="c1"># For the codelen, we effectively don&#39;t have the parameter that had Nsteps&lt;1</span>
+                
+            <span class="k">if</span> <span class="n">k</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;This shouldn&#39;t have happened&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">quit</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">k</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>                  <span class="c1"># If we have no parameters left then the parameter codelength is 0 so we can move on</span>
+                <span class="k">continue</span>
+            
+            <span class="n">fish</span> <span class="o">=</span> <span class="n">fish</span><span class="p">[</span><span class="n">Nsteps</span><span class="o">&gt;=</span><span class="mi">1</span><span class="p">]</span>     <span class="c1"># Only consider these parameters in the codelen</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="n">Nsteps</span><span class="o">&gt;=</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="k">try</span><span class="p">:</span>        <span class="c1"># If p was an array, we can make a list out of it</span>
+            <span class="n">list_p</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+            <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)))</span>
+        <span class="k">except</span><span class="p">:</span>     <span class="c1"># p is either a number or nothing</span>
+            <span class="k">if</span> <span class="n">p</span><span class="p">:</span>   <span class="c1"># p is a number</span>
+                <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">p</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+        
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">,:])</span><span class="o">==</span><span class="mi">4</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">codelen</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">k</span><span class="o">/</span><span class="mf">2.</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">3.</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">fish</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p</span><span class="p">)))</span> <span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">codelen</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="n">out_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">negloglike_all</span><span class="p">,</span> <span class="n">codelen</span><span class="p">,</span> <span class="n">index_arr</span><span class="p">,</span> <span class="n">params</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">params</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span> <span class="n">params</span><span class="p">[:,</span><span class="mi">2</span><span class="p">],</span> <span class="n">params</span><span class="p">[:,</span><span class="mi">3</span><span class="p">]]))</span>
+
+    <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">likelihood</span><span class="o">.</span><span class="n">temp_dir</span> <span class="o">+</span> <span class="s1">&#39;/codelen_matches_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">rank</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;.dat&#39;</span><span class="p">,</span> <span class="n">out_arr</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%.7e</span><span class="s1">&#39;</span><span class="p">)</span>        <span class="c1"># Save the data for this proc in Partial</span>
+
+    <span class="n">comm</span><span class="o">.</span><span class="n">Barrier</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="s1">&#39;cat `find &#39;</span> <span class="o">+</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">temp_dir</span> <span class="o">+</span> <span class="s1">&#39;/ -name &quot;codelen_matches_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_*.dat&quot; | sort -V` &gt; &#39;</span> <span class="o">+</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">+</span> <span class="s1">&#39;/codelen_matches_comp&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;.dat&#39;</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="s1">&#39;rm &#39;</span> <span class="o">+</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">temp_dir</span> <span class="o">+</span> <span class="s1">&#39;/codelen_matches_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_*.dat&#39;</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+        
+    <span class="k">return</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Deaglan Bartlett.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

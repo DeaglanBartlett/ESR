@@ -7,6 +7,18 @@ dirname = 'core_maths/'
 nfortab = 4
 
 def file_len(fname):
+
+    """[Summary]
+
+    :param [ParamName]: [ParamDescription], defaults to [DefaultParamVal]
+    :type [ParamName]: [ParamType](, optional)
+    ...
+    :raises [ErrorType]: [ErrorDescription]
+    ...
+    :return: [ReturnDescription]
+    :rtype: [ReturnType]
+    """
+
     p = subprocess.Popen(['wc', '-l', fname], stdout=subprocess.PIPE,
                                               stderr=subprocess.PIPE)
     result, err = p.communicate()

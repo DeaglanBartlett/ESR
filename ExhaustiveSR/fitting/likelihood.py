@@ -1,5 +1,5 @@
-import astropy.constants
-import astropy.units as apu
+#import astropy.constants
+#import astropy.units as apu
 import numpy as np
 import pandas as pd
 import scipy.integrate
@@ -23,27 +23,11 @@ class CCLikelihood:
         self.like_dir = esr_dir + "/fitting/"
         self.like_file = "likelihood_cc"
         self.sym_file = "symbols_cc"
-
-        """
-        self.temp_dir = self.like_dir + "/output/partial_cc"
-        self.out_dir = self.like_dir + "/output/output_cc"
-        self.fig_dir = self.like_dir + "/output/figs_cc"
-        self.Hfid = 67.4
-        """
     
-        #"""
         self.temp_dir = self.like_dir + "/output/partial_cc_dimful"
         self.out_dir = self.like_dir + "/output/output_cc_dimful"
         self.fig_dir = self.like_dir + "/output/figs_cc_dimful"
         self.Hfid = 1.
-        #"""
-
-        """
-        self.temp_dir = self.like_dir + "/output/partial_cc_h"
-        self.out_dir = self.like_dir + "/output/output_cc_h"
-        self.fig_dir = self.like_dir + "/output/figs_cc_h"
-        self.Hfid = 100.
-        """
         
         self.ylabel = r'$H \left( z \right) \ / \ H_{\rm fid}$'  # for plotting
 
@@ -100,26 +84,10 @@ class PanthLikelihood:
         self.fn_dir = esr_dir + "function_library/core_maths/"
         self.like_dir = esr_dir + "/fitting/"
 
-        """
-        self.temp_dir = self.like_dir + "/output/partial_panth"
-        self.out_dir = self.like_dir + "/output/output_panth"
-        self.fig_dir = self.like_dir + "/output/figs_panth"
-        self.Hfid = 67.4 * apu.km / apu.s / apu.Mpc
-        """
-
-        """
-        self.temp_dir = self.like_dir + "/output/partial_panth_h"
-        self.out_dir = self.like_dir + "/output/output_panth_h"
-        self.fig_dir = self.like_dir + "/output/figs_panth_h"
-        self.Hfid = 100. * apu.km / apu.s / apu.Mpc
-        """
-
-        #"""
         self.temp_dir = self.like_dir + "/output/partial_panth_dimful"
         self.out_dir = self.like_dir + "/output/output_panth_dimful"
         self.fig_dir = self.like_dir + "/output/figs_panth_dimful"
         self.Hfid = 1.0 * apu.km / apu.s / apu.Mpc
-        #"""
 
         data = pd.read_csv(self.data_file, delim_whitespace=True)
         origlen = len(data)
