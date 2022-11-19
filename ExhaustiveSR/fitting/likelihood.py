@@ -8,8 +8,8 @@ import sys
 
 from sympy_symbols import *
 
-#sys.path.insert(0, '../generation/')
-#from simplifier import time_limit
+sys.path.insert(0, '../generation/')
+from simplifier import time_limit
 
 class CCLikelihood:
 
@@ -383,5 +383,3 @@ class MockLikelihood:
                             "a2": a2})
         return fcn_i, eq, False
 
-sys.path.insert(0, '../generation/')
-from simplifier import time_limit

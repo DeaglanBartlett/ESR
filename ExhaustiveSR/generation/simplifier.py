@@ -16,9 +16,9 @@ import os
 import utils
 from custom_printer import ESRPrinter
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
+#comm = MPI.COMM_WORLD
+#rank = comm.Get_rank()
+#size = comm.Get_size()
 
 a, b = sympy.symbols('a b', real=True)
 inv = sympy.Lambda(a, 1/a)
@@ -1523,3 +1523,8 @@ def check_results(dirname, compl, tmax=10):
         np.savetxt(dirname + '/matches_%i.txt'%compl, matches)
 
     return
+    
+if __name__ == "__main__":
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
