@@ -7,20 +7,19 @@ API
 generation
 ----------
 
+duplicate_checker
+~~~~~~~~~~~~~~~~~
 
-custom_printer
-~~~~~~~~~~~~~~
-
-.. automodule:: generation.custom_printer
+.. automodule:: generation.duplicate_checker
    :members:
    :undoc-members:
    :show-inheritance:
 
 
-duplicate_checker
-~~~~~~~~~~~~~~~~~
+custom_printer
+~~~~~~~~~~~~~~
 
-.. automodule:: generation.duplicate_checker
+.. automodule:: generation.custom_printer
    :members:
    :undoc-members:
    :show-inheritance:

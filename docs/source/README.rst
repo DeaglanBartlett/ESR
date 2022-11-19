@@ -1,4 +1,5 @@
-# ExhaustiveSR
+ExhaustiveSR
+------------
 
 :ExhaustiveSR: Exhaustive Symbolic Regression
 :Authors: Deaglan J. Bartlett and Harry Desmond
@@ -12,7 +13,8 @@
 .. image:: https://img.shields.io/badge/astro.CO-arXiv%3AXXXX.YYYYY-B31B1B.svg
   :target: https://arxiv.org/abs/XXXX.YYYYY
 
-## About
+About
+=====
 
 ExhaustiveSR is a symbolic regression algorithm which efficiently 
 and systematically finds find all possible equations at fixed complexity 
@@ -35,24 +37,53 @@ supernovae to learn the Hubble rate as a function of redshift.
 The functions generated for this paper are publicly available
 AT THIS LINK.
 
-## Documentation
-The documentation for this project can be found [at this link](https://exhaustivesr.readthedocs.io/)
+Licence and Citation
+====================
 
-## Users are required to cite the Exhaustive Symbolic Regression Papers:
+Users are required to cite the Exhaustive Symbolic Regression `Paper <https://arxiv.org/abs/XXXX.YYYYY>`_
+for which the following bibtex can be used
 
-* arXiv:PAPER1 (Paper 1)
+.. code:: bibtex
 
-## Contributors
+  @ARTICLE{2022arXivXXXXYYYYY,
+       author = {{Bartlett}, D.~J. and {Desmond}, H. and {Ferreira}, P.~G.},
+        title = "{Exhaustive Symbolic Regression}",
+      journal = {arXiv e-prints},
+     keywords = {Astrophysics - Cosmology and Nongalactic Astrophysics},
+         year = 2022,
+        month = nov,
+          eid = {arXiv:XXXX.YYYYY},
+        pages = {arXiv:XXXX.YYYYY},
+  archivePrefix = {arXiv},
+       eprint = {XXXX.YYYYY},
+  primaryClass = {astro-ph.CO},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2022arXivXXXXYYYYY},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+  }
+
+Contributors
+============
 Below is a list of contributors to this repository. 
-* [Deaglan Bartlett](https://github.com/DeaglanBartlett) (CNRS & Sorbonne Université, Institut d’Astrophysique de Paris and Astrophysics, University of Oxford)
-* [Harry Desmond](https://github.com/harrydesmond) (Institute of Cosmology & Gravitation, University of Portsmouth)
 
-## Examples
+`Deaglan Bartlett <https://github.com/DeaglanBartlett>`_ (CNRS & Sorbonne Université, Institut d’Astrophysique de Paris and Astrophysics, University of Oxford)
+
+`Harry Desmond <https://github.com/harrydesmond>`_ (Institute of Cosmology & Gravitation, University of Portsmouth)
+
+Examples
+========
 
 To run the Pantheon example from Paper 1, one must download the
-[Pantheon data](https://github.com/PantheonPlusSH0ES/DataRelease)
+`Pantheon data <https://github.com/PantheonPlusSH0ES/DataRelease>`_
 and place in the 'data' directory.
 
-## Acknowledgements
-DJB is supported by the Simons Collaboration on ``Learning the Universe'' and was supported by STFC and Oriel College, Oxford.
+Documentation
+=============
+
+The documentation for this project can be found
+`at this link <https://exhaustivesr.readthedocs.io/>`_
+
+Acknowledgements
+================
+DJB is supported by the Simons Collaboration on "Learning the Universe" and was supported by STFC and Oriel College, Oxford.
 HD is supported by a Royal Society University Research Fellowship (grant no. 211046).
+

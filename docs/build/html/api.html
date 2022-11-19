@@ -43,8 +43,8 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#generation">generation</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#module-generation.custom_printer">custom_printer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-generation.duplicate_checker">duplicate_checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-generation.custom_printer">custom_printer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-generation.generator">generator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-generation.simplifier">simplifier</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-generation.utils">utils</a></li>
@@ -95,6 +95,40 @@
 <h1>API<a class="headerlink" href="#api" title="Permalink to this heading"></a></h1>
 <section id="generation">
 <h2>generation<a class="headerlink" href="#generation" title="Permalink to this heading"></a></h2>
+<section id="module-generation.duplicate_checker">
+<span id="duplicate-checker"></span><h3>duplicate_checker<a class="headerlink" href="#module-generation.duplicate_checker" title="Permalink to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.duplicate_checker.main">
+<span class="sig-prename descclassname"><span class="pre">generation.duplicate_checker.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">runname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">track_memory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expand_tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1234</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/duplicate_checker.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.duplicate_checker.main" title="Permalink to this definition"></a></dt>
+<dd><p>Run the generation of functions for a given complexity and set of basis functions</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">runname (str)</dt>
+<dd class="field-odd"><p>name of run, which defines the basis functions used</p>
+</dd>
+<dt class="field-even">compl (int)</dt>
+<dd class="field-even"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-odd">track_memory (bool, default=True)</dt>
+<dd class="field-odd"><p>whether to compute and print memory statistics (True) or not (False)</p>
+</dd>
+<dt class="field-even">search_tmax (float, default=60.)</dt>
+<dd class="field-even"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
+</dd>
+<dt class="field-odd">expand_tmax (float, default=1.)</dt>
+<dd class="field-odd"><p>maximum time in seconds to run any one part of expand/simplify procedure for a given function</p>
+</dd>
+<dt class="field-even">seed (int, default=1234)</dt>
+<dd class="field-even"><p>seed to set random number generator for shuffling functions (used to prevent one rank having similar, hard to simplify functions)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 <section id="module-generation.custom_printer">
 <span id="custom-printer"></span><h3>custom_printer<a class="headerlink" href="#module-generation.custom_printer" title="Permalink to this heading"></a></h3>
 <dl class="py class">
@@ -131,40 +165,6 @@ unless integer powers used</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">generation.custom_printer.</span></span><span class="sig-name descname"><span class="pre">ESRReprPrinter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/custom_printer.html#ESRReprPrinter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.custom_printer.ESRReprPrinter" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#generation.custom_printer.ESRPrinter" title="generation.custom_printer.ESRPrinter"><code class="xref py py-class docutils literal notranslate"><span class="pre">ESRPrinter</span></code></a></p>
 <p>(internal) – see sstrrepr</p>
-</dd></dl>
-
-</section>
-<section id="module-generation.duplicate_checker">
-<span id="duplicate-checker"></span><h3>duplicate_checker<a class="headerlink" href="#module-generation.duplicate_checker" title="Permalink to this heading"></a></h3>
-<dl class="py function">
-<dt class="sig sig-object py" id="generation.duplicate_checker.main">
-<span class="sig-prename descclassname"><span class="pre">generation.duplicate_checker.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">runname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">track_memory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expand_tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1234</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/duplicate_checker.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.duplicate_checker.main" title="Permalink to this definition"></a></dt>
-<dd><p>Run the generation of functions for a given complexity and set of basis functions</p>
-<dl class="simple">
-<dt>Args:</dt><dd><dl class="field-list simple">
-<dt class="field-odd">runname (str)</dt>
-<dd class="field-odd"><p>name of run, which defines the basis functions used</p>
-</dd>
-<dt class="field-even">compl (int)</dt>
-<dd class="field-even"><p>complexity of functions to consider</p>
-</dd>
-<dt class="field-odd">track_memory (bool, default=True)</dt>
-<dd class="field-odd"><p>whether to compute and print memory statistics (True) or not (False)</p>
-</dd>
-<dt class="field-even">search_tmax (float, default=60.)</dt>
-<dd class="field-even"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
-</dd>
-<dt class="field-odd">expand_tmax (float, default=1.)</dt>
-<dd class="field-odd"><p>maximum time in seconds to run any one part of expand/simplify procedure for a given function</p>
-</dd>
-<dt class="field-even">seed (int, default=1234)</dt>
-<dd class="field-even"><p>seed to set random number generator for shuffling functions (used to prevent one rank having similar, hard to simplify functions)</p>
-</dd>
-</dl>
-</dd>
-<dt>Returns:</dt><dd><p>None</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>

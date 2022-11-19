@@ -1,1 +1,13 @@
 sympy
+myst-parser
+numpy
+scipy
+matplotlib
+pandas
+sphinx>=5.0
+pympler
+psutil
+prettytable
+numdifftools
+mpi4py
+astropy
