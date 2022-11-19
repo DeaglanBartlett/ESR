@@ -16,9 +16,9 @@ import os
 import utils
 from custom_printer import ESRPrinter
 
-#comm = MPI.COMM_WORLD
-#rank = comm.Get_rank()
-#size = comm.Get_size()
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
 
 a, b = sympy.symbols('a b', real=True)
 inv = sympy.Lambda(a, 1/a)
@@ -60,10 +60,6 @@ def get_max_param(all_fun, verbose=True):
     Returns:
         :max_param (int): maximum number of free parameters in any equation in all_fun
     """
-    
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
 
     max_param = -1
 
@@ -124,10 +120,6 @@ def make_changes(all_fun, all_sym, all_inv_subs, str_fun, sym_fun, inv_subs_fun)
         :all_sym (list): list of sympy objects containing all (updated) functions
         :all_inv_subs: list of dictionaries giving subsitutions to be applied to all (updated) functions
     """
-    
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
     
     all_orig = all_fun.copy()
 
@@ -190,10 +182,6 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
         :str_fun (list): list of strings containing functions
         :sym_fun (OrderedDict): dictionary of sympy objects which can be accessed by their string representations. If save_sympy is False, then sym_fun is None.
     """
-    
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
 
     if rank == 0 and verbose:
         if track_memory:
@@ -302,10 +290,6 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
         :all_inv_subs: list of dictionaries giving subsitutions to be applied to all (updated) functions
     
     """
-
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
 
     all_orig = all_fun.copy()
     all_orig_sym = all_sym.copy()
@@ -774,10 +758,6 @@ def expand_or_factor(all_sym, tmax=1, method='expand'):
     Returns:
         :all_sym (OrderedDict): dictionary of (updated) sympy objects which can be accessed by their string representations.
     """
-    
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
 
     vals = list(all_sym.values())
     keys = list(all_sym.keys())
@@ -835,10 +815,6 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
         :all_sym (list): dictionary of (updated) sympy objects which can be accessed by their string representations.
         :count (int): number of rounds of optimisation which were performed
     """
-    
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
 
     if rank == 0 and track_memory:
         utils.using_mem("start do_sympy")
@@ -1230,10 +1206,6 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
         :all_subs (list): list of substitutions required to convert between all and unique functions. Each item is either a dictionary with sympy objects as keys and values (use_sympy=True) or a string version of this dictionary (use_sympy=False). If bcast_res=True, then all ranks have this list, otherwise only rank 0 has this list and all other ranks return None.
     
     """
-    
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
 
     if rank == 0:
         with open(fname, 'r') as f:
@@ -1362,10 +1334,6 @@ def check_results(dirname, compl, tmax=10):
         None
     
     """
-    
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
 
     if rank == 0:
         print('\tLoading all equations', flush=True)
