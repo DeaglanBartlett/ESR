@@ -13,7 +13,7 @@
 import os
 import sys
 
-autodoc_mock_imports = ["mpi4py"]
+#autodoc_mock_imports = ["mpi4py"]
 
 sys.path.insert(0, os.path.abspath('../../ExhaustiveSR/'))
 sys.path.insert(0, os.path.abspath('../../ExhaustiveSR/generation/'))

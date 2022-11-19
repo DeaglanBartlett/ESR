@@ -5,12 +5,11 @@ import pandas as pd
 import scipy.integrate
 import sympy
 import sys
-from mpi4py import MPI
 
 from sympy_symbols import *
 
-#sys.path.insert(0, '../generation/')
-#from simplifier import time_limit
+sys.path.insert(0, '../generation/')
+from simplifier import time_limit
 
 class CCLikelihood:
 
