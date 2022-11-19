@@ -4,6 +4,5 @@ astropy
 numpy
 scipy
 matplotlib
-sympy
 pandas
 

@@ -12,6 +12,9 @@
 #
 import os
 import sys
+
+autodoc_mock_imports = ["mpi4py"]
+
 sys.path.insert(0, os.path.abspath('../../ExhaustiveSR/'))
 sys.path.insert(0, os.path.abspath('../../ExhaustiveSR/generation/'))
 sys.path.insert(0, os.path.abspath('../../ExhaustiveSR/fitting/'))
@@ -56,9 +59,6 @@ master_doc='index'
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
-
-autodoc_mock_imports = ["mpi4py"]
-
 
 # -- Options for HTML output -------------------------------------------------
 

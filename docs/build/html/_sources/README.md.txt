@@ -22,7 +22,7 @@ The functions generated for this paper are publicly available
 AT THIS LINK.
 
 ## Documentation
-The documentation for this project can be found AT THIS LINK
+The documentation for this project can be found [at this link](https://exhaustivesr.readthedocs.io/)
 
 ## Users are required to cite the Exhaustive Symbolic Regression Papers:
 
