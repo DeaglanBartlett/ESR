@@ -3,13 +3,6 @@
 Tutorial
 ========
 
-Preliminaries
--------------
-
-
-ADD SOME PRELIM STUFF HERE
-
-
 Function Generation
 -------------------
 
@@ -99,16 +92,6 @@ The following script initially loads the cosmic chronometer data then fits the f
 							cc_like, 
 							verbose=True)
 
-To fit a function to your own data, one must create an alternative likelihood class.
+To fit a function to your own data, one must create an alternative likelihood class which contains all the functions 
+found in the ``fitting.likelihood.CCLikelihood`` object.
 
-
-Building docs
--------------
-
-From within docs directory
-
-.. code-block:: console
-
-	make clean
-	sphinx-build -b html source build
-	make html

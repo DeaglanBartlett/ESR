@@ -72,32 +72,63 @@
 <h1>Welcome to ExhaustiveSR’s documentation!<a class="headerlink" href="#welcome-to-exhaustivesr-s-documentation" title="Permalink to this heading"></a></h1>
 <section id="exhaustivesr">
 <h2>ExhaustiveSR<a class="headerlink" href="#exhaustivesr" title="Permalink to this heading"></a></h2>
-<p>Code to find all functions of a given complexity given a set of basis functions.
-One can then optimise the parameters for a given data set, and select the best functions using the MDL principle.</p>
+<p>ExhaustiveSR is a symbolic regression algorithm which efficiently
+and systematically finds find all possible equations at fixed complexity
+(defined to be the number of nodes in its tree representation)
+given a set of basis functions.
+This is achieved by identifying the unique equations, so that one
+minimises the number of equations which one would have to fit to data.
+These unique equations are fitted to data and the results applied to
+the full list of equations, so we know the maximum likelihood parameters
+of every equation generated.
+We then select the best function using the minimum description length principle.
+By considering all equations, this procedure is guaranteed
+to find the true optimum for a
+given complexity and basis function set.</p>
+<p>We provide all required code and plotting routines to reproduce the
+results of the original ExhaustiveSR paper, which applies this method
+to a catalogue of cosmic chronometers and the Pantheon+ sample of
+supernovae to learn the Hubble rate as a function of redshift.
+The functions generated for this paper are publicly available
+AT THIS LINK.</p>
+<section id="documentation">
+<h3>Documentation<a class="headerlink" href="#documentation" title="Permalink to this heading"></a></h3>
+<p>The documentation for this project can be found AT THIS LINK</p>
 </section>
 <section id="users-are-required-to-cite-the-exhaustive-symbolic-regression-papers">
-<h2>Users are required to cite the Exhaustive Symbolic Regression Papers:<a class="headerlink" href="#users-are-required-to-cite-the-exhaustive-symbolic-regression-papers" title="Permalink to this heading"></a></h2>
+<h3>Users are required to cite the Exhaustive Symbolic Regression Papers:<a class="headerlink" href="#users-are-required-to-cite-the-exhaustive-symbolic-regression-papers" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>arXiv:PAPER1 (Paper 1)</p></li>
-<li><p>arXiv:PAPER2 (Paper 2)</p></li>
+</ul>
+</section>
+<section id="contributors">
+<h3>Contributors<a class="headerlink" href="#contributors" title="Permalink to this heading"></a></h3>
+<p>Below is a list of contributors to this repository.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/DeaglanBartlett">Deaglan Bartlett</a> (CNRS &amp; Sorbonne Université, Institut d’Astrophysique de Paris and Astrophysics, University of Oxford)</p></li>
+<li><p><a class="reference external" href="https://github.com/harrydesmond">Harry Desmond</a> (Institute of Cosmology &amp; Gravitation, University of Portsmouth)</p></li>
 </ul>
 </section>
 <section id="examples">
-<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h2>
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h3>
 <p>To run the Pantheon example from Paper 1, one must download the
 <a class="reference external" href="https://github.com/PantheonPlusSH0ES/DataRelease">Pantheon data</a>
 and place in the ‘data’ directory.</p>
+</section>
+<section id="acknowledgements">
+<h3>Acknowledgements<a class="headerlink" href="#acknowledgements" title="Permalink to this heading"></a></h3>
+<p>DJB is supported by the Simons Collaboration on ``Learning the Universe’’ and was supported by STFC and Oriel College, Oxford.
+HD is supported by a Royal Society University Research Fellowship (grant no. 211046).</p>
+</section>
 </section>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorial.html#preliminaries">Preliminaries</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial.html#function-generation">Function Generation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial.html#fitting-to-a-dataset">Fitting to a dataset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorial.html#fitting-a-single-function">Fitting a single function</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial.html#building-docs">Building docs</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a><ul>

@@ -12,6 +12,16 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 def main(comp, likelihood):
+    """Combine the description lengths of all functions of a given complexity, sort by this and save to file.
+    
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
+    
+    Returns:
+        None
+    
+    """
 
     unifn_file = likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt"%(comp,comp)
     allfn_file = likelihood.fn_dir + "/compl_%i/all_equations_%i.txt"%(comp,comp)
@@ -150,19 +160,7 @@ def main(comp, likelihood):
 
         negloglike_previous = np.nan
 
-        # Remove duplicates since these should have same logL
-        #_, uniq_idx = np.unique(np.array(negloglike_sort), return_index=True)
-        #uniq_idx = np.sort(uniq_idx)
-
         for i in range(len(DL_sort)):
-        #for j in range(len(uniq_idx)):
-
-            """
-            i = uniq_idx[j]
-            if negloglike_sort[i] == negloglike_previous:
-                print("DUPLICATE:", i, fcn_min_sort[i], fcn_min_sort[i-1])
-                continue
-            """
             
             # Only happens for non-duplicates; all Prels should be non-zero
             if i < Nfuncs:

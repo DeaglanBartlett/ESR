@@ -15,6 +15,10 @@ from simplifier import time_limit
 class CCLikelihood:
 
     def __init__(self):
+        """Likelihood class used to fit cosmic chronometer data.
+        Should be used as a template for other likelihoods as all functions in this class are required in fitting functions.
+        
+        """
 
         esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/'
         self.data_dir = esr_dir + '/data/'
@@ -39,13 +43,36 @@ class CCLikelihood:
 
 
     def get_pred(self, zp1, a, eq_numpy, **kwargs):
+        """Return the predicted H(z), which is the square root of the functions we are using.
+        
+        Args:
+            :zp1 (float or np.array): 1 + z for redshift z
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives H^2
+            
+        Returns:
+            :H (float or np.array): the predicted Hubble parameter at redshifts supplied
+        
+        """
         return np.sqrt(eq_numpy(zp1, *a))
 
     def clear_data(self):
+        """Clear data used for numerical integration (not required for cosmic chronometers)"""
         pass
 
 
     def negloglike(self, a, eq_numpy, **kwargs):
+        """Negative log-likelihood for a given function
+        
+        Args:
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives H^2
+            
+        Returns:
+            :nll (float): - log(likelihood) for this function and parameters
+        
+        """
+        
         H = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
         if not np.all(np.isreal(H)):
             return np.inf
@@ -55,6 +82,18 @@ class CCLikelihood:
         return nll
 
     def run_sympify(self, fcn_i, **kwargs):
+        """Sympify a function
+        
+        Args:
+            :fcn_i (str): string representing function we wish to fit to data
+            
+        Returns:
+            :fcn_i (str): string representing function we wish to fit to data (with superfluous characters removed)
+            :eq (sympy object): sympy object representing function we wish to fit to data
+            :integrated (bool, always False): whether we analytically integrated the function (True) or not (False)
+        
+        """
+    
         fcn_i = fcn_i.replace('\n', '')
         fcn_i = fcn_i.replace('\'', '')
 
@@ -75,6 +114,7 @@ class CCLikelihood:
 class PanthLikelihood:
 
     def __init__(self):
+        """Likelihood class used to fit Pantheon data"""
 
         esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/'
         self.data_dir = esr_dir + '/data/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/'
@@ -131,11 +171,24 @@ class PanthLikelihood:
         self.data_mask = None
 
     def clear_data(self):
+        """Clear data used for numerical integration"""
         self.data_x = None
         self.data_mask = None
 
 
     def get_pred(self, zp1, a, eq_numpy, integrated=False):
+        """Return the predicted distance modulus from the H^2 function supplied.
+        
+        Args:
+            :zp1 (float or np.array): 1 + z for redshift z
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives H^2
+            :integrated (bool, default=False): whether we previously analytically integrated the function (True) or not (False)
+            
+        Returns:
+            :mu (float or np.array): the predicted distance modulus at redshifts supplied
+        
+        """
 
         if integrated:
             dL = eq_numpy(zp1, *a) - eq_numpy(1, *a)
@@ -164,6 +217,16 @@ class PanthLikelihood:
 
 
     def negloglike(self, a, eq_numpy, integrated=False):
+        """Negative log-likelihood for a given function
+        
+        Args:
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives H^2
+            
+        Returns:
+            :nll (float): - log(likelihood) for this function and parameters
+        
+        """
         mu_pred = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy, integrated=integrated)
         if not np.all(np.isreal(mu_pred)):
             return np.inf
@@ -174,6 +237,20 @@ class PanthLikelihood:
 
 
     def run_sympify(self, fcn_i, tmax=5, try_integration=True):
+        """Sympify a function
+        
+        Args:
+            :fcn_i (str): string representing function we wish to fit to data
+            :tmax (float): maximum time in seconds to attempt analytic integration
+            :try_integration (bool, default=True): as the likelihood requires an integral, whether to try to analytically integrate (True) or not (False)
+            
+        Returns:
+            :fcn_i (str): string representing function we wish to fit to data (with superfluous characters removed)
+            :eq (sympy object): sympy object representing function we wish to fit to data
+            :integrated (bool): whether we we able to analytically integrate the function (True) or not (False)
+        
+        """
+        
         fcn_i = fcn_i.replace('\n', '')
         fcn_i = fcn_i.replace('\'', '')
 
@@ -210,6 +287,13 @@ class PanthLikelihood:
 class MockLikelihood:
 
     def __init__(self, nz, yfracerr):
+        """Likelihood class used to fit mock cosmic chronometer data
+        
+        Args:
+            :nz (int): number of mock redshifts to use
+            :yfracerr (float): the fractional uncertainty on the cosmic chronometer mock we are using
+        
+        """
 
         esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/'
         self.data_dir = esr_dir + '/data/mock/'
@@ -234,13 +318,35 @@ class MockLikelihood:
 
 
     def get_pred(self, zp1, a, eq_numpy, **kwargs):
+        """Return the predicted H(z), which is the square root of the functions we are using.
+        
+        Args:
+            :zp1 (float or np.array): 1 + z for redshift z
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives H^2
+            
+        Returns:
+            :H (float or np.array): the predicted Hubble parameter at redshifts supplied
+        
+        """
         return np.sqrt(eq_numpy(zp1, *a))
 
     def clear_data(self):
+        """Clear data used for numerical integration (not required for cosmic chronometers)"""
         pass
 
 
     def negloglike(self, a, eq_numpy, **kwargs):
+        """Negative log-likelihood for a given function
+        
+        Args:
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives H^2
+            
+        Returns:
+            :nll (float): - log(likelihood) for this function and parameters
+        
+        """
         H = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
         if not np.all(np.isreal(H)):
             return np.inf
@@ -250,6 +356,18 @@ class MockLikelihood:
         return nll
 
     def run_sympify(self, fcn_i, **kwargs):
+        """Sympify a function
+        
+        Args:
+            :fcn_i (str): string representing function we wish to fit to data
+            
+        Returns:
+            :fcn_i (str): string representing function we wish to fit to data (with superfluous characters removed)
+            :eq (sympy object): sympy object representing function we wish to fit to data
+            :integrated (bool, always False): whether we analytically integrated the function (True) or not (False)
+        
+        """
+        
         fcn_i = fcn_i.replace('\n', '')
         fcn_i = fcn_i.replace('\'', '')
 

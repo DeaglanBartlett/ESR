@@ -51,9 +51,15 @@ class Node:
 
         
 def check_tree(s):
-    """
-    Given a candidate string of 0, 1 and 2s, see
-    whether one can make a function out of this
+    """ Given a candidate string of 0, 1 and 2s, see whether one can make a function out of this
+    
+    Args:
+        :s (str): string comprised of 0, 1 and 2 representing tree of nullary, unary and binary nodes
+        
+    Returns:
+        :success (bool): whether candidate string can form a valid tree (True) or not (False)
+        :part_considered (str): string of length <= s, where s[:len(part_considered)] = part_considered
+        :tree (list): list of Node objects corresponding to string s
     """
 
     tree = [Node(t) for t in s]
@@ -113,8 +119,13 @@ def check_tree(s):
             
         
 def get_allowed_shapes(compl):
-    """
-    Find the shapes of all allowed trees containing compl nodes
+    """ Find the shapes of all allowed trees containing compl nodes
+    
+    Args:
+        :compl (int): complexity of tree = number of nodes
+        
+    Returns:
+        :cand (list): list of strings comprised of 0, 1 and 2 representing valid trees of nullary, unary and binary nodes
     """
 
     if rank == 0:
@@ -156,6 +167,17 @@ def get_allowed_shapes(compl):
     
     
 def node_to_string(idx, tree, labels):
+    """Convert a tree with labels into a string giving function
+    
+    Args:
+        :idx (int): index of tree to consider
+        :tree (list): list of Node objects corresponding to the tree
+        :labels (list): list of strings giving node labels of tree
+        
+    Returns:
+        Function as a string
+    """
+    
     if len(tree) == 0:
         return '0'
     elif tree[idx].type == 0:
@@ -173,6 +195,20 @@ def node_to_string(idx, tree, labels):
     
     
 def update_tree(tree, labels, try_idx, basis_functions):
+    """Try to combine exponentials and powers to make simpler representations of functions
+    
+    Args:
+        :tree (list): list of Node objects corresponding to tree of function
+        :labels (list): list of strings giving node labels of tree
+        :try_idx (int): when we have multiple substituions we can attempt, this indicates which one to try
+        :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+    
+    Returns:
+        :new_labels (list): list of strings giving node labels of new tree
+        :new_shape (list): list of 0, 1 and 2 representing whether nodes in new tree are nullary, unary or binary
+        :nadded (int): number of new functions added
+    
+    """
 
     pow_set = ["square", "cube", "sqrt_abs", "inv"]
     pow_num = {"square":'*2', "cube":'*3', "sqrt_abs":'/2', "inv":'*-1'}
@@ -566,9 +602,20 @@ def update_tree(tree, labels, try_idx, basis_functions):
 
 
 def update_sums(tree, labels, try_idx, basis_functions):
-
-#    print('\nSTARTING')
-#    print(labels)
+    """Try to combine sums to make simpler representations of functions
+    
+    Args:
+        :tree (list): list of Node objects corresponding to tree of function
+        :labels (list): list of strings giving node labels of tree
+        :try_idx (int): when we have multiple substituions we can attempt, this indicates which one to try
+        :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+    
+    Returns:
+        :new_labels (list): list of strings giving node labels of new tree
+        :new_shape (list): list of 0, 1 and 2 representing whether nodes in new tree are nullary, unary or binary
+        :nadded (int): number of new functions added
+    
+    """
 
     new_shape = None
     new_labels = None
@@ -705,9 +752,6 @@ def update_sums(tree, labels, try_idx, basis_functions):
             k = tree[k].parent
         all_sign.append(n)
 
-#    print("ALL_S", all_s)
-#    print("SIGN", all_sign)
-
     # Get unique terms in sum
     s = []
     for ss in all_s:
@@ -723,8 +767,6 @@ def update_sums(tree, labels, try_idx, basis_functions):
     
     if (len(s) != len(all_s)) or run_anyway:
         for j in range(len(s)):
-        
-#            print('\ns', s[j])
                 
             l = labels[:i]
             t = [tt.type for tt in tree[:i]]
@@ -741,11 +783,9 @@ def update_sums(tree, labels, try_idx, basis_functions):
             for a in uni:
                 nrep = [all_sign[b] for b in range(len(all_sign)) if (all_s[a] == all_s[b])]
                 len_nrep = len(nrep)
-#                print("NREP", nrep)
                 nrep = sum(nrep)
                 
                 if (neg_const[a] == True) and (len_nrep == 1):
-#                    print("NEG")
                     # If neg_const try to get the version with the - instead of + (or vice versa)
                     left_idx = tree[tree[all_idx[a][0]].parent].left
                     right_idx = tree[tree[all_idx[a][0]].parent].right
@@ -800,8 +840,6 @@ def update_sums(tree, labels, try_idx, basis_functions):
                         else:
                             n_uni = n_uni + ['-']
                 elif all_sign[a] == 1:
-#                elif nrep > 0:
-#                    print("SIGN 1")
                     if nrep == 1:
                         l_uni = labels[all_idx[a][0]:all_idx[a][1]] + l_uni
                         t_uni = [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
@@ -812,7 +850,6 @@ def update_sums(tree, labels, try_idx, basis_functions):
                         t_uni = [2, 0] + [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
                         n_uni = n_uni + ['+']
                 else:
-#                    print("ELSE", nrep)
                     if abs(nrep) == 1:
                         l_uni = labels[all_idx[a][0]:all_idx[a][1]] + l_uni
                         t_uni = [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
@@ -825,9 +862,6 @@ def update_sums(tree, labels, try_idx, basis_functions):
                         n_uni = n_uni + ['+']
                     elif nrep < 0:
                         n_uni = n_uni + ['-']
-                        
-#            print('l_uni', l_uni)
-#            print('n_uni', n_uni)
                         
             l_rep = []
             t_rep = []
@@ -875,7 +909,6 @@ def update_sums(tree, labels, try_idx, basis_functions):
                                 a = uni[k]
                                 nrep = [all_sign[b] for b in range(len(all_sign)) if (all_s[a] == all_s[b])]
                                 nrep = sum(nrep)
-#                                print('a', a, labels[all_idx[a][0]:all_idx[a][1]], nrep)
                                 if neg_const[a] == True:
                                     # If neg_const try to get the version with the - instead of + (or vice versa)
                                     left_idx = tree[all_idx[a][0]].left
@@ -914,7 +947,6 @@ def update_sums(tree, labels, try_idx, basis_functions):
                                                         [2, 0] + \
                                                         [tt.type for tt in tree[left_idx-1:all_idx[a][1]]] + t_uni
                                         else:
-#                                            print(left_idx, right_idx, labels[all_idx[a][0]], nrep, labels[left_idx].lstrip("-"))
                                             x = labels[right_idx].lstrip("-")
                                             if x == str(1) and nrep == 1:
                                                 l_uni = labels[all_idx[a][0]+1:right_idx] + labels[right_idx+1:all_idx[a][1]] + l_uni
@@ -969,15 +1001,11 @@ def update_sums(tree, labels, try_idx, basis_functions):
                                 labels[all_idx[a][0]:all_idx[a][1]] + l_uni
                             t = t + [2] * len(n_uni) + [2, 0] + \
                                 [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-
-#            print('l')
             
             l += labels[end_idx:]
             t += [tt.type for tt in tree[end_idx:]]
             new_labels.append(l)
             new_shape.append(t)
-            
-#            print('appended', l)
 
             nadded += 1
     
@@ -989,6 +1017,17 @@ def update_sums(tree, labels, try_idx, basis_functions):
     
     
 def find_additional_trees(tree, labels, basis_functions):
+    """For a given tree, try to find all simpler representations of the function by combining sums, exponentials and powers
+    
+    Args:
+        :tree (list): list of Node objects corresponding to tree of function
+        :labels (list): list of strings giving node labels of tree
+        :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+        
+    Returns:
+        :new_tree (list): list of equivalent trees, given as lists of Node objects
+        :new_labels (list): list of lists of strings giving node labels of new_tree
+    """
 
     new_tree = [tree]
     new_labels = [labels]
@@ -1037,7 +1076,6 @@ def find_additional_trees(tree, labels, basis_functions):
                     f = [node_to_string(0, new_tree[i], new_labels[i]), node_to_string(0, t, l)]
                     try:
                         _, sym = simplifier.initial_sympify(f, max_param, verbose=False, parallel=False)
-                        #if not sym[0].equals(sym[1]):
                         if len(sym) != 1:
                             print('Maybe bad (not keeping):', new_labels[i], '\t', sym[0], '\t', sym[1])
                         else:
@@ -1072,6 +1110,20 @@ def find_additional_trees(tree, labels, basis_functions):
     
     
 def shape_to_functions(s, basis_functions):
+    """Find all possible functions formed from the given list of 0s, 1s and 2s defining a tree and basis functions
+    
+    Args:
+        :s (str): string comprised of 0, 1 and 2 representing tree of nullary, unary and binary nodes
+        :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+    
+    Returns:
+        :all_fun (list): list of strings containing all functions generated directly from tree
+        :all_tree (list): list of lists of Node objects corresponding to the trees of functions in all_fun
+        :extra_fun (list): list of strings containing functions generated by combining sums, exponentials and powers of the functions in all_fun
+        :extra_tree (list): list of lists of Node objects corresponding to the trees of functions in extra_fun
+        :extra_orig (list): list of strings corresponding to original versions of extra_fun, as found in all_fun
+    
+    """
 
     n0 = np.sum(s == 0)
     n1 = np.sum(s == 1)
@@ -1147,7 +1199,6 @@ def shape_to_functions(s, basis_functions):
         extra_fun = list(itertools.chain(*extra_fun))
         extra_orig = list(itertools.chain(*extra_orig))
         print('Number of extra trees for', s, len(extra_fun))
-    #extra_tree = comm.bcast(extra_tree, root=0)
     extra_fun = comm.bcast(extra_fun, root=0)
     extra_orig = comm.bcast(extra_orig, root=0)
     
@@ -1157,6 +1208,16 @@ def shape_to_functions(s, basis_functions):
 
 
 def labels_to_shape(labels, basis_functions):
+    """Find the representation of the shape of a tree given its labels
+    
+    Args:
+        :labels (list): list of strings giving node labels of tree
+        :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+    
+    Returns:
+        :s (str): string comprised of 0, 1 and 2 representing tree of nullary, unary and binary nodes
+        
+    """
 
     basis_dict = {}
     for i in range(len(basis_functions)):
@@ -1176,6 +1237,17 @@ def labels_to_shape(labels, basis_functions):
 
 
 def aifeyn_complexity(tree, param_list):
+    """Compute contribution to description length from describing tree
+    
+    Args:
+        :tree (list): list of strings giving node labels of tree
+        :param_list (list): list of strings of all possible parameter names
+    
+    Returns:
+        :aifeyn (float): the contribution to description length from describing tree
+    
+    """
+
     t = [tt for tt in tree if (tt not in param_list) and (not tt.lstrip("-").isdigit())]  # Operators
     n = np.array([int(tt) for tt in tree if tt.lstrip("-").isdigit()])  # Integers
     n[n==0] = 1  # So we have log(1) for 0 instead of log(0)
@@ -1185,6 +1257,18 @@ def aifeyn_complexity(tree, param_list):
 
 
 def generate_equations(compl, basis_functions, dirname):
+    """Generate all equations at a given complexity for a set of basis functions and save results to file
+    
+    Args:
+        :compl (int): complexity of functions to consider
+        :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+        :dirname (str): directory path to save results in
+    
+    Returns:
+        :all_fun (list): list of strings containing all functions generated
+        :extra_orig (list): list of strings containing functions generated by combining sums, exponentials and powers of the functions in all_fun as they appear in all_fun
+    
+    """
 
     shapes = get_allowed_shapes(compl)
 
@@ -1220,7 +1304,6 @@ def generate_equations(compl, basis_functions, dirname):
     nextratree = 0
 
     for i in range(len(shapes)):
-    #for i in [0]:
         if rank == 0:
             print('\n%i of %i'%(i+1, len(shapes)))
             print(shapes[i])
@@ -1267,14 +1350,6 @@ def generate_equations(compl, basis_functions, dirname):
                 for tree in extra_tree:
                     print(aifeyn_complexity(tree, param_list), file=f)
 
-            """
-            for fname in ['orig_trees', 'orig_aifeyn', 'extra_trees', 'extra_aifeyn']:
-                s = 'wc -l %s/%s_%i.txt'%(dirname,fname,compl)
-                #print(s)
-                os.system(s)
-                sys.stdout.flush()
-            """
-
     if rank == 0:
         s = 'cat %s/orig_trees_%i.txt %s/extra_trees_%i.txt > %s/trees_%i.txt'%(dirname,compl,dirname,compl,dirname,compl)
         print('\n%s'%s)
@@ -1288,16 +1363,6 @@ def generate_equations(compl, basis_functions, dirname):
         print('\nntree:', ntree)
         print('nextratree:', nextratree)
         print('sum:', ntree + nextratree)
-
-        """
-        for fname in ['orig_trees', 'extra_trees', 'trees', 'orig_aifeyn', 'extra_aifeyn', 'aifeyn']:
-            print('\n%s'%fname)
-            s = 'wc -l %s/%s_%i.txt'%(dirname,fname,compl)
-            print(s)
-            sys.stdout.flush()
-            os.system(s)
-            sys.stdout.flush()
-        """
 
     all_fun = list(itertools.chain(*all_fun))
     extra_fun = list(itertools.chain(*extra_fun))

@@ -8,6 +8,23 @@ import generator
 import simplifier
 
 def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False):
+    """Run end-to-end fitting of function for a single function
+    
+    Args:
+        :labels (list): list of strings giving node labels of tree
+        :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+        :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
+        :pmin (float, default=0.): minimum value for each parameter to consider when generating initial guess
+        :pmax (float, default=3.): maximum value for each parameter to consider when generating initial guess
+        :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        :verbose (bool, default=True): Whether to print results (True) or not (False)
+    
+    Returns:
+         :negloglike (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
+         :DL (float): the description length of this function
+    
+    """
 
     # (1) Convert the string to a sympy function
     s = generator.labels_to_shape(labels, basis_functions)

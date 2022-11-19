@@ -21,6 +21,24 @@ rank = comm.Get_rank()
 size = comm.Get_size()
     
 def load_loglike(comp, likelihood, data_start, data_end, split=True):
+    """Load results of optimisation completed by test_all.py
+    
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
+        :data_start (int): minimum index of results we want to load (only if split=True)
+        :data_end (int): maximum index of results we want to load (only if split=True)
+        :split (bool, deault=True): whether to return subset of results given by data_start and data_end (True) or all data (False)
+        
+    Returns:
+        :negloglike (list): list of minimum log-likelihoods
+        :param1 (list): list of parameters a0 at maximum likelihood points
+        :param2 (list): list of parameters a1 at maximum likelihood points
+        :param3 (list): list of parameters a2 at maximum likelihood points
+        :param4 (list): list of parameters a3 at maximum likelihood points
+
+    """
+
     negloglike, param1, param2, param3, param4 = np.genfromtxt(likelihood.out_dir + "/negloglike_comp"+str(comp)+".dat", unpack=True)
     negloglike = np.atleast_1d(negloglike)
     param1 = np.atleast_1d(param1)
@@ -37,6 +55,23 @@ def load_loglike(comp, likelihood, data_start, data_end, split=True):
 
 
 def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
+    """Compute Fisher, correct MLP and find parametric contirbution to description length for single function
+    
+    Args:
+        :fcn_i (str): string representing function we wish to fit to data
+        :eq (sympy object): sympy object for the function we wish to fit to data
+        :integrated (bool): whether eq_numpy has already been integrated
+        :theta_ML (list): the maximum likelihood values of the parameters
+        :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
+        :negloglike (float): the minimum log-likelihood for this function
+    
+    Returns:
+        :params (list): the corrected maximum likelihood values of the parameters
+        :negloglike (float): the corrected minimum log-likelihood for this function
+        :deriv (list): flattened version of the Hessian of -log(likelihood) at the maximum likelihood point
+        :codelen (float): the parameteric contribution to the description length of this function
+        
+    """
 
     def f4(x):
         return likelihood.negloglike(x,eq_numpy, integrated=integrated)
@@ -94,8 +129,6 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
                     Delta, Nsteps = Delta_tmp, Nsteps_tmp
                     deriv[:] = np.array([Hmat[0,0], Hmat[0,1], Hmat[0,2], Hmat[0,3], Hmat[1,1], Hmat[1,2], Hmat[1,3], Hmat[2,2], Hmat[2,3], Hmat[3,3]])
                     break
-
-        #negloglike = f4(params[:k])
     
     elif ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
         k=3
@@ -137,8 +170,6 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
                     Delta, Nsteps = Delta_tmp, Nsteps_tmp
                     deriv[:] = np.array([Hmat[0,0], Hmat[0,1], Hmat[0,2], np.nan, Hmat[1,1], Hmat[1,2], np.nan, Hmat[2,2], np.nan, np.nan])
                     break
-
-        #negloglike = f3(params[:k])
     
     elif ("a1" in fcn_i) and ("a0" in fcn_i):
         k=2
@@ -181,8 +212,6 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
                     deriv[:] = np.array([Hmat[0,0], Hmat[0,1], np.nan, np.nan, Hmat[1,1], np.nan, np.nan, np.nan, np.nan, np.nan])
                     break
 
-        #negloglike = f2(params[:k])
-
     elif ("a0" in fcn_i):
         k=1
         
@@ -223,8 +252,6 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
                     Delta, Nsteps = Delta_tmp, Nsteps_tmp
                     deriv[:] = np.array([Hmat[0,0], np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
                     break
-
-        #negloglike = f1(params[:k])
     
     else:                   # No params
         codelen = 0
@@ -280,6 +307,18 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
 
     
 def main(comp, likelihood, tmax=5, try_integration=False):
+    """Compute Fisher, correct MLP and find parametric contirbution to description length for all functions and save to file
+    
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
+        :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        
+    Returns:
+        None
+    
+    """
 
     if comp==8:
         sys.setrecursionlimit(2000)

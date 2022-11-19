@@ -1,0 +1,103 @@
+.. default-role:: math
+
+Tutorial
+========
+
+Preliminaries
+-------------
+
+
+ADD SOME PRELIM STUFF HERE
+
+
+Function Generation
+-------------------
+
+To generate all functions at a given complexity (here complexity 5), one simply needs to run the following.
+
+.. code-block:: python
+
+	import generation.duplicate_checker
+
+	runname = 'core_maths'
+	comp = 5
+	generation.duplicate_checker.main(runname, comp)
+
+
+In ``generation.duplicate_checker`` we have  predefined a few sets of functions which we believe would be useful. However, one simply needs to add another option to the start of that script to define a new run:
+
+.. code-block:: python
+
+	if runname == 'keep_duplicates':
+        	basis_functions = [["x", "a"],  # type0
+                	["square", "exp", "inv", "sqrt_abs", "log_abs"],  # type1
+                	["+", "*", "-", "/", "pow"]]  # type2
+    	elif runname == 'core_maths':
+        	basis_functions = [["x", "a"],  # type0
+                	["inv"],  # type1
+                	["+", "*", "-", "/", "pow"]]  # type2
+    	elif runname == 'ext_maths':
+        	basis_functions = [["x", "a"],  # type0
+                	["inv", "sqrt_abs", "square", "exp"],  # type1
+                	["+", "*", "-", "/", "pow"]]  # type2
+    	elif runname == 'osc_maths':
+        	basis_functions = [["x", "a"],  # type0
+                	["inv", "sin"],  # type1
+                	["+", "*", "-", "/", "pow"]]  # type2
+
+where type 0, 1 and 2 functions are nullary, unary, and binary, respectively.
+
+Fitting to a dataset
+--------------------
+
+Suppose we have already generated the equations required for the ``CCLikelihood`` class. In the following we show the steps that are required to fit the complexity 5 functions to these data. The various ``fitting'' functions run rely on the output of the previous script, so the order cannot change. 
+
+
+.. code-block:: python
+
+	import fitting.test_all
+	import fitting.test_all_Fisher
+	import fitting.match
+	import fitting.combine_DL
+	import fitting.plot
+	from fitting.likelihood import CCLikelihood
+
+	comp = 5
+	likelihood = CCLikelihood()
+
+	fitting.test_all.main(comp, likelihood)
+	fitting.test_all_Fisher.main(comp, likelihood)
+	fitting.match.main(comp, likelihood)
+	fitting.combine_DL.main(comp, likelihood)
+	fitting.plot.main(comp, likelihood)
+
+
+
+Fitting a single function
+-------------------------
+
+One may wish to fit a single function to your data, instead of the full library produced during the function generation step.
+For example, suppose we wish to fit a `\Lambda` CDM expansion history to the cosmic chronometer data.
+This function is `y(x) = \theta_0 + \theta_1 x^3` which can be represented as the tree
+`[+, \theta_0, \times, \theta_1, {\rm pow}, x, 3]` although we will rewrite `\theta_0` as ``a0``, `\theta_1` as ``a1`` and `\times` as ``*``.
+The following script initially loads the cosmic chronometer data then fits the function to this data, returning the negative log-likelihood and the description length.
+
+.. code-block:: python
+
+	from fitting import single_function
+	from fitting.likelihood import CCLikelihood
+
+	cc_like = CCLikelihood()
+
+	labels = ["+", "a0", "*", "a1", "pow", "x", "3"]
+	basis_functions = [["x", "a"],  # type0
+			["inv"],  # type1
+			["+", "*", "-", "/", "pow"]]  # type2
+
+	logl_lcdm_cc, dl_lcdm_cc = fit_single.single_function(labels, 
+							basis_functions, 
+							cc_like, 
+							verbose=True)
+
+To fit a function to your own data, one must create an alternative likelihood class.
+

@@ -18,6 +18,20 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed=1234):
+    """Run the generation of functions for a given complexity and set of basis functions
+    
+    Args:
+        :runname (str): name of run, which defines the basis functions used
+        :compl (int): complexity of functions to consider
+        :track_memory (bool, default=True): whether to compute and print memory statistics (True) or not (False)
+        :search_tmax (float, default=60.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :expand_tmax (float, default=1.): maximum time in seconds to run any one part of expand/simplify procedure for a given function
+        :seed (int, default=1234): seed to set random number generator for shuffling functions (used to prevent one rank having similar, hard to simplify functions)
+    
+    Returns:
+        None
+    
+    """
 
     if runname == 'keep_duplicates':
         basis_functions = [["x", "a"],  # type0
@@ -37,7 +51,6 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
                 ["+", "*", "-", "/", "pow"]]  # type2
 
     dirname = '../function_library/' + runname + '/'
-    #dirname = '../function_library/tests/'
     
     if (rank == 0) and (not os.path.isdir(dirname)):
         print('Making output directory:', dirname)

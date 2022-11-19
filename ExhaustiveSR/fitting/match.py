@@ -21,6 +21,18 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 def main(comp, likelihood, tmax=5, try_integration=False):
+    """Apply results of fitting the unique functions to all functions and save to file
+    
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
+        :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        
+    Returns:
+        None
+        
+    """
 
     def f4(x):
         return likelihood.negloglike(x,eq_numpy, integrated=integrated)

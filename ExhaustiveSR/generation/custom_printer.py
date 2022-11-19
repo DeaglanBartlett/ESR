@@ -1,10 +1,3 @@
-"""
-A Printer for generating readable representation of most SymPy classes.
-
-Only difference to StrPrinter is to use  pow(.,.) instead of **
-unless integer powers used
-"""
-
 from typing import Any, Dict as tDict
 
 from sympy.core import S, Rational, Pow, Basic, Mul, Number, Add
@@ -21,6 +14,13 @@ from mpmath.libmp import prec_to_dps, to_str as mlib_to_str
 
 
 class ESRPrinter(Printer):
+    """
+    A Printer for generating readable representation of most SymPy classes as required for ExhaustiveSR.
+
+    Only difference to sympy's StrPrinter is to use pow(.,.) instead of **
+    unless integer powers used
+    """
+
     printmethod = "_sympystr"
     _default_settings = {
         "order": None,

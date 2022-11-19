@@ -8,15 +8,6 @@ generation
 ----------
 
 
-count_functions
-~~~~~~~~~~~~~~~
-
-.. automodule:: generation.count_functions
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
 custom_printer
 ~~~~~~~~~~~~~~
 

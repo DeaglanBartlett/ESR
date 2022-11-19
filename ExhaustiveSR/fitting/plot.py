@@ -22,6 +22,18 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 def main(comp, likelihood, tmax=5, try_integration=False):
+    """Plot best 50 functions at given complexity against data and save plot to file
+    
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object containing data, functions to convert SR expressions to variable of data and output path
+        :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        
+    Returns:
+        None
+    
+    """
 
     if rank != 0:
         return
@@ -64,7 +76,7 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     cmap = cm.hot_r
     norm = mpl.colors.LogNorm(vmin=vmin,vmax=vmax)
 
-    for i in range(min(len(fcn_list),50)):                 # The part of all eqs analysed by this proc
+    for i in range(min(len(fcn_list),50)):
 
         fcn_i = fcn_list[i].replace('\'', '')
         
@@ -112,7 +124,6 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     ax1.set_xlabel(r'$z$')
     ax1.set_ylabel(likelihood.ylabel)
     ax1.set_xlim(0, None)
-    #ax1.set_xscale('log')
 
     ax2  = fig.add_axes([0.85,0.10,0.05,0.85])
     cb1  = mpl.colorbar.ColorbarBase(ax2,cmap=cmap,norm=norm,orientation='vertical')

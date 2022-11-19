@@ -32,6 +32,15 @@ class TimeoutException(Exception): pass
 
 @contextmanager
 def time_limit(seconds):
+    """ Check function call does not exceed allotted time
+    
+    Args:
+        :seconds (float): maximum time function can run in seconds
+    
+    Raises:
+        TimeoutException if time exceeds seconds
+    """
+    
     def signal_handler(signum, frame):
         raise TimeoutException("Timed out")
     signal.signal(signal.SIGALRM, signal_handler)
@@ -42,6 +51,15 @@ def time_limit(seconds):
         signal.alarm(0)
 
 def get_max_param(all_fun, verbose=True):
+    """ Find maximum number of free parameters in list of functions
+    
+    Args:
+        :all_fun (list): list of strings containing functions
+        :verbose (bool, default=True): Whether to print result (True) or not (False)
+    
+    Returns:
+        :max_param (int): maximum number of free parameters in any equation in all_fun
+    """
 
     max_param = -1
 
@@ -63,6 +81,15 @@ def get_max_param(all_fun, verbose=True):
     
 
 def count_params(all_fun, max_param):
+    """ Count the number of free parameters in each member of a list of functions
+    
+    Args:
+        :all_fun (list): list of strings containing functions
+        :max_param (int): maximum number of free parameters in any equation in all_fun
+        
+    Returns:
+        :nparam (np.array): array of ints containing number of free parameters in corresponding member of all_fun
+    """
 
     nparam = np.zeros(len(all_fun), dtype=int)
     param_list = ['a%i'%i for i in range(max_param)]
@@ -77,7 +104,23 @@ def count_params(all_fun, max_param):
     
     
 def make_changes(all_fun, all_sym, all_inv_subs, str_fun, sym_fun, inv_subs_fun):
-
+    """ Update global variables of functions and symbolic expressions by combining rank
+    calculations
+    
+    Args:
+        :all_fun (list): list of strings containing all functions
+        :all_sym (list): list of sympy objects containing all functions
+        :all_inv_subs (list): list of dictionaries giving subsitutions to be applied to all functions
+        :str_fun (list): list of strings containing functions considered by rank
+        :sym_fun (list): list of sympy objects containing functions considered by rank
+        :inv_subs_fun (list): list of dictionaries giving subsitutions to be applied to functions considered by rank
+        
+    Returns:
+        :all_fun: list of strings containing all (updated) functions
+        :all_sym (list): list of sympy objects containing all (updated) functions
+        :all_inv_subs: list of dictionaries giving subsitutions to be applied to all (updated) functions
+    """
+    
     all_orig = all_fun.copy()
 
     i = utils.split_idx(len(all_fun), rank, size)
@@ -125,6 +168,20 @@ def make_changes(all_fun, all_sym, all_inv_subs, str_fun, sym_fun, inv_subs_fun)
     
     
 def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memory=False, save_sympy=True):
+    """Convert list of strings of functions into list of sympy objects
+    
+    Args:
+        :all_fun (list): list of strings containing functions
+        :max_param (int): maximum number of free parameters in any equation in all_fun
+        :verbose (bool, default=True): whether to print progress (True) or not (False)
+        :parallel (bool, default=True): whether to split equations amongst ranks (True) or each equation considered by all ranks (False)
+        :track_memory (bool, default=True): whether to compute and print memory statistics (True) or not (False)
+        :save_sympy (bool, default=True): whether to return sympy objects (True) or not (False)
+        
+    Returns:
+        :str_fun (list): list of strings containing functions
+        :sym_fun (OrderedDict): dictionary of sympy objects which can be accessed by their string representations. If save_sympy is False, then sym_fun is None.
+    """
 
     if rank == 0 and verbose:
         if track_memory:
@@ -186,18 +243,6 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
     # We have to gather these, although won't do this again
     if parallel:
 
-        """
-        old_fun = str_fun.copy()
-        str_fun = comm.gather(str_fun, root=0)
-        if rank == 0:
-            str_fun = list(itertools.chain(*str_fun))
-        str_fun = comm.bcast(str_fun, root=0)
-        #final_fun = str_fun.copy()
-        """
-
-        #str_fun = old_fun
-        
-        #"""
         # First find which ranks contain which indices
         start_idx = len(str_fun)
         start_idx = comm.gather(start_idx, root=0)
@@ -212,27 +257,6 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
             all_fun[start_idx[r]:start_idx[r+1]] = comm.bcast(str_fun, root=r) 
         str_fun = all_fun
 
-        #"""
-
-        """
-        if save_sympy:
-            sym_keys = comm.gather(list(sym_fun.keys()), root=0)
-            sym_vals = comm.gather(list(sym_fun.values()), root=0)
-            sym_fun = None
-            if rank == 0:
-                sym_keys = list(itertools.chain(*sym_keys))
-                sym_vals = list(itertools.chain(*sym_vals))
-                sym_fun = OrderedDict()
-                for i in range(len(sym_keys)):
-                    key = sym_keys[i]
-                    if not key in sym_fun:
-                        sym_fun[key] = sym_vals[i]
-                del sym_vals, sym_keys
-                gc.collect()
-            sym_fun = comm.bcast(sym_fun, root=0)
-        """
-
-        #"""
         if save_sympy:
             all_sym = OrderedDict()
             for r in range(size):
@@ -244,13 +268,28 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
                         all_sym[key] = sym_vals[i]
         
             sym_fun = all_sym
-        #"""
-    #"""
 
     return str_fun, sym_fun
     
     
 def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, tmax=1, check_perm=False):
+    """Simplify equations and find duplicates.
+    
+    Args:
+        :all_fun (list): list of strings containing all functions
+        :all_sym (list): list of sympy objects containing all functions
+        :all_inv_subs (list): list of dictionaries giving subsitutions to be applied to all functions
+        :max_param (int): maximum number of free parameters in any equation in all_fun
+        :expand_fun (bool, default=True): whether to run the sympy expand options (True) or not (False)
+        :tmax (float, default=1.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :check_perm (bool, default=False): whether to check all possible permutations and inverses of constants (True) or not (False)
+        
+    Returns:
+        :all_fun: list of strings containing all (updated) functions
+        :all_sym (list): list of sympy objects containing all (updated) functions
+        :all_inv_subs: list of dictionaries giving subsitutions to be applied to all (updated) functions
+    
+    """
 
     all_orig = all_fun.copy()
     all_orig_sym = all_sym.copy()
@@ -331,7 +370,7 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                     with time_limit(tmax):
                         if (all_a[c[0]] in sym_fun[i].free_symbols) and (all_a[c[1]] in sym_fun[i].free_symbols):
                             # Make sure symbols only appear once in sym version
-                            if sym_fun[i].count(all_a[c[1]]) == 1: # or str_fun[i].count(param_list[c[1]]) == 1:
+                            if sym_fun[i].count(all_a[c[1]]) == 1:
                                 if sym_fun[i].count(all_a[c[0]]) == 1:
                                     v = 1
                                     keep = False
@@ -360,7 +399,6 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                                             sym_fun[i] = sym_fun[i].subs(expr[0], all_a[c[v]])
                                             f2 = str(sym_fun[i])
                                             npar = count_params([f1, f2], max_param)
-                                            #keep = (npar[0] == npar[1])
                                             if inv_subs_fun[i] is None:
                                                 if keep:
                                                     inv_subs_fun[i] = [str({expr[0]:all_a[c[v]]})]
@@ -375,7 +413,6 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                                             sym_fun[i] = sym_fun[i].subs(expr[0], sympy.Abs(all_a[c[v]], evaluate=False))
                                             f2 = str(sym_fun[i])
                                             npar = count_params([f1, f2], max_param)
-                                            #keep = (npar[0] == npar[1])
                                             if inv_subs_fun[i] is None:
                                                 if keep:
                                                     inv_subs_fun[i] = [str({expr[0]:sympy.Abs(all_a[c[v]])})]
@@ -431,12 +468,11 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                                         ]
                                         
                             for expr in all_expr:
-                                if sym_fun[i].has(expr[0]): # or (str(expr[0]) in str_fun[i]):
+                                if sym_fun[i].has(expr[0]):
                                     ss = str(sym_fun[i]).replace(" ", "")
                                     ee = str(expr[0]).replace(" ", "")
                                     # Make sure variable only appears in this form in the sym version
                                     if ss.count(param_list[j]) in [1, ss.count(ee), ee.count(param_list[j])]:
-                                    #if str_fun[i].count(param_list[j]) in [1, str_fun[i].count(str(expr[0])), str(expr[0]).count(param_list[j])]:
                                         f0 = sym_fun[i].copy()
                                         sym_fun[i] = sym_fun[i].subs({expr[0]:expr[1]})
 
@@ -712,6 +748,16 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
     
 
 def expand_or_factor(all_sym, tmax=1, method='expand'):
+    """Run the sympy expand or factor functions
+    
+    Args:
+        :all_sym (OrderedDict): dictionary of sympy objects which can be accessed by their string representations.
+        :tmax (float, default=1.): maximum time in seconds to run any one part of expand/simplify procedure for a given function
+        :method (str, default='expand'): whether to run expand ('expand') or simplify ('simplify'). All other options are ignored
+    
+    Returns:
+        :all_sym (OrderedDict): dictionary of (updated) sympy objects which can be accessed by their string representations.
+    """
 
     vals = list(all_sym.values())
     keys = list(all_sym.keys())
@@ -754,6 +800,21 @@ def expand_or_factor(all_sym, tmax=1, method='expand'):
    
     
 def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_memory=False):
+    """Run the duplicate checking procedure
+    
+    Args:
+        :all_fun (list): list of strings containing all functions
+        :all_sym (OrderedDict): dictionary of sympy objects which can be accessed by their string representations.
+        :compl (int):
+        :search_tmax (float, default=1.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :expand_tmax (float, default=1.): maximum time in seconds to run any one part of expand/simplify procedure for a given function
+        :dirname (str): directory path to save results in
+        :track_memory (bool, default=True): whether to compute and print memory statistics (True) or not (False)
+    Returns:
+        :all_fun (list): list of strings containing all (updated) functions
+        :all_sym (list): dictionary of (updated) sympy objects which can be accessed by their string representations.
+        :count (int): number of rounds of optimisation which were performed
+    """
 
     if rank == 0 and track_memory:
         utils.using_mem("start do_sympy")
@@ -825,10 +886,7 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
             if rank == 0:
                 print('\tnparam = %i'%i)
             sys.stdout.flush()
-
-            #check_perm = i <= (compl - 1) / 2
-            #if count == 0:
-            #    check_perm = False
+            
             check_perm = (count != 0)
             
             m = nparam == i
@@ -923,7 +981,6 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
     if rank == 0:
         print('\nRewriting')
     sys.stdout.flush()
-    #utils.merge_keys(all_fun, all_sym)
 
     while old_nuniq != new_nuniq:
 
@@ -983,7 +1040,6 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
                 print('\tnparam = %i'%i)
             sys.stdout.flush()
 
-            #check_perm = i <= (compl - 1) / 2
             check_perm = True
 
             m = nparam == i
@@ -1064,14 +1120,6 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
         print('\nFinal factorisation')
     sys.stdout.flush()
     all_sym = expand_or_factor(all_sym, tmax=expand_tmax, method='factor')
-    
-    """
-    # Now replace functions by their factorised form
-    if rank == 0:
-        print('\nRewriting')
-    sys.stdout.flush()
-    utils.merge_keys(all_fun, all_sym)
-    """
 
     if rank == 0 and track_memory:
         utils.using_mem("END")
@@ -1081,9 +1129,14 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
     
     
 def get_all_dup(max_param):
-    """
-    Finds self-inverse transformations of parameters, to be used
+    """Finds self-inverse transformations of parameters, to be used
     in simplify_inv_subs(inv_subs, all_dup)
+    
+    Args:
+        :max_param (int): maximum number of parameters to consider
+        
+    Returns:
+        :all_dup (list): list of dictionaries giving subsitutions which are self-inverse
     """
 
     if max_param == 0:
@@ -1104,9 +1157,15 @@ def get_all_dup(max_param):
     
     
 def simplify_inv_subs(inv_subs, all_dup):
-    """
-    If two consecutive {a0: -a0} or {a0: a1, a1: a0} or {a0: 1/a0}
-    then we can remove both of these
+    """Find if two consecutive {a0: -a0} or {a0: a1, a1: a0} or {a0: 1/a0}
+    and then remove both of these
+    
+    Args:
+        :inv_subs (list): list of dictionaries giving subsitutions to check
+        :all_dup (list): list of dictionaries giving subsitutions which are self-inverse
+        
+    Returns:
+        :all_subs (list): list of dictionaries giving subsitutions without consecutive self-inverses
     """
 
     if inv_subs is None or len(inv_subs) == 0:
@@ -1135,6 +1194,18 @@ def simplify_inv_subs(inv_subs, all_dup):
     
     
 def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
+    """Load the subsitutions required to convert between all and unique functions
+    
+    Args:
+        :fname (str): file name containing the subsitutions
+        :max_param (int): maximum number of parameters to consider
+        :use_sympy (bool, default=True): whether to convert substituions to sympy objects (True) or leave as strings (False)
+        :bcast_res (bool, default=True): whether to allow all ranks to have the substitutions (True) or just the 0th rank (False)
+        
+    Returns:
+        :all_subs (list): list of substitutions required to convert between all and unique functions. Each item is either a dictionary with sympy objects as keys and values (use_sympy=True) or a string version of this dictionary (use_sympy=False). If bcast_res=True, then all ranks have this list, otherwise only rank 0 has this list and all other ranks return None.
+    
+    """
 
     if rank == 0:
         with open(fname, 'r') as f:
@@ -1199,6 +1270,19 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
     
 
 def convert_params(p_meas, fish_meas, inv_subs, n=4):
+    """Convert parameters from those in unique function to those in actual function
+    
+    Args:
+        :p_meas (list): list of measured parameters in unique function
+        :fish_meas (list): flattened version of the Hessian of -log(likelihood) at the maximum likelihood point
+        :inv_subs (list): list of substitutions required to convert between all and unique functions
+        :n (int, default=4): the number of dimensions of the array from which fish_meas was computed using
+        
+    Returns:
+        :p_new (list): list of parameters for the actual function
+        :diag_fish (np.array): the diagonal entries of the Fisher matrix of the actual function at the maximum likelihood point
+    
+    """
 
     max_param = len(p_meas)
     
@@ -1238,6 +1322,18 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4):
 
 
 def check_results(dirname, compl, tmax=10):
+    """Check that all functions can be recovered by applying the subsitutions to the unique functions.
+    If not, define a new unique function and save results to file.
+    
+    Args:
+        :dirname (str): name of directory containing all the functions to consider
+        :compl (int): complexity of functions to consider
+        :tmax (float, default=10.): maximum time in seconds to run the substitutions
+        
+    Returns:
+        None
+    
+    """
 
     if rank == 0:
         print('\tLoading all equations', flush=True)
@@ -1281,20 +1377,6 @@ def check_results(dirname, compl, tmax=10):
     all_fun = comm.scatter(all_fun, root=0)
     inv_subs = comm.scatter(inv_subs, root=0)
 
-    """
-    if rank == 0:
-        # Shuffle to make each rank more similar
-        shufidx = np.arange(len(all_fun))
-        np.random.seed(1234)
-        np.random.shuffle(shufidx)
-        
-        all_fun = [all_fun[ii] for ii in shufidx]
-        all_fun = [all_fun[imin[i]:imax[i]] for i in range(size)]
-    else:
-        all_fun = None
-    all_fun = comm.scatter(all_fun, root=0)
-    """
-
     all_nparam = count_params(all_fun, max_param)
 
     if rank == 0:
@@ -1314,17 +1396,6 @@ def check_results(dirname, compl, tmax=10):
     else:
         matches = None
     matches = comm.scatter(matches, root=0)
-
-    """
-    if rank == 0:
-        print('\tLoading inverse subs')
-    fname = dirname + '/inv_subs_%i.txt'%compl
-    inv_subs = load_subs(fname, max_param, bcast_res=False, use_sympy=False)  # no sympy to save memory
-    if rank == 0:
-        inv_subs = [inv_subs[ii] for ii in shufidx]
-        inv_subs = [inv_subs[imin[i]:imax[i]] for i in range(size)]
-    inv_subs = comm.scatter(inv_subs, root=0)
-    """
 
     param_list = ['a%i'%i for i in range(max_param)]
     all_a = sympy.symbols(" ".join(param_list), real=True)
@@ -1374,11 +1445,8 @@ def check_results(dirname, compl, tmax=10):
                 s1 = s1.subs(sub, simultaneous=True)
                 if (not str(s1) == str(s2)) and (not s1.equals(s2)): 
                     raise ValueError
-                    #to_change.append([i+imin, all_fun[i]])
         except:
             to_change.append([i+imin, all_fun[i]])
-
-    #print('DONE:', rank)
 
     del inv_subs, all_fun
     gc.collect()
@@ -1397,8 +1465,6 @@ def check_results(dirname, compl, tmax=10):
         print('\nNeed to change %i functions'%len(to_change))
         for r in to_change:
             print(r)
-
-        #sys.exit(0)
 
         print('\nLoading all equations', flush=True)
         with open(dirname + '/all_equations_%i.txt'%compl, 'r') as f:

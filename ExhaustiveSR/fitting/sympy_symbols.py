@@ -1,3 +1,6 @@
+"""Script defining functions and symbols which can be used to interpret functions used in fitting functions
+"""
+
 import sympy
 
 x, y = sympy.symbols('x y', positive=True)                  # The variables, which are always +ve here

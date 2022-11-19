@@ -1,6 +1,3 @@
-# This optimises in log-space, with separate +ve and -ve branch (except when there 
-# are >=3 params in which case it does it in linear)
-
 import numpy as np
 import sympy
 import warnings
@@ -20,36 +17,153 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 def chi2_fcn_4args(x, likelihood, eq_numpy, integrated):
-    return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-
-def chi2_fcn_3args(x, likelihood, eq_numpy, integrated):
+    """Compute chi2 for a function with 4 parameters
+    
+    Args:
+        :x (list): parameters to use for function
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
+        :integrated (bool): whether eq_numpy has already been integrated
+        
+    Returns:
+        :negloglike (float): - log(likelihood) for this function and parameters
+    
+    """
     return likelihood.negloglike(x,eq_numpy, integrated=integrated)
     
+
+def chi2_fcn_3args(x, likelihood, eq_numpy, integrated):
+    """Compute chi2 for a function with 3 parameters
+    
+    Args:
+        :x (list): parameters to use for function
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
+        :integrated (bool): whether eq_numpy has already been integrated
+        
+    Returns:
+        :negloglike (float): - log(likelihood) for this function and parameters
+    
+    """
+    return likelihood.negloglike(x,eq_numpy, integrated=integrated)
+    
+    
 def chi2_fcn_2args_pp(x, likelihood, eq_numpy, integrated):
+    """Compute chi2 for a function with 2 parameters, assuming both positive and passed in log-space
+    
+    Args:
+        :x (list): log_{10} of parameters to use for function
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
+        :integrated (bool): whether eq_numpy has already been integrated
+        
+    Returns:
+        :negloglike (float): - log(likelihood) for this function and parameters
+    
+    """
     p = [10.**x[0], 10.**x[1]]
     return likelihood.negloglike(p,eq_numpy, integrated=integrated)
+    
 
 def chi2_fcn_2args_pm(x, likelihood, eq_numpy, integrated):
+    """Compute chi2 for a function with 2 parameters, assuming first positive and second negative, and passed in log-space
+    
+    Args:
+        :x (list): log_{10} of absolute value of parameters to use for function
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
+        :integrated (bool): whether eq_numpy has already been integrated
+        
+    Returns:
+        :negloglike (float): - log(likelihood) for this function and parameters
+    
+    """
     p = [10.**x[0], -10.**x[1]]
     return likelihood.negloglike(p,eq_numpy, integrated=integrated)
+    
 
 def chi2_fcn_2args_mp(x, likelihood, eq_numpy, integrated):
+    """Compute chi2 for a function with 2 parameters, assuming first negative and second positive, and passed in log-space
+    
+    Args:
+        :x (list): log_{10} of absolute value of parameters to use for function
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
+        :integrated (bool): whether eq_numpy has already been integrated
+        
+    Returns:
+        :negloglike (float): - log(likelihood) for this function and parameters
+    
+    """
     p = [-10.**x[0], 10.**x[1]]
     return likelihood.negloglike(p,eq_numpy, integrated=integrated)
     
+    
 def chi2_fcn_2args_mm(x, likelihood, eq_numpy, integrated):
+    """Compute chi2 for a function with 2 parameters, assuming both negative, and passed in log-space
+    
+    Args:
+        :x (list): log_{10} of absolute value of parameters to use for function
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
+        :integrated (bool): whether eq_numpy has already been integrated
+        
+    Returns:
+        :negloglike (float): - log(likelihood) for this function and parameters
+    
+    """
     p = [-10.**x[0], -10.**x[1]]
     return likelihood.negloglike(p,eq_numpy, integrated=integrated)
     
+    
 def chi2_fcn_1arg_p(x, likelihood, eq_numpy, integrated):
+    """Compute chi2 for a function with 1 parameter, assuming parameter positive and passed in log-space
+    
+    Args:
+        :x (list): log_{10} of absolute value of parameter to use for function
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
+        :integrated (bool): whether eq_numpy has already been integrated
+        
+    Returns:
+        :negloglike (float): - log(likelihood) for this function and parameters
+    
+    """
     p = [10.**x[0]]
     return likelihood.negloglike(p,eq_numpy, integrated=integrated)
+    
 
 def chi2_fcn_1arg_m(x, likelihood, eq_numpy, integrated):
+    """Compute chi2 for a function with 1 parameter, assuming parameter negative and passed in log-space
+    
+    Args:
+        :x (list): log_{10} of absolute value of parameter to use for function
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
+        :integrated (bool): whether eq_numpy has already been integrated
+        
+    Returns:
+        :negloglike (float): - log(likelihood) for this function and parameters
+    
+    """
     p = [-10.**x[0]]
     return likelihood.negloglike(p,eq_numpy, integrated=integrated)
     
+    
 def get_functions(comp, likelihood, unique=True):
+    """Load all functions for a given complexity to use and distribute among ranks
+    
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object containing data, functions to convert SR expressions to variable of data and file path
+        :unique (bool, default=True): whether to load just the unique functions (True) or all functions (False)
+        
+    Returns:
+        :fcn_list (list): list of strings representing functions to be used by given rank
+        :data_start (int): first index of function used by rank
+        :data_end (int): last index of function used by rank
+        
+    """
 
     if unique:
         unifn_file = likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt"%(comp,comp)
@@ -97,11 +211,24 @@ def get_functions(comp, likelihood, unique=True):
     
     
 def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False):
+    """Optimise the parameters of a function to fit data
+    
+    Args:
+        :fcn_i (str): string representing function we wish to fit to data
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :tmax (float): maximum time in seconds to run any one part of simplification procedure for a given function
+        :pmin (float): minimum value for each parameter to consider when generating initial guess
+        :pmax (float): maximum value for each parameter to consider when generating initial guess
+        :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        
+    Returns:
+        :chi2_i (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
+        :params (list): the maximum likelihood values of the parameters
+    
+    """
 
     xvar, yvar, inv_cov = likelihood.xvar, likelihood.yvar, likelihood.inv_cov
 
-    #Niter_1, Niter_2, Niter_3, Niter_4 = 10, 10, 10, 10
-    #Nconv_1, Nconv_2, Nconv_3, Nconv_4 = 3, 3, 3, 3
     Niter_1, Niter_2, Niter_3, Niter_4 = 30, 30, 30, 30
     Nconv_1, Nconv_2, Nconv_3, Nconv_4 = 5, 5, 5, 5
 
@@ -264,6 +391,22 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False):
     
     
 def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False):
+    """Optimise all functions for a given complexity and save results to file.
+    
+    This optimises in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
+    
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
+        :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :pmin (float, default=0.): minimum value for each parameter to considered when generating initial guess
+        :pmax (float, default=3.): maximum value for each parameter to considered when generating initial guess
+        :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        
+    Returns:
+        None
+    
+    """
 
     fcn_list_proc, _, _ = get_functions(comp, likelihood)
 

@@ -7,9 +7,16 @@ from collections import OrderedDict
 from custom_printer import ESRPrinter
 
 def split_idx(Ntotal, r, indices_or_sections):
-    """
-    Returns the rth set indices for numpy.array_split(a,indices_or_sections)
+    """ Returns the rth set indices for numpy.array_split(a,indices_or_sections)
     where len(a) = Ntotal
+    
+    Args:
+        :Ntotal (int): length of array to split
+        :r (int): rank whose indices are required
+        :indices_or_sections (int): how many parts to split array into
+        
+    Returns:
+        :i (list): [min, max] index used by rank
     """
     try:
         # handle array case.
@@ -33,10 +40,17 @@ def split_idx(Ntotal, r, indices_or_sections):
     else:
         i = [imin, imax-1]
         
-    #return np.arange(imin, imax)
     return i
 
 def pprint_ntuple(nt):
+    """Printing function for memory diagnostics
+    
+    Args:
+        :nt (tuple): tuple of memory statistics returned by psutil.virtual_memory()
+        
+    Returns:
+        None
+    """
     for name in nt._fields:
         value = getattr(nt, name)
         if name != 'percent':
@@ -46,12 +60,30 @@ def pprint_ntuple(nt):
 
 
 def using_mem(point=""):
+    """Find and print current virtual memory usage
+    
+    Args:
+        :point (str): string to print to identify where memory diagnostics calculated
+        
+    Returns:
+        None
+    
+    """
     print('\n%s:'%point)
     pprint_ntuple(psutil.virtual_memory())
     return
 
 
 def locals_size(loc):
+    """Find and print the total memory used by locals()
+    
+    Args:
+        :loc (dict): dictionary of locals (obtained calling locals() in another script)
+        
+    Returns:
+        None
+    
+    """
 
     keys = list(loc.keys())
     mem = np.empty(len(keys))
@@ -76,6 +108,16 @@ def locals_size(loc):
 
 
 def get_unique_indexes(l):
+    """Find the indices of the unique items in a list
+    
+    Args:
+        :l (list): list from which we want to find unique indices
+        
+    Returns:
+        :result (OrderedDict): dictionary which returns index of unique item in l, accessed by unique item
+        :match (dict): dictionary which returns index of unique item in result, accessed by unique item
+    
+    """
     result = OrderedDict()
     for i in range(len(l)):
         val = l[i]
@@ -86,8 +128,14 @@ def get_unique_indexes(l):
 
 
 def get_match_indexes(a, b):
-    """
-    Returns indices in a of items in b
+    """Returns indices in a of items in b
+    
+    Args:
+        :a (list): list of values whose index in b we wish to determine
+        :b (list): list of values whose indices we wish to find
+        
+    Returns:
+        :result (list): indices where corresponding value of a appears in b
     """
     bb = set(b)
     result = OrderedDict()
@@ -100,9 +148,15 @@ def get_match_indexes(a, b):
 
 
 def merge_keys(all_fun, all_sym):
-    """
-    Convert all_fun so that different values which give same
+    """Convert all_fun so that different values which give same
     item in all_sym now have the same value
+    
+    Args:
+        :all_fun (list): list of strings containing all functions
+        :all_sym (OrderedDict): dictionary of sympy objects which can be accessed by their string representations.
+        
+    Returns:
+        None
     """
     p = ESRPrinter()
     for i in range(len(all_fun)):
