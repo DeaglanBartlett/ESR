@@ -1,4 +1,4 @@
-ExhaustiveSR
+ESR
 ============
 
 .. toctree::

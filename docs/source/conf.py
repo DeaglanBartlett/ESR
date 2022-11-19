@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.abspath('../../ESR/plotting/'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'ExhaustiveSR'
+project = 'ESR'
 copyright = '2022, Deaglan Bartlett'
 author = 'Deaglan Bartlett'
 
