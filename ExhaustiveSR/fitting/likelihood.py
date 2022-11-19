@@ -5,6 +5,7 @@ import pandas as pd
 import scipy.integrate
 import sympy
 import sys
+from mpi4py import MPI
 
 from sympy_symbols import *
 

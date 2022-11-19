@@ -6,4 +6,5 @@ scipy
 matplotlib
 pandas
 sphinx>=5.0
+mpi4py
 
