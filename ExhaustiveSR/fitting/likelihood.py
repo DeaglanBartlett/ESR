@@ -1,5 +1,5 @@
-#import astropy.constants
-#import astropy.units as apu
+import astropy.constants
+import astropy.units as apu
 import numpy as np
 import pandas as pd
 import scipy.integrate
