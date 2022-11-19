@@ -5,5 +5,5 @@ numpy
 scipy
 matplotlib
 pandas
-sphinx>=4.0
+sphinx>=5.0
 
