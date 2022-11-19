@@ -382,3 +382,6 @@ class MockLikelihood:
                             "a1": a1,
                             "a2": a2})
         return fcn_i, eq, False
+
+sys.path.insert(0, '../generation/')
+from simplifier import time_limit
