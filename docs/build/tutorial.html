@@ -43,7 +43,6 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#preliminaries">Preliminaries</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#function-generation">Function Generation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#fitting-to-a-dataset">Fitting to a dataset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#fitting-a-single-function">Fitting a single function</a></li>
@@ -78,10 +77,6 @@
              
   <section id="tutorial">
 <h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this heading"></a></h1>
-<section id="preliminaries">
-<h2>Preliminaries<a class="headerlink" href="#preliminaries" title="Permalink to this heading"></a></h2>
-<p>ADD SOME PRELIM STUFF HERE</p>
-</section>
 <section id="function-generation">
 <h2>Function Generation<a class="headerlink" href="#function-generation" title="Permalink to this heading"></a></h2>
 <p>To generate all functions at a given complexity (here complexity 5), one simply needs to run the following.</p>
@@ -157,7 +152,8 @@ The following script initially loads the cosmic chronometer data then fits the f
                                                 <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>To fit a function to your own data, one must create an alternative likelihood class.</p>
+<p>To fit a function to your own data, one must create an alternative likelihood class which contains all the functions
+found in the <code class="docutils literal notranslate"><span class="pre">fitting.likelihood.CCLikelihood</span></code> object.</p>
 </section>
 </section>
 

@@ -30,7 +30,7 @@ The documentation for this project can be found AT THIS LINK
 
 ## Contributors
 Below is a list of contributors to this repository. 
-* [Deaglan Bartlett](https://github.com/DeaglanBartlett) (CNRS & Sorbonne Universit\'{e}, Institut d’Astrophysique de Paris)
+* [Deaglan Bartlett](https://github.com/DeaglanBartlett) (CNRS & Sorbonne Université, Institut d’Astrophysique de Paris and Astrophysics, University of Oxford)
 * [Harry Desmond](https://github.com/harrydesmond) (Institute of Cosmology & Gravitation, University of Portsmouth)
 
 ## Examples
