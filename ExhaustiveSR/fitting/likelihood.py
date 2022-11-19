@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 import scipy.integrate
-from mpi4py import MPI
 import sympy
 import sys
 
