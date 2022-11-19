@@ -15,10 +15,10 @@ import sys
 
 autodoc_mock_imports = ["mpi4py", "astropy"]
 
-sys.path.insert(0, os.path.abspath('../../ExhaustiveSR/'))
-sys.path.insert(0, os.path.abspath('../../ExhaustiveSR/generation/'))
-sys.path.insert(0, os.path.abspath('../../ExhaustiveSR/fitting/'))
-sys.path.insert(0, os.path.abspath('../../ExhaustiveSR/plotting/'))
+sys.path.insert(0, os.path.abspath('../../ESR/'))
+sys.path.insert(0, os.path.abspath('../../ESR/generation/'))
+sys.path.insert(0, os.path.abspath('../../ESR/fitting/'))
+sys.path.insert(0, os.path.abspath('../../ESR/plotting/'))
 
 
 # -- Project information -----------------------------------------------------

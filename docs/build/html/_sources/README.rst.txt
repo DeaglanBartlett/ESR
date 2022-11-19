@@ -1,9 +1,9 @@
-ExhaustiveSR
-------------
+ESR
+----
 
-:ExhaustiveSR: Exhaustive Symbolic Regression
+:ESR: Exhaustive Symbolic Regression
 :Authors: Deaglan J. Bartlett and Harry Desmond
-:Homepage: https://github.com/DeaglanBartlett/ExhaustiveSR 
+:Homepage: https://github.com/DeaglanBartlett/ESR 
 :Documentation: https://exhaustivesr.readthedocs.io
 
 .. image:: https://readthedocs.org/projects/exhaustivesr/badge/?version=latest
@@ -16,7 +16,7 @@ ExhaustiveSR
 About
 =====
 
-ExhaustiveSR is a symbolic regression algorithm which efficiently 
+ESR (Exhaustive Symbolic Regression) is a symbolic regression algorithm which efficiently 
 and systematically finds find all possible equations at fixed complexity 
 (defined to be the number of nodes in its tree representation)
 given a set of basis functions.
@@ -31,7 +31,7 @@ to find the true optimum for a
 given complexity and basis function set.
 
 We provide all required code and plotting routines to reproduce the 
-results of the original ExhaustiveSR paper, which applies this method
+results of the original ESR paper, which applies this method
 to a catalogue of cosmic chronometers and the Pantheon+ sample of 
 supernovae to learn the Hubble rate as a function of redshift.
 The functions generated for this paper are publicly available
@@ -60,6 +60,16 @@ for which the following bibtex can be used
        adsurl = {https://ui.adsabs.harvard.edu/abs/2022arXivXXXXYYYYY},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
   }
+
+The software is available on the MIT licence:
+
+Copyright 2022 Deaglan J. Bartlett
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Contributors
 ============

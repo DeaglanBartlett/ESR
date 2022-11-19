@@ -1,9 +1,9 @@
-.. ExhaustiveSR documentation master file, created by
+.. ESR documentation master file, created by
    sphinx-quickstart on Sat Nov  5 19:13:20 2022.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to ExhaustiveSR's documentation!
+Welcome to ESR's documentation!
 ========================================
 
 .. include:: README.rst
