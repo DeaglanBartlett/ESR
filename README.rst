@@ -4,10 +4,10 @@ ESR
 :ESR: Exhaustive Symbolic Regression
 :Authors: Deaglan J. Bartlett and Harry Desmond
 :Homepage: https://github.com/DeaglanBartlett/ESR 
-:Documentation: https://exhaustivesr.readthedocs.io
+:Documentation: https://esr.readthedocs.io
 
-.. image:: https://readthedocs.org/projects/exhaustivesr/badge/?version=latest
-  :target: https://exhaustivesr.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/esr/badge/?version=latest
+  :target: https://esr.readthedocs.io/en/latest/?badge=latest
   :alt: Documentation Status
 
 .. image:: https://img.shields.io/badge/astro.CO-arXiv%3AXXXX.YYYYY-B31B1B.svg
@@ -90,7 +90,7 @@ Documentation
 =============
 
 The documentation for this project can be found
-`at this link <https://exhaustivesr.readthedocs.io/>`_
+`at this link <https://esr.readthedocs.io/>`_
 
 Acknowledgements
 ================
