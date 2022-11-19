@@ -1,1 +1,9 @@
 sympy
+myst-parser
+astropy
+numpy
+scipy
+matplotlib
+sympy
+pandas
+
