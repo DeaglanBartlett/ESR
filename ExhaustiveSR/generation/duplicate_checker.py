@@ -1,6 +1,6 @@
 import numpy as np
 import sys
-from mpi4py import MPI
+#from mpi4py import MPI
 import sympy
 import csv
 import os
@@ -13,9 +13,9 @@ import simplifier
 import utils
 from custom_printer import ESRPrinter
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
+#comm = MPI.COMM_WORLD
+#rank = comm.Get_rank()
+#size = comm.Get_size()
 
 def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed=1234):
     """Run the generation of functions for a given complexity and set of basis functions
