@@ -1,2 +1,1 @@
 sympy
-mpi4py

@@ -57,6 +57,8 @@ master_doc='index'
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+autodoc_mock_imports = ["mpi4py"]
+
 
 # -- Options for HTML output -------------------------------------------------
 
