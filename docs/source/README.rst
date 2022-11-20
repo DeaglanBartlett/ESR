@@ -5,6 +5,7 @@ ESR
 :Authors: Deaglan J. Bartlett and Harry Desmond
 :Homepage: https://github.com/DeaglanBartlett/ESR 
 :Documentation: https://esr.readthedocs.io
+:Pre-computed function sets: https://doi.org/10.5281/zenodo.7339113
 
 .. image:: https://readthedocs.org/projects/esr/badge/?version=latest
   :target: https://esr.readthedocs.io/en/latest/?badge=latest
@@ -13,11 +14,14 @@ ESR
 .. image:: https://img.shields.io/badge/astro.CO-arXiv%3AXXXX.YYYYY-B31B1B.svg
   :target: https://arxiv.org/abs/XXXX.YYYYY
 
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7339113.svg
+   :target: https://doi.org/10.5281/zenodo.7339113
+
 About
 =====
 
 ESR (Exhaustive Symbolic Regression) is a symbolic regression algorithm which efficiently 
-and systematically finds find all possible equations at fixed complexity 
+and systematically finds all possible equations at fixed complexity 
 (defined to be the number of nodes in its tree representation)
 given a set of basis functions.
 This is achieved by identifying the unique equations, so that one
@@ -34,8 +38,9 @@ We provide all required code and plotting routines to reproduce the
 results of the original ESR paper, which applies this method
 to a catalogue of cosmic chronometers and the Pantheon+ sample of 
 supernovae to learn the Hubble rate as a function of redshift.
-The functions generated for this paper are publicly available
-AT THIS LINK.
+The functions generated for this paper and an additional function
+set containing exp, sqrt and square are 
+`publicly available <https://doi.org/10.5281/zenodo.7339113>`_.
 
 Licence and Citation
 ====================
@@ -60,6 +65,30 @@ for which the following bibtex can be used
        adsurl = {https://ui.adsabs.harvard.edu/abs/2022arXivXXXXYYYYY},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
   }
+
+If the user uses the `pre-computed function sets <https://doi.org/10.5281/zenodo.7339113>`_ 
+then they must also cite
+
+.. code:: bibtex
+
+	@dataset{bartlett_deaglan_j_2022_7339113,
+  	author       = {Bartlett, Deaglan J. and
+                  Desmond, Harry and
+                  Ferreira, Pedro G.},
+  	title        = {Exhaustive Symbolic Regression Function Sets},
+  	month        = nov,
+  	year         = 2022,
+  	note         = {{DJB is supported by the Simons Collaboration on 
+                   ``Learning the Universe'' and was supported by
+                   STFC and Oriel College, Oxford. HD is supported by
+                   a Royal Society University Research Fellowship
+                   (grant no. 211046). PGF acknowledges support from
+                   European Research Council Grant No: 693024 and the
+                   Beecroft Trust.}},
+  	publisher    = {Zenodo},
+  	doi          = {10.5281/zenodo.7339113},
+  	url          = {https://doi.org/10.5281/zenodo.7339113}
+	}
 
 The software is available on the MIT licence:
 
