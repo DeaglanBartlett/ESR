@@ -62,6 +62,7 @@ for which the following bibtex can be used
   archivePrefix = {arXiv},
        eprint = {2211.11461},
   primaryClass = {astro-ph.CO},
+	  url = {https://arxiv.org/abs/2211.11461},
   }
 
 If the user uses the `pre-computed function sets <https://doi.org/10.5281/zenodo.7339113>`_ 
