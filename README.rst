@@ -11,8 +11,8 @@ ESR
   :target: https://esr.readthedocs.io/en/latest/?badge=latest
   :alt: Documentation Status
 
-.. image:: https://img.shields.io/badge/astro.CO-arXiv%3AXXXX.YYYYY-B31B1B.svg
-  :target: https://arxiv.org/abs/XXXX.YYYYY
+.. image:: https://img.shields.io/badge/astro.CO-arXiv%32211.11461-B31B1B.svg
+  :target: https://arxiv.org/abs/2211.11461
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7339113.svg
    :target: https://doi.org/10.5281/zenodo.7339113
@@ -45,25 +45,23 @@ set containing exp, sqrt and square are
 Licence and Citation
 ====================
 
-Users are required to cite the Exhaustive Symbolic Regression `Paper <https://arxiv.org/abs/XXXX.YYYYY>`_
+Users are required to cite the Exhaustive Symbolic Regression `Paper <https://arxiv.org/abs/2211.11461>`_
 for which the following bibtex can be used
 
 .. code:: bibtex
 
-  @ARTICLE{2022arXivXXXXYYYYY,
+  @ARTICLE{2022arXiv2211.11461,
        author = {{Bartlett}, D.~J. and {Desmond}, H. and {Ferreira}, P.~G.},
         title = "{Exhaustive Symbolic Regression}",
       journal = {arXiv e-prints},
      keywords = {Astrophysics - Cosmology and Nongalactic Astrophysics},
          year = 2022,
         month = nov,
-          eid = {arXiv:XXXX.YYYYY},
-        pages = {arXiv:XXXX.YYYYY},
+          eid = {arXiv:2211.11461},
+        pages = {arXiv:2211.11461},
   archivePrefix = {arXiv},
-       eprint = {XXXX.YYYYY},
+       eprint = {2211.11461},
   primaryClass = {astro-ph.CO},
-       adsurl = {https://ui.adsabs.harvard.edu/abs/2022arXivXXXXYYYYY},
-      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
   }
 
 If the user uses the `pre-computed function sets <https://doi.org/10.5281/zenodo.7339113>`_ 
