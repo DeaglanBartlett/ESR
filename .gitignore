@@ -9,6 +9,8 @@ outfiles/
 ExhaustiveSR/data/DataRelease/
 ExhaustiveSR/plotting/figs/
 
+ESR/plotting/pres_plots/
+
 test_inv_subs.py
 test_new_trees.py
 test_conversion.py
