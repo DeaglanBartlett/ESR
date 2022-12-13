@@ -155,7 +155,7 @@ def get_allowed_shapes(compl):
                 # Remove other candidates where this string appears at the start
                 m = cand[:,:len(part_considered)] == part_considered[None,:]
                 m = np.prod(m, axis=1)
-                msk[m] = False
+                msk[np.where(m)] = False
         
         cand = cand[msk,:]
     else:
