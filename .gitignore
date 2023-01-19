@@ -8,6 +8,8 @@ outfiles/
 
 ExhaustiveSR/data/DataRelease/
 ExhaustiveSR/plotting/figs/
+ESR/data/DataRelease/
+ESR/plotting/figs/
 
 ESR/plotting/pres_plots/
 
@@ -30,9 +32,17 @@ ExhaustiveSR/function_library/core_maths/
 ExhaustiveSR/function_library/ext_maths/
 ExhaustiveSR/function_library/osc_maths/
 ExhaustiveSR/function_library/tests/
+ESR/function_library/core_maths/
+ESR/function_library/ext_maths/
+ESR/function_library/osc_maths/
+ESR/function_library/tests/
+
 
 ExhaustiveSR/fitting/output
 ExhaustiveSR/fitting/old_panth
 ExhaustiveSR/fitting/test_script.py
+ESR/fitting/output
+ESR/fitting/old_panth
+ESR/fitting/test_script.py
 
 ext_maths
