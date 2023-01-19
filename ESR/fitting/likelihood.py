@@ -19,7 +19,7 @@ class CCLikelihood:
         
         """
 
-        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/'
+        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ESR/'
         self.data_dir = esr_dir + '/data/'
         self.data_file = self.data_dir + '/CC_Hubble.dat'
         self.fn_dir = esr_dir + "function_library/core_maths/"
@@ -115,7 +115,7 @@ class PanthLikelihood:
     def __init__(self):
         """Likelihood class used to fit Pantheon data"""
 
-        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/'
+        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ESR/'
         self.data_dir = esr_dir + '/data/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/'
 
         self.data_file = self.data_dir + 'Pantheon+SH0ES.dat'
@@ -294,7 +294,7 @@ class MockLikelihood:
         
         """
 
-        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ExhaustiveSR/'
+        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ESR/'
         self.data_dir = esr_dir + '/data/mock/'
         self.data_file = self.data_dir + '/CC_Hubble_%i_'%nz + str(yfracerr) + '.dat'
         self.fn_dir = esr_dir + "function_library/core_maths/"
@@ -382,4 +382,5 @@ class MockLikelihood:
                             "a1": a1,
                             "a2": a2})
         return fcn_i, eq, False
+
 
