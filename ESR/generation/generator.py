@@ -3,12 +3,16 @@ import itertools
 import sys
 from mpi4py import MPI
 import sympy
+from sympy.core.sympify import kernS
 import gc
 import os
 import pprint
 
 import simplifier
 import utils
+
+sys.path.insert(1, os.path.realpath(os.path.pardir))
+from fitting.sympy_symbols import *
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -48,6 +52,147 @@ class Node:
             self.val = int(v)
         elif v.lstrip("-").lstrip("/").isnumeric():
             self.val = float(v)
+            
+class DecoratedNode:
+
+    def __init__(self, fun, parent_op=None):
+        
+        self.expr = fun
+        self.type = type(fun)
+        self.constant = fun.is_number
+        self.degree = len(fun.args)
+        self.op = fun.__class__.__name__
+        self.parent_op = parent_op
+        self.tree = None
+        
+        if self.constant:
+            self.val = str(fun)
+        elif fun.is_symbol:
+            self.val = fun.name
+        else:
+            self.val = None
+            
+        if self.op == 'Pow' and fun.args[1] == 2.0:
+            self.op = 'Square'
+            self.children = [DecoratedNode(fun.args[0], parent_op=self.op)]
+        elif self.op == 'Pow' and fun.args[1] == 3.0:
+            self.op = 'Cube'
+            self.children = [DecoratedNode(fun.args[0], parent_op=self.op)]
+        elif self.op == 'Pow' and fun.args[1] == 1/2:
+            self.op = 'Sqrt'
+            self.children = [DecoratedNode(fun.args[0], parent_op=self.op)]
+        elif self.op == 'Mul' and len(fun.args) == 2 and fun.args[1].__class__.__name__ == 'Pow' and fun.args[1].args[1] == -1:
+            self.op = 'Div'
+            self.children = [DecoratedNode(fun.args[0], parent_op=self.op),
+                            DecoratedNode(fun.args[1].args[0], parent_op=self.op)]
+        elif self.op == 'Pow' and fun.args[1] == -1:
+            self.op = 'Inv'
+            self.children = [DecoratedNode(fun.args[0], parent_op=self.op)]
+        else:
+            if (len(fun.args) > 2):
+                f = fun.as_two_terms()
+                self.children = [DecoratedNode(f[0], parent_op=self.op),
+                                DecoratedNode(f[1], parent_op=self.op)]
+            else:
+                self.children = [DecoratedNode(a, parent_op=self.op) for a in fun.args]
+                
+    def is_unity(self):
+        try:
+            f = float(self.val)
+            return f == float(1)
+        except:
+            return False
+            
+    def count_nodes(self, basis_functions):
+        """
+        :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+        """
+        
+        if self.degree == 0:
+            return 1
+        
+        # Sqrt(x) instead of pow(x, 1/2)
+        elif self.op == "Pow" and (self.children[1].type==sympy.core.numbers.Half) and (("sqrt" in basis_functions[1]) or ("sqrt_abs" in basis_functions[1])):
+            v = 0
+
+        # Square(x) instead of pow(x, 2)
+        elif self.op == "Pow" and (self.children[1].val == str(2)) and "square" in basis_functions[1]:
+            v = 0
+            
+        # Cube(x) instead of pow(x, 3)
+        elif self.op == "Pow" and (self.children[1].val == str(3)) and "cube" in basis_functions[1]:
+            v = 0
+
+        # Inv(x) instead of pow(x, -1)
+        elif self.op == "Pow" and (self.children[1].type==sympy.core.numbers.NegativeOne) and ("inv" in basis_functions[1]):
+            if self.parent_op == "Mul":
+                v = 0
+            else:
+                v = 1
+                
+        # Multiply or divide by one doesn't do anything
+        elif self.op == "Mul" and (self.children[0].is_unity() or self.children[1].is_unity()):
+            v = 0
+        elif self.op == "Div" and (self.children[0] == 1 or self.children[1] == 1):
+            v = 0
+
+        # Treat sqrt_abs and pow_abs as a single function
+        elif self.op == "Abs" and self.parent_op == "Pow":
+            v = 0
+                
+        else:
+            v = 1
+            
+        carr = np.array([c.count_nodes(basis_functions) for c in self.children])
+        
+        return v + carr.sum()
+        
+    def to_list(self, basis_functions):
+        """
+        
+        """
+    
+        if self.degree == 0:
+            return [str(self.val)]
+        elif self.degree == 1:
+            return [self.op, self.children[0].op]
+        # Sqrt(x) instead of pow(x, 1/2)
+        elif self.op == "Pow" and (self.children[1].type==sympy.core.numbers.Half) and (("sqrt" in basis_functions[1]) or ("sqrt_abs" in basis_functions[1])):
+            if ("sqrt" in basis_functions[1]):
+                return ["sqrt"] + self.children[0].to_list(basis_functions)
+            else:
+                return ["sqrt_abs"] + self.children[0].to_list(basis_functions)
+        # Square(x) instead of pow(x, 2)
+        elif self.op == "Pow" and (self.children[1].val == str(2)) and "square" in basis_functions[1]:
+            return ["square"] + self.children[0].to_list(basis_functions)
+        # Cube(x) instead of pow(x, 3)
+        elif self.op == "Pow" and (self.children[1].val == str(3)) and "cube" in basis_functions[1]:
+            return ["cube"] + self.children[0].to_list(basis_functions)
+        # Inv(x) instead of pow(x, -1)
+        elif self.op == "Pow" and (self.children[1].type==sympy.core.numbers.NegativeOne) and ("inv" in basis_functions[1]):
+            return ["Inv"] + self.children[0].to_list(basis_functions)
+        # Deal with * inv = /
+        elif self.op == "Mul" and self.children[0].op == "Pow" and (self.children[1].type==sympy.core.numbers.NegativeOne) and ("/" in basis_functions[2]):
+            return ["Mul"] + self.children[1].to_list(basis_functions)
+        # Deal with / inv = *
+        elif self.op == "Div" and self.children[0].op == "Pow" and (self.children[1].type==sympy.core.numbers.NegativeOne) and ("*" in basis_functions[2]):
+            return ["Mul"] + self.children[1].to_list(basis_functions)
+        # Multiply or divide by one doesn't do anything
+        elif self.op == "Mul" and (self.children[0].is_unity() or self.children[1].is_unity()):
+            if self.children[0].is_unity():
+                return self.children[1].to_list(basis_functions)
+            else:
+                return self.children[0].to_list(basis_functions)
+        # Don't keep abs after pow or sqrt
+        elif self.op == "Abs" and self.parent.op in ["Sqrt", "Pow"]:
+            return self.children[0].to_list(basis_functions)
+        elif self.op == "Div" and (self.children[0] == 1 or self.children[1] == 1):
+            v = 0
+        else:
+            r = [self.op]
+            for c in self.children:
+                r = r + c.to_list(basis_functions)
+            return r
 
         
 def check_tree(s):
@@ -192,6 +337,86 @@ def node_to_string(idx, tree, labels):
             return labels[idx] + '(' + node_to_string(tree[idx].left, tree, labels) + \
                 ',' + node_to_string(tree[idx].right, tree, labels) + ')'
     return
+    
+    
+def string_to_expr(s, kern=False, evaluate=False):
+    """Convert a string giving function into a sympy object
+    
+    Args:
+        :s (str): string representation of the function considered
+        :kern (bool): whether to use sympy's kernS function or sympify
+        :evaluate (bool): whether to use powsimp, factor and subs
+        
+    Returns:
+        :expr (sympy object): expression corresponding to s
+    
+    """
+    
+    s = s.replace('[', '(')
+    s = s.replace(']', ')')
+    s = s.replace('Sqrt', 'sqrt')
+    s = s.replace('*^', '*10^')
+    
+    locs = {"inv": inv,
+            "square": square,
+            "cube": cube,
+            "sqrt": sqrt,
+            "log": log,
+            "pow": pow,
+            "x": x
+            }
+    
+    if kern:
+        expr = kernS(s)
+    else:
+#        expr = sympy.sympify(s, evaluate=evaluate,
+        expr = sympy.sympify(s,
+                            locals=locs)
+        if evaluate:
+            expr = expr.powsimp(expr)
+            expr = expr.factor()
+            expr = expr.subs(1.0, 1)
+    
+    return expr
+    
+    
+def string_to_node(s, basis_functions):
+    """Convert a string giving function into a tree with labels
+    
+    Args:
+        :s (str): string representation of the function considered
+        :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+        
+    Returns:
+        :tree (list): list of Node objects corresponding to the tree
+        :labels (list): list of strings giving node labels of tree
+    
+    """
+    
+    expr = [None] * 3
+    nodes = [None] * 3
+    c = np.ones(3, dtype=int)
+
+    i = 0
+    expr[i] = string_to_expr(s, kern=False, evaluate=True)
+    nodes[i] = DecoratedNode(expr[i])
+    c[i] = nodes[i].count_nodes(basis_functions)
+    
+    i = 1
+    expr[i] = string_to_expr(s, kern=False, evaluate=False)
+    nodes[i] = DecoratedNode(expr[i])
+    c[i] = nodes[i].count_nodes(basis_functions)
+
+    i = 2
+    expr[i] = string_to_expr(s, kern=True)
+    nodes[i] = DecoratedNode(expr[i])
+    c[i] = nodes[i].count_nodes(basis_functions)
+    
+    i = c.argmin()
+    
+    # FINISH THIS OFF
+
+    return expr[i], nodes[i], c[i]
     
     
 def update_tree(tree, labels, try_idx, basis_functions):
