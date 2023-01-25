@@ -7,7 +7,7 @@ import match
 import combine_DL
 import plot
 
-from likelihood import CCLikelihood, PanthLikelihood, MockLikelihood
+from likelihood import CCLikelihood, PanthLikelihood, MockLikelihood, SimpleLikelihood
 
 try_integration=False
 
@@ -32,15 +32,18 @@ tmax = 5
 print_text('COMPLEXITY = %i'%comp)
 
 print_text('Loading data')
-likelihood = CCLikelihood() 
+#likelihood = CCLikelihood() 
 #likelihood = PanthLikelihood()
 #nz = 3200 # 320, 640, 800, 1000, 3200
 #yfracerr = 0.2  # 0.01, 0.05, 0.1, 0.2
 #likelihood = MockLikelihood(nz, yfracerr)
+likelihood = SimpleLikelihood("feynman_I_6_2a.tsv")
 
 print_text('test_all')
 test_all.main(comp, likelihood, tmax=5, try_integration=try_integration)
 comm.Barrier()
+
+quit()
 
 print_text('test_all_Fisher')
 test_all_Fisher.main(comp, likelihood, tmax=tmax, try_integration=try_integration)

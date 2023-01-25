@@ -46,7 +46,38 @@ def chi2_fcn_3args(x, likelihood, eq_numpy, integrated):
     
     """
     return likelihood.negloglike(x,eq_numpy, integrated=integrated)
+
+
+def chi2_fcn_2args(x, likelihood, eq_numpy, integrated):
+    """Compute chi2 for a function with 2 parameters
     
+    Args:
+        :x (list): parameters to use for function
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
+        :integrated (bool): whether eq_numpy has already been integrated
+        
+    Returns:
+        :negloglike (float): - log(likelihood) for this function and parameters
+    
+    """
+    return likelihood.negloglike(x,eq_numpy, integrated=integrated)
+
+
+def chi2_fcn_1arg(x, likelihood, eq_numpy, integrated):
+    """Compute chi2 for a function with 1 parameter1
+
+    Args:
+        :x (list): parameters to use for function
+        :likelihood (fitting.likelihood object): object containing data and likelihood function
+        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
+        :integrated (bool): whether eq_numpy has already been integrated
+
+    Returns:
+        :negloglike (float): - log(likelihood) for this function and parameters
+
+    """
+    return likelihood.negloglike(x,eq_numpy, integrated=integrated)
     
 def chi2_fcn_2args_pp(x, likelihood, eq_numpy, integrated):
     """Compute chi2 for a function with 2 parameters, assuming both positive and passed in log-space
@@ -210,7 +241,7 @@ def get_functions(comp, likelihood, unique=True):
     return fcn_list[data_start:data_end], data_start, data_end
     
     
-def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False):
+def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log_opt=False):
     """Optimise the parameters of a function to fit data
     
     Args:
@@ -220,6 +251,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False):
         :pmin (float): minimum value for each parameter to consider when generating initial guess
         :pmax (float): maximum value for each parameter to consider when generating initial guess
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
         
     Returns:
         :chi2_i (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
@@ -227,7 +259,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False):
     
     """
 
-    xvar, yvar, inv_cov = likelihood.xvar, likelihood.yvar, likelihood.inv_cov
+    xvar, yvar = likelihood.xvar, likelihood.yvar
 
     Niter_1, Niter_2, Niter_3, Niter_4 = 30, 30, 30, 30
     Nconv_1, Nconv_2, Nconv_3, Nconv_4 = 5, 5, 5, 5
@@ -296,43 +328,50 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False):
                 inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]      # Larger range bc linear search here
                 res = minimize(chi2_fcn_3args, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 5000})    # Default=3000
             elif ("a1" in fcn_i) and ("a0" in fcn_i):
-                inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]           # These are now in log-space, so this is 1e-1 -- 1e1; was -10:10
-                res_pp = minimize(chi2_fcn_2args_pp, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
-                res_mp = minimize(chi2_fcn_2args_mp, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
-                res_pm = minimize(chi2_fcn_2args_pm, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
-                res_mm = minimize(chi2_fcn_2args_mm, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                if log_opt:
+                    inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]           # These are now in log-space, so this is 1e-1 -- 1e1; was -10:10
+                    res_pp = minimize(chi2_fcn_2args_pp, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                    res_mp = minimize(chi2_fcn_2args_mp, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                    res_pm = minimize(chi2_fcn_2args_pm, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                    res_mm = minimize(chi2_fcn_2args_mm, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
                 
-                choose = np.argmin([res_pp['fun'], res_mp['fun'], res_pm['fun'], res_mm['fun']])
-                if choose==0:
-                    res = res_pp
-                    mult_arr = np.array([1,1,1,1])
-                elif choose==1:
-                    res = res_mp
-                    mult_arr = np.array([-1,1,1,1])
-                elif choose==2:
-                    res = res_pm
-                    mult_arr = np.array([1,-1,1,1])
-                elif choose==3:
-                    res = res_mm
-                    mult_arr = np.array([-1,-1,1,1])
+                    choose = np.argmin([res_pp['fun'], res_mp['fun'], res_pm['fun'], res_mm['fun']])
+                    if choose==0:
+                        res = res_pp
+                        mult_arr = np.array([1,1,1,1])
+                    elif choose==1:
+                        res = res_mp
+                        mult_arr = np.array([-1,1,1,1])
+                    elif choose==2:
+                        res = res_pm
+                        mult_arr = np.array([1,-1,1,1])
+                    elif choose==3:
+                        res = res_mm
+                        mult_arr = np.array([-1,-1,1,1])
+                    else:
+                        print("Some ambiguity in choose", eq, flush=True)
+                        res = res_pp
                 else:
-                    print("Some ambiguity in choose", eq, flush=True)
-                    res = res_pp
+                    inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]
+                    res = minimize(chi2_fcn_2args, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 5000})    # Default=3000
                     
             else:
+                if log_opt:
+                    inpt = np.random.uniform(pmin,pmax)
+                    res_p = minimize(chi2_fcn_1arg_p, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                    res_m = minimize(chi2_fcn_1arg_m, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
 
-                inpt = np.random.uniform(pmin,pmax)
-                res_p = minimize(chi2_fcn_1arg_p, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
-                res_m = minimize(chi2_fcn_1arg_m, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
-
-                if res_p['fun']<res_m['fun']:
-                    res = res_p
-                    mult_arr = np.array([1,1,1,1])
-                elif res_p['fun']>res_m['fun']:
-                    res = res_m
-                    mult_arr = np.array([-1,1,1,1])
+                    if res_p['fun']<res_m['fun']:
+                        res = res_p
+                        mult_arr = np.array([1,1,1,1])
+                    elif res_p['fun']>res_m['fun']:
+                        res = res_m
+                        mult_arr = np.array([-1,1,1,1])
+                    else:
+                        res = res_p     # Arbitrarily decide to take the +ve in cases where they're the same, but don't update mult_arr
                 else:
-                    res = res_p     # Arbitrarily decide to take the +ve in cases where they're the same, but don't update mult_arr
+                    inpt = np.random.uniform(pmin,pmax)
+                    res = minimize(chi2_fcn_1arg, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 5000})    # Default=3000
 
             if np.isinf(res['fun']):
                 inf_count += 1
@@ -390,7 +429,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False):
     return chi2_i, params
     
     
-def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False):
+def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_opt=False):
     """Optimise all functions for a given complexity and save results to file.
     
     This optimises in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
@@ -423,7 +462,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False):
                                                     tmax, 
                                                     pmin, 
                                                     pmax, 
-                                                    try_integration=try_integration)
+                                                    try_integration=try_integration,
+                                                    log_opt=log_opt)
                 except NameError:
                     if try_integration:
                         chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], 
@@ -431,7 +471,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False):
                                                     tmax, 
                                                     pmin, 
                                                     pmax, 
-                                                    try_integration=False)
+                                                    try_integration=False,
+                                                    log_opt=log_opt)
                     else:
                         raise NameError
         except:

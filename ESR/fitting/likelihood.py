@@ -384,3 +384,98 @@ class MockLikelihood:
         return fcn_i, eq, False
 
 
+class SimpleLikelihood:
+
+    def __init__(self, data_file):
+        """Likelihood class used to fit a function directly
+        
+        """
+
+        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ESR/'
+        self.data_dir = esr_dir + '/data/'
+        self.data_file = self.data_dir + '/' + data_file
+        self.fn_dir = esr_dir + "function_library/core_maths/"
+        self.like_dir = esr_dir + "/fitting/"
+        #self.like_file = "likelihood_cc"
+        #self.sym_file = "symbols_cc"
+
+        self.temp_dir = self.like_dir + "/output/partial_simple_test"
+        self.out_dir = self.like_dir + "/output/output_simple_test"
+        self.fig_dir = self.like_dir + "/output/figs_simple_test"
+
+        self.ylabel = r'$y$'    # for plotting
+
+        df = np.array(pd.read_table(self.data_file, sep="\t"))
+        self.xvar = df[:,0]
+        self.yvar = df[:,1]
+        self.yerr = 0.
+
+    def get_pred(self, x, a, eq_numpy, **kwargs):
+        """Return the predicted y(x)
+        
+        Args:
+            :x (float or np.array): x value being used
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives H^2
+            
+        Returns:
+            :y (float or np.array): the predicted y value at x supplied
+        
+        """
+        return eq_numpy(x, *a)
+
+    def clear_data(self):
+        """Clear data used for numerical integration (not required for cosmic chronometers)"""
+        pass
+
+
+    def negloglike(self, a, eq_numpy, **kwargs):
+        """Negative log-likelihood for a given function. Here it is |y-ypred|^2
+        
+        Args:
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives y
+            
+        Returns:
+            :nll (float): - log(likelihood) for this function and parameters
+        
+        """
+
+        ypred = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
+        if not np.all(np.isreal(ypred)):
+            return np.inf
+        nll = np.sum((ypred - self.yvar) ** 2)
+        if np.isnan(nll):
+            return np.inf
+        return nll
+    
+
+    def run_sympify(self, fcn_i, **kwargs):
+        """Sympify a function
+
+        Args:
+            :fcn_i (str): string representing function we wish to fit to data
+
+        Returns:
+            :fcn_i (str): string representing function we wish to fit to data (with superfluous characters removed)
+            :eq (sympy object): sympy object representing function we wish to fit to data
+            :integrated (bool, always False): whether we analytically integrated the function (True) or not (False)
+
+        """
+
+        fcn_i = fcn_i.replace('\n', '')
+        fcn_i = fcn_i.replace('\'', '')
+
+        eq = sympy.sympify(fcn_i,
+                    locals={"inv": inv,
+                            "square": square,
+                            "cube": cube,
+                            "sqrt": sqrt,
+                            "log": log,
+                            "pow": pow,
+                            "x": x,
+                            "a0": a0,
+                            "a1": a1,
+                            "a2": a2})
+        return fcn_i, eq, False
+
