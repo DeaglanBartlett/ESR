@@ -9,8 +9,8 @@ import sys
 import itertools
 import numdifftools as nd
 
-import test_all
-from sympy_symbols import *
+import esr.fitting.test_all as test_all
+from esr.fitting.sympy_symbols import *
 
 warnings.filterwarnings("ignore")
 

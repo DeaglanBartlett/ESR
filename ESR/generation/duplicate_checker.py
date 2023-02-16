@@ -8,10 +8,10 @@ import gc
 import time
 import pprint
 
-import generator
-import simplifier
-import utils
-from custom_printer import ESRPrinter
+import esr.generation.generator as generator
+import esr.generation.simplifier as simplifier
+import esr.generation.utils as utils
+from esr.generation.custom_printer import ESRPrinter
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -50,7 +50,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
                 ["inv", "sin"],  # type1
                 ["+", "*", "-", "/", "pow"]]  # type2
 
-    dirname = '../function_library/' + runname + '/'
+    dirname = os.path.abspath(os.path.join(os.path.dirname(generator.__file__), '..', 'function_library')) + '/' + runname + '/'
     
     if (rank == 0) and (not os.path.isdir(dirname)):
         print('Making output directory:', dirname)

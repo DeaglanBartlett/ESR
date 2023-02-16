@@ -1,11 +1,10 @@
 import sys
 
-from test_all import optimise_fun
-from test_all_Fisher import convert_params
+from esr.fitting.test_all import optimise_fun
+from esr.fitting.test_all_Fisher import convert_params
 
-sys.path.insert(0, '../generation/')
-import generator
-import simplifier
+import esr.generation.generator as generator
+import esr.generation.simplifier as simplifier
 
 def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False):
     """Run end-to-end fitting of function for a single function

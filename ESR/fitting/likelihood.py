@@ -5,11 +5,12 @@ import pandas as pd
 import scipy.integrate
 import sympy
 import sys
+import os
 
-from sympy_symbols import *
+from esr.fitting.sympy_symbols import *
 
-sys.path.insert(0, '../generation/')
-from simplifier import time_limit
+from esr.generation.simplifier import time_limit
+import esr.generation.simplifier
 
 class CCLikelihood:
 
@@ -19,7 +20,7 @@ class CCLikelihood:
         
         """
 
-        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ESR/'
+        esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
         self.data_dir = esr_dir + '/data/'
         self.data_file = self.data_dir + '/CC_Hubble.dat'
         self.fn_dir = esr_dir + "function_library/core_maths/"
@@ -27,9 +28,10 @@ class CCLikelihood:
         self.like_file = "likelihood_cc"
         self.sym_file = "symbols_cc"
     
-        self.temp_dir = self.like_dir + "/output/partial_cc_dimful"
-        self.out_dir = self.like_dir + "/output/output_cc_dimful"
-        self.fig_dir = self.like_dir + "/output/figs_cc_dimful"
+        self.base_out_dir = self.like_dir + "/output/"
+        self.temp_dir = self.base_out_dir + "/partial_cc_dimful"
+        self.out_dir = self.base_out_dir + "/output_cc_dimful"
+        self.fig_dir = self.base_out_dir + "/figs_cc_dimful"
         self.Hfid = 1.
         
         self.ylabel = r'$H \left( z \right) \ / \ H_{\rm fid}$'  # for plotting
@@ -39,6 +41,9 @@ class CCLikelihood:
         self.yvar /= self.Hfid
         self.yerr /= self.Hfid
         self.inv_cov = 1 / self.yerr ** 2
+        
+#        for j in range(len(self.xvar)):
+#            print(self.xvar, self.yvar)
 
 
     def get_pred(self, zp1, a, eq_numpy, **kwargs):
@@ -115,7 +120,7 @@ class PanthLikelihood:
     def __init__(self):
         """Likelihood class used to fit Pantheon data"""
 
-        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ESR/'
+        esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
         self.data_dir = esr_dir + '/data/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/'
 
         self.data_file = self.data_dir + 'Pantheon+SH0ES.dat'
@@ -123,9 +128,10 @@ class PanthLikelihood:
         self.fn_dir = esr_dir + "function_library/core_maths/"
         self.like_dir = esr_dir + "/fitting/"
 
-        self.temp_dir = self.like_dir + "/output/partial_panth_dimful"
-        self.out_dir = self.like_dir + "/output/output_panth_dimful"
-        self.fig_dir = self.like_dir + "/output/figs_panth_dimful"
+        self.base_out_dir = self.like_dir + "/output/"
+        self.temp_dir = self.base_out_dir + "/partial_panth_dimful"
+        self.out_dir = self.base_out_dir + "/output_panth_dimful"
+        self.fig_dir = self.base_out_dir + "/figs_panth_dimful"
         self.Hfid = 1.0 * apu.km / apu.s / apu.Mpc
 
         data = pd.read_csv(self.data_file, delim_whitespace=True)
@@ -294,7 +300,7 @@ class MockLikelihood:
         
         """
 
-        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ESR/'
+        esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
         self.data_dir = esr_dir + '/data/mock/'
         self.data_file = self.data_dir + '/CC_Hubble_%i_'%nz + str(yfracerr) + '.dat'
         self.fn_dir = esr_dir + "function_library/core_maths/"
@@ -302,9 +308,10 @@ class MockLikelihood:
         self.like_file = "likelihood_cc"
         self.sym_file = "symbols_cc"
 
-        self.temp_dir = self.like_dir + "/output/partial_mock_%i_"%nz + str(yfracerr)
-        self.out_dir = self.like_dir + "/output/output_mock_%i_"%nz + str(yfracerr)
-        self.fig_dir = self.like_dir + "/output/figs_mock_%i_"%nz + str(yfracerr) 
+        self.base_out_dir = self.like_dir + "/output/"
+        self.temp_dir = self.base_out_dir + "/partial_mock_%i_"%nz + str(yfracerr)
+        self.out_dir = self.base_out_dir + "/output_mock_%i_"%nz + str(yfracerr)
+        self.fig_dir = self.base_out_dir + "/figs_mock_%i_"%nz + str(yfracerr)
         self.Hfid = 1.
 
         self.ylabel = r'$H \left( z \right) \ / \ H_{\rm fid}$'  # for plotting
@@ -391,17 +398,16 @@ class SimpleLikelihood:
         
         """
 
-        esr_dir = '/mnt/zfsusers/deaglan/symbolic_regression/brute_force/simplify_brute/ESR/'
+        esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
         self.data_dir = esr_dir + '/data/'
         self.data_file = self.data_dir + '/' + data_file
         self.fn_dir = esr_dir + "function_library/core_maths/"
         self.like_dir = esr_dir + "/fitting/"
-        #self.like_file = "likelihood_cc"
-        #self.sym_file = "symbols_cc"
-
-        self.temp_dir = self.like_dir + "/output/partial_simple_test"
-        self.out_dir = self.like_dir + "/output/output_simple_test"
-        self.fig_dir = self.like_dir + "/output/figs_simple_test"
+        
+        self.base_out_dir = self.like_dir + "/output/"
+        self.temp_dir = self.base_out_dir + "/partial_simple_test"
+        self.out_dir = self.base_out_dir + "/output_simple_test"
+        self.fig_dir = self.base_out_dir + "/figs_simple_test"
 
         self.ylabel = r'$y$'    # for plotting
 

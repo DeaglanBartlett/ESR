@@ -1,5 +1,5 @@
 import numpy as np
-from likelihood import CCLikelihood
+from esr.fitting.likelihood import CCLikelihood
 
 
 seed = 1234

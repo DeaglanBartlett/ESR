@@ -5,10 +5,9 @@ import os
 import sys
 from mpi4py import MPI
 from scipy.optimize import minimize
-from sympy_symbols import *
 
-sys.path.insert(0, '../generation/')
-import simplifier
+from esr.fitting.sympy_symbols import *
+import esr.generation.simplifier as simplifier
 
 warnings.filterwarnings("ignore")
 
@@ -209,7 +208,7 @@ def get_functions(comp, likelihood, unique=True):
         sys.setrecursionlimit(3000)
 
     if rank == 0:
-        for dirname in [likelihood.out_dir, likelihood.temp_dir]:
+        for dirname in [likelihood.base_out_dir, likelihood.out_dir, likelihood.temp_dir]:
             if not os.path.isdir(dirname):
                 print('Making dir:', dirname)
                 os.mkdir(dirname)
@@ -352,6 +351,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                         print("Some ambiguity in choose", eq, flush=True)
                         res = res_pp
                 else:
+                    flag_three = True
                     inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]
                     res = minimize(chi2_fcn_2args, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 5000})    # Default=3000
                     
@@ -370,6 +370,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                     else:
                         res = res_p     # Arbitrarily decide to take the +ve in cases where they're the same, but don't update mult_arr
                 else:
+                    flag_three = True
                     inpt = np.random.uniform(pmin,pmax)
                     res = minimize(chi2_fcn_1arg, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 5000})    # Default=3000
 

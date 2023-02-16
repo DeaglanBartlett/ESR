@@ -5,7 +5,7 @@ import os, sys
 from prettytable import PrettyTable
 import csv
 
-import test_all
+import esr.fitting.test_all as test_all
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()

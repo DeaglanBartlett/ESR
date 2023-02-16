@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API &mdash; ESR 0.0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Tutorial" href="tutorial.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> ESR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#generation">generation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-generation.duplicate_checker">duplicate_checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-generation.custom_printer">custom_printer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-generation.generator">generator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-generation.simplifier">simplifier</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-generation.utils">utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#fitting">fitting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-fitting.combine_DL">combine_DL</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-fitting.fit_single">fit_single</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-fitting.likelihood">likelihood</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-fitting.match">match</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-fitting.plot">plot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-fitting.sympy_symbols">sympy_symbols</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-fitting.test_all">test_all</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-fitting.test_all_Fisher">test_all_Fisher</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ESR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>API</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="toctree-wrapper compound">
+</div>
+<section id="api">
+<h1>API<a class="headerlink" href="#api" title="Permalink to this heading"></a></h1>
+<section id="generation">
+<h2>generation<a class="headerlink" href="#generation" title="Permalink to this heading"></a></h2>
+<section id="module-generation.duplicate_checker">
+<span id="duplicate-checker"></span><h3>duplicate_checker<a class="headerlink" href="#module-generation.duplicate_checker" title="Permalink to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.duplicate_checker.main">
+<span class="sig-prename descclassname"><span class="pre">generation.duplicate_checker.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">runname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">track_memory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expand_tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1234</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/duplicate_checker.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.duplicate_checker.main" title="Permalink to this definition"></a></dt>
+<dd><p>Run the generation of functions for a given complexity and set of basis functions</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">runname (str)</dt>
+<dd class="field-odd"><p>name of run, which defines the basis functions used</p>
+</dd>
+<dt class="field-even">compl (int)</dt>
+<dd class="field-even"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-odd">track_memory (bool, default=True)</dt>
+<dd class="field-odd"><p>whether to compute and print memory statistics (True) or not (False)</p>
+</dd>
+<dt class="field-even">search_tmax (float, default=60.)</dt>
+<dd class="field-even"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
+</dd>
+<dt class="field-odd">expand_tmax (float, default=1.)</dt>
+<dd class="field-odd"><p>maximum time in seconds to run any one part of expand/simplify procedure for a given function</p>
+</dd>
+<dt class="field-even">seed (int, default=1234)</dt>
+<dd class="field-even"><p>seed to set random number generator for shuffling functions (used to prevent one rank having similar, hard to simplify functions)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-generation.custom_printer">
+<span id="custom-printer"></span><h3>custom_printer<a class="headerlink" href="#module-generation.custom_printer" title="Permalink to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="generation.custom_printer.ESRPrinter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">generation.custom_printer.</span></span><span class="sig-name descname"><span class="pre">ESRPrinter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/custom_printer.html#ESRPrinter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.custom_printer.ESRPrinter" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Printer</span></code></p>
+<p>A Printer for generating readable representation of most SymPy classes as required for ExhaustiveSR.</p>
+<p>Only difference to sympy’s StrPrinter is to use pow(.,.) instead of **
+unless integer powers used</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="generation.custom_printer.ESRPrinter.emptyPrinter">
+<span class="sig-name descname"><span class="pre">emptyPrinter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/custom_printer.html#ESRPrinter.emptyPrinter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.custom_printer.ESRPrinter.emptyPrinter" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="generation.custom_printer.ESRPrinter.parenthesize">
+<span class="sig-name descname"><span class="pre">parenthesize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/custom_printer.html#ESRPrinter.parenthesize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.custom_printer.ESRPrinter.parenthesize" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="generation.custom_printer.ESRPrinter.printmethod">
+<span class="sig-name descname"><span class="pre">printmethod</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'_sympystr'</span></em><a class="headerlink" href="#generation.custom_printer.ESRPrinter.printmethod" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="generation.custom_printer.ESRPrinter.stringify">
+<span class="sig-name descname"><span class="pre">stringify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sep</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/custom_printer.html#ESRPrinter.stringify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.custom_printer.ESRPrinter.stringify" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="generation.custom_printer.ESRReprPrinter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">generation.custom_printer.</span></span><span class="sig-name descname"><span class="pre">ESRReprPrinter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/custom_printer.html#ESRReprPrinter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.custom_printer.ESRReprPrinter" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#generation.custom_printer.ESRPrinter" title="generation.custom_printer.ESRPrinter"><code class="xref py py-class docutils literal notranslate"><span class="pre">ESRPrinter</span></code></a></p>
+<p>(internal) – see sstrrepr</p>
+</dd></dl>
+
+</section>
+<section id="module-generation.generator">
+<span id="generator"></span><h3>generator<a class="headerlink" href="#module-generation.generator" title="Permalink to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="generation.generator.DecoratedNode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">DecoratedNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_op</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#DecoratedNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.DecoratedNode" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="generation.generator.DecoratedNode.count_nodes">
+<span class="sig-name descname"><span class="pre">count_nodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">basis_functions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#DecoratedNode.count_nodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.DecoratedNode.count_nodes" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Basis_functions (list)</dt>
+<dd class="field-odd"><p>list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="generation.generator.DecoratedNode.is_unity">
+<span class="sig-name descname"><span class="pre">is_unity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#DecoratedNode.is_unity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.DecoratedNode.is_unity" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="generation.generator.DecoratedNode.to_list">
+<span class="sig-name descname"><span class="pre">to_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">basis_functions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#DecoratedNode.to_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.DecoratedNode.to_list" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="generation.generator.Node">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">Node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#Node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.Node" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="generation.generator.Node.assign_op">
+<span class="sig-name descname"><span class="pre">assign_op</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">op</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#Node.assign_op"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.Node.assign_op" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="generation.generator.Node.copy">
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#Node.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.Node.copy" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="generation.generator.Node.is_used">
+<span class="sig-name descname"><span class="pre">is_used</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#Node.is_used"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.Node.is_used" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.aifeyn_complexity">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">aifeyn_complexity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tree</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#aifeyn_complexity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.aifeyn_complexity" title="Permalink to this definition"></a></dt>
+<dd><p>Compute contribution to description length from describing tree</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">tree (list)</dt>
+<dd class="field-odd"><p>list of strings giving node labels of tree</p>
+</dd>
+<dt class="field-even">param_list (list)</dt>
+<dd class="field-even"><p>list of strings of all possible parameter names</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">aifeyn (float)</dt>
+<dd class="field-odd"><p>the contribution to description length from describing tree</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.check_tree">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">check_tree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#check_tree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.check_tree" title="Permalink to this definition"></a></dt>
+<dd><p>Given a candidate string of 0, 1 and 2s, see whether one can make a function out of this</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">s (str)</dt>
+<dd class="field-odd"><p>string comprised of 0, 1 and 2 representing tree of nullary, unary and binary nodes</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">success (bool)</dt>
+<dd class="field-odd"><p>whether candidate string can form a valid tree (True) or not (False)</p>
+</dd>
+<dt class="field-even">part_considered (str)</dt>
+<dd class="field-even"><p>string of length &lt;= s, where s[:len(part_considered)] = part_considered</p>
+</dd>
+<dt class="field-odd">tree (list)</dt>
+<dd class="field-odd"><p>list of Node objects corresponding to string s</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.find_additional_trees">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">find_additional_trees</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tree</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis_functions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#find_additional_trees"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.find_additional_trees" title="Permalink to this definition"></a></dt>
+<dd><p>For a given tree, try to find all simpler representations of the function by combining sums, exponentials and powers</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">tree (list)</dt>
+<dd class="field-odd"><p>list of Node objects corresponding to tree of function</p>
+</dd>
+<dt class="field-even">labels (list)</dt>
+<dd class="field-even"><p>list of strings giving node labels of tree</p>
+</dd>
+<dt class="field-odd">basis_functions (list)</dt>
+<dd class="field-odd"><p>list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">new_tree (list)</dt>
+<dd class="field-odd"><p>list of equivalent trees, given as lists of Node objects</p>
+</dd>
+<dt class="field-even">new_labels (list)</dt>
+<dd class="field-even"><p>list of lists of strings giving node labels of new_tree</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.generate_equations">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">generate_equations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">compl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis_functions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirname</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#generate_equations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.generate_equations" title="Permalink to this definition"></a></dt>
+<dd><p>Generate all equations at a given complexity for a set of basis functions and save results to file</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">compl (int)</dt>
+<dd class="field-odd"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-even">basis_functions (list)</dt>
+<dd class="field-even"><p>list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators</p>
+</dd>
+<dt class="field-odd">dirname (str)</dt>
+<dd class="field-odd"><p>directory path to save results in</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing all functions generated</p>
+</dd>
+<dt class="field-even">extra_orig (list)</dt>
+<dd class="field-even"><p>list of strings containing functions generated by combining sums, exponentials and powers of the functions in all_fun as they appear in all_fun</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.get_allowed_shapes">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">get_allowed_shapes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">compl</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#get_allowed_shapes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.get_allowed_shapes" title="Permalink to this definition"></a></dt>
+<dd><p>Find the shapes of all allowed trees containing compl nodes</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">compl (int)</dt>
+<dd class="field-odd"><p>complexity of tree = number of nodes</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">cand (list)</dt>
+<dd class="field-odd"><p>list of strings comprised of 0, 1 and 2 representing valid trees of nullary, unary and binary nodes</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.labels_to_shape">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">labels_to_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis_functions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#labels_to_shape"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.labels_to_shape" title="Permalink to this definition"></a></dt>
+<dd><p>Find the representation of the shape of a tree given its labels</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">labels (list)</dt>
+<dd class="field-odd"><p>list of strings giving node labels of tree</p>
+</dd>
+<dt class="field-even">basis_functions (list)</dt>
+<dd class="field-even"><p>list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">s (str)</dt>
+<dd class="field-odd"><p>string comprised of 0, 1 and 2 representing tree of nullary, unary and binary nodes</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.node_to_string">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">node_to_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tree</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#node_to_string"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.node_to_string" title="Permalink to this definition"></a></dt>
+<dd><p>Convert a tree with labels into a string giving function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">idx (int)</dt>
+<dd class="field-odd"><p>index of tree to consider</p>
+</dd>
+<dt class="field-even">tree (list)</dt>
+<dd class="field-even"><p>list of Node objects corresponding to the tree</p>
+</dd>
+<dt class="field-odd">labels (list)</dt>
+<dd class="field-odd"><p>list of strings giving node labels of tree</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>Function as a string</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.shape_to_functions">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">shape_to_functions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis_functions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#shape_to_functions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.shape_to_functions" title="Permalink to this definition"></a></dt>
+<dd><p>Find all possible functions formed from the given list of 0s, 1s and 2s defining a tree and basis functions</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">s (str)</dt>
+<dd class="field-odd"><p>string comprised of 0, 1 and 2 representing tree of nullary, unary and binary nodes</p>
+</dd>
+<dt class="field-even">basis_functions (list)</dt>
+<dd class="field-even"><p>list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing all functions generated directly from tree</p>
+</dd>
+<dt class="field-even">all_tree (list)</dt>
+<dd class="field-even"><p>list of lists of Node objects corresponding to the trees of functions in all_fun</p>
+</dd>
+<dt class="field-odd">extra_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing functions generated by combining sums, exponentials and powers of the functions in all_fun</p>
+</dd>
+<dt class="field-even">extra_tree (list)</dt>
+<dd class="field-even"><p>list of lists of Node objects corresponding to the trees of functions in extra_fun</p>
+</dd>
+<dt class="field-odd">extra_orig (list)</dt>
+<dd class="field-odd"><p>list of strings corresponding to original versions of extra_fun, as found in all_fun</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.string_to_expr">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">string_to_expr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kern</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#string_to_expr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.string_to_expr" title="Permalink to this definition"></a></dt>
+<dd><p>Convert a string giving function into a sympy object</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">s (str)</dt>
+<dd class="field-odd"><p>string representation of the function considered</p>
+</dd>
+<dt class="field-even">kern (bool)</dt>
+<dd class="field-even"><p>whether to use sympy’s kernS function or sympify</p>
+</dd>
+<dt class="field-odd">evaluate (bool)</dt>
+<dd class="field-odd"><p>whether to use powsimp, factor and subs</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">expr (sympy object)</dt>
+<dd class="field-odd"><p>expression corresponding to s</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.string_to_node">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">string_to_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis_functions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#string_to_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.string_to_node" title="Permalink to this definition"></a></dt>
+<dd><p>Convert a string giving function into a tree with labels</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">s (str)</dt>
+<dd class="field-odd"><p>string representation of the function considered</p>
+</dd>
+<dt class="field-even">basis_functions (list)</dt>
+<dd class="field-even"><p>list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">tree (list)</dt>
+<dd class="field-odd"><p>list of Node objects corresponding to the tree</p>
+</dd>
+<dt class="field-even">labels (list)</dt>
+<dd class="field-even"><p>list of strings giving node labels of tree</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.update_sums">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">update_sums</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tree</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">try_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis_functions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#update_sums"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.update_sums" title="Permalink to this definition"></a></dt>
+<dd><p>Try to combine sums to make simpler representations of functions</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">tree (list)</dt>
+<dd class="field-odd"><p>list of Node objects corresponding to tree of function</p>
+</dd>
+<dt class="field-even">labels (list)</dt>
+<dd class="field-even"><p>list of strings giving node labels of tree</p>
+</dd>
+<dt class="field-odd">try_idx (int)</dt>
+<dd class="field-odd"><p>when we have multiple substituions we can attempt, this indicates which one to try</p>
+</dd>
+<dt class="field-even">basis_functions (list)</dt>
+<dd class="field-even"><p>list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">new_labels (list)</dt>
+<dd class="field-odd"><p>list of strings giving node labels of new tree</p>
+</dd>
+<dt class="field-even">new_shape (list)</dt>
+<dd class="field-even"><p>list of 0, 1 and 2 representing whether nodes in new tree are nullary, unary or binary</p>
+</dd>
+<dt class="field-odd">nadded (int)</dt>
+<dd class="field-odd"><p>number of new functions added</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.generator.update_tree">
+<span class="sig-prename descclassname"><span class="pre">generation.generator.</span></span><span class="sig-name descname"><span class="pre">update_tree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tree</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">try_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis_functions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/generator.html#update_tree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.generator.update_tree" title="Permalink to this definition"></a></dt>
+<dd><p>Try to combine exponentials and powers to make simpler representations of functions</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">tree (list)</dt>
+<dd class="field-odd"><p>list of Node objects corresponding to tree of function</p>
+</dd>
+<dt class="field-even">labels (list)</dt>
+<dd class="field-even"><p>list of strings giving node labels of tree</p>
+</dd>
+<dt class="field-odd">try_idx (int)</dt>
+<dd class="field-odd"><p>when we have multiple substituions we can attempt, this indicates which one to try</p>
+</dd>
+<dt class="field-even">basis_functions (list)</dt>
+<dd class="field-even"><p>list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">new_labels (list)</dt>
+<dd class="field-odd"><p>list of strings giving node labels of new tree</p>
+</dd>
+<dt class="field-even">new_shape (list)</dt>
+<dd class="field-even"><p>list of 0, 1 and 2 representing whether nodes in new tree are nullary, unary or binary</p>
+</dd>
+<dt class="field-odd">nadded (int)</dt>
+<dd class="field-odd"><p>number of new functions added</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-generation.simplifier">
+<span id="simplifier"></span><h3>simplifier<a class="headerlink" href="#module-generation.simplifier" title="Permalink to this heading"></a></h3>
+<dl class="py exception">
+<dt class="sig sig-object py" id="generation.simplifier.TimeoutException">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">TimeoutException</span></span><a class="reference internal" href="_modules/generation/simplifier.html#TimeoutException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.TimeoutException" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.check_results">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">check_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dirname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#check_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.check_results" title="Permalink to this definition"></a></dt>
+<dd><p>Check that all functions can be recovered by applying the subsitutions to the unique functions.
+If not, define a new unique function and save results to file.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">dirname (str)</dt>
+<dd class="field-odd"><p>name of directory containing all the functions to consider</p>
+</dd>
+<dt class="field-even">compl (int)</dt>
+<dd class="field-even"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-odd">tmax (float, default=10.)</dt>
+<dd class="field-odd"><p>maximum time in seconds to run the substitutions</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.convert_params">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">convert_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p_meas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fish_meas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inv_subs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#convert_params"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.convert_params" title="Permalink to this definition"></a></dt>
+<dd><p>Convert parameters from those in unique function to those in actual function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">p_meas (list)</dt>
+<dd class="field-odd"><p>list of measured parameters in unique function</p>
+</dd>
+<dt class="field-even">fish_meas (list)</dt>
+<dd class="field-even"><p>flattened version of the Hessian of -log(likelihood) at the maximum likelihood point</p>
+</dd>
+<dt class="field-odd">inv_subs (list)</dt>
+<dd class="field-odd"><p>list of substitutions required to convert between all and unique functions</p>
+</dd>
+<dt class="field-even">n (int, default=4)</dt>
+<dd class="field-even"><p>the number of dimensions of the array from which fish_meas was computed using</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">p_new (list)</dt>
+<dd class="field-odd"><p>list of parameters for the actual function</p>
+</dd>
+<dt class="field-even">diag_fish (np.array)</dt>
+<dd class="field-even"><p>the diagonal entries of the Fisher matrix of the actual function at the maximum likelihood point</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.count_params">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">count_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_param</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#count_params"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.count_params" title="Permalink to this definition"></a></dt>
+<dd><p>Count the number of free parameters in each member of a list of functions</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing functions</p>
+</dd>
+<dt class="field-even">max_param (int)</dt>
+<dd class="field-even"><p>maximum number of free parameters in any equation in all_fun</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">nparam (np.array)</dt>
+<dd class="field-odd"><p>array of ints containing number of free parameters in corresponding member of all_fun</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.do_sympy">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">do_sympy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_sym</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_tmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expand_tmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">track_memory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#do_sympy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.do_sympy" title="Permalink to this definition"></a></dt>
+<dd><p>Run the duplicate checking procedure</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing all functions</p>
+</dd>
+<dt class="field-even">all_sym (OrderedDict)</dt>
+<dd class="field-even"><p>dictionary of sympy objects which can be accessed by their string representations.</p>
+</dd>
+<dt class="field-odd">compl (int)</dt>
+<dd class="field-odd"><p></p></dd>
+<dt class="field-even">search_tmax (float, default=1.)</dt>
+<dd class="field-even"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
+</dd>
+<dt class="field-odd">expand_tmax (float, default=1.)</dt>
+<dd class="field-odd"><p>maximum time in seconds to run any one part of expand/simplify procedure for a given function</p>
+</dd>
+<dt class="field-even">dirname (str)</dt>
+<dd class="field-even"><p>directory path to save results in</p>
+</dd>
+<dt class="field-odd">track_memory (bool, default=True)</dt>
+<dd class="field-odd"><p>whether to compute and print memory statistics (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing all (updated) functions</p>
+</dd>
+<dt class="field-even">all_sym (list)</dt>
+<dd class="field-even"><p>dictionary of (updated) sympy objects which can be accessed by their string representations.</p>
+</dd>
+<dt class="field-odd">count (int)</dt>
+<dd class="field-odd"><p>number of rounds of optimisation which were performed</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.expand_or_factor">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">expand_or_factor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all_sym</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'expand'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#expand_or_factor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.expand_or_factor" title="Permalink to this definition"></a></dt>
+<dd><p>Run the sympy expand or factor functions</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_sym (OrderedDict)</dt>
+<dd class="field-odd"><p>dictionary of sympy objects which can be accessed by their string representations.</p>
+</dd>
+<dt class="field-even">tmax (float, default=1.)</dt>
+<dd class="field-even"><p>maximum time in seconds to run any one part of expand/simplify procedure for a given function</p>
+</dd>
+<dt class="field-odd">method (str, default=’expand’)</dt>
+<dd class="field-odd"><p>whether to run expand (‘expand’) or simplify (‘simplify’). All other options are ignored</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_sym (OrderedDict)</dt>
+<dd class="field-odd"><p>dictionary of (updated) sympy objects which can be accessed by their string representations.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.get_all_dup">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">get_all_dup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_param</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#get_all_dup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.get_all_dup" title="Permalink to this definition"></a></dt>
+<dd><p>Finds self-inverse transformations of parameters, to be used
+in simplify_inv_subs(inv_subs, all_dup)</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">max_param (int)</dt>
+<dd class="field-odd"><p>maximum number of parameters to consider</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_dup (list)</dt>
+<dd class="field-odd"><p>list of dictionaries giving subsitutions which are self-inverse</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.get_max_param">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">get_max_param</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#get_max_param"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.get_max_param" title="Permalink to this definition"></a></dt>
+<dd><p>Find maximum number of free parameters in list of functions</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing functions</p>
+</dd>
+<dt class="field-even">verbose (bool, default=True)</dt>
+<dd class="field-even"><p>Whether to print result (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">max_param (int)</dt>
+<dd class="field-odd"><p>maximum number of free parameters in any equation in all_fun</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.initial_sympify">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">initial_sympify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">track_memory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_sympy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#initial_sympify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.initial_sympify" title="Permalink to this definition"></a></dt>
+<dd><p>Convert list of strings of functions into list of sympy objects</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing functions</p>
+</dd>
+<dt class="field-even">max_param (int)</dt>
+<dd class="field-even"><p>maximum number of free parameters in any equation in all_fun</p>
+</dd>
+<dt class="field-odd">verbose (bool, default=True)</dt>
+<dd class="field-odd"><p>whether to print progress (True) or not (False)</p>
+</dd>
+<dt class="field-even">parallel (bool, default=True)</dt>
+<dd class="field-even"><p>whether to split equations amongst ranks (True) or each equation considered by all ranks (False)</p>
+</dd>
+<dt class="field-odd">track_memory (bool, default=True)</dt>
+<dd class="field-odd"><p>whether to compute and print memory statistics (True) or not (False)</p>
+</dd>
+<dt class="field-even">save_sympy (bool, default=True)</dt>
+<dd class="field-even"><p>whether to return sympy objects (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">str_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing functions</p>
+</dd>
+<dt class="field-even">sym_fun (OrderedDict)</dt>
+<dd class="field-even"><p>dictionary of sympy objects which can be accessed by their string representations. If save_sympy is False, then sym_fun is None.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.load_subs">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">load_subs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_sympy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bcast_res</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#load_subs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.load_subs" title="Permalink to this definition"></a></dt>
+<dd><p>Load the subsitutions required to convert between all and unique functions</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fname (str)</dt>
+<dd class="field-odd"><p>file name containing the subsitutions</p>
+</dd>
+<dt class="field-even">max_param (int)</dt>
+<dd class="field-even"><p>maximum number of parameters to consider</p>
+</dd>
+<dt class="field-odd">use_sympy (bool, default=True)</dt>
+<dd class="field-odd"><p>whether to convert substituions to sympy objects (True) or leave as strings (False)</p>
+</dd>
+<dt class="field-even">bcast_res (bool, default=True)</dt>
+<dd class="field-even"><p>whether to allow all ranks to have the substitutions (True) or just the 0th rank (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_subs (list)</dt>
+<dd class="field-odd"><p>list of substitutions required to convert between all and unique functions. Each item is either a dictionary with sympy objects as keys and values (use_sympy=True) or a string version of this dictionary (use_sympy=False). If bcast_res=True, then all ranks have this list, otherwise only rank 0 has this list and all other ranks return None.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.make_changes">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">make_changes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_sym</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_inv_subs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">str_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inv_subs_fun</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#make_changes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.make_changes" title="Permalink to this definition"></a></dt>
+<dd><p>Update global variables of functions and symbolic expressions by combining rank
+calculations</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing all functions</p>
+</dd>
+<dt class="field-even">all_sym (list)</dt>
+<dd class="field-even"><p>list of sympy objects containing all functions</p>
+</dd>
+<dt class="field-odd">all_inv_subs (list)</dt>
+<dd class="field-odd"><p>list of dictionaries giving subsitutions to be applied to all functions</p>
+</dd>
+<dt class="field-even">str_fun (list)</dt>
+<dd class="field-even"><p>list of strings containing functions considered by rank</p>
+</dd>
+<dt class="field-odd">sym_fun (list)</dt>
+<dd class="field-odd"><p>list of sympy objects containing functions considered by rank</p>
+</dd>
+<dt class="field-even">inv_subs_fun (list)</dt>
+<dd class="field-even"><p>list of dictionaries giving subsitutions to be applied to functions considered by rank</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun</dt>
+<dd class="field-odd"><p>list of strings containing all (updated) functions</p>
+</dd>
+<dt class="field-even">all_sym (list)</dt>
+<dd class="field-even"><p>list of sympy objects containing all (updated) functions</p>
+</dd>
+<dt class="field-odd">all_inv_subs</dt>
+<dd class="field-odd"><p>list of dictionaries giving subsitutions to be applied to all (updated) functions</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.simplify_inv_subs">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">simplify_inv_subs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inv_subs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_dup</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#simplify_inv_subs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.simplify_inv_subs" title="Permalink to this definition"></a></dt>
+<dd><p>Find if two consecutive {a0: -a0} or {a0: a1, a1: a0} or {a0: 1/a0}
+and then remove both of these</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">inv_subs (list)</dt>
+<dd class="field-odd"><p>list of dictionaries giving subsitutions to check</p>
+</dd>
+<dt class="field-even">all_dup (list)</dt>
+<dd class="field-even"><p>list of dictionaries giving subsitutions which are self-inverse</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_subs (list)</dt>
+<dd class="field-odd"><p>list of dictionaries giving subsitutions without consecutive self-inverses</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.sympy_simplify">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">sympy_simplify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_sym</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_inv_subs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expand_fun</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_perm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#sympy_simplify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.sympy_simplify" title="Permalink to this definition"></a></dt>
+<dd><p>Simplify equations and find duplicates.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing all functions</p>
+</dd>
+<dt class="field-even">all_sym (list)</dt>
+<dd class="field-even"><p>list of sympy objects containing all functions</p>
+</dd>
+<dt class="field-odd">all_inv_subs (list)</dt>
+<dd class="field-odd"><p>list of dictionaries giving subsitutions to be applied to all functions</p>
+</dd>
+<dt class="field-even">max_param (int)</dt>
+<dd class="field-even"><p>maximum number of free parameters in any equation in all_fun</p>
+</dd>
+<dt class="field-odd">expand_fun (bool, default=True)</dt>
+<dd class="field-odd"><p>whether to run the sympy expand options (True) or not (False)</p>
+</dd>
+<dt class="field-even">tmax (float, default=1.)</dt>
+<dd class="field-even"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
+</dd>
+<dt class="field-odd">check_perm (bool, default=False)</dt>
+<dd class="field-odd"><p>whether to check all possible permutations and inverses of constants (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun</dt>
+<dd class="field-odd"><p>list of strings containing all (updated) functions</p>
+</dd>
+<dt class="field-even">all_sym (list)</dt>
+<dd class="field-even"><p>list of sympy objects containing all (updated) functions</p>
+</dd>
+<dt class="field-odd">all_inv_subs</dt>
+<dd class="field-odd"><p>list of dictionaries giving subsitutions to be applied to all (updated) functions</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.simplifier.time_limit">
+<span class="sig-prename descclassname"><span class="pre">generation.simplifier.</span></span><span class="sig-name descname"><span class="pre">time_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seconds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/simplifier.html#time_limit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.simplifier.time_limit" title="Permalink to this definition"></a></dt>
+<dd><p>Check function call does not exceed allotted time</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">seconds (float)</dt>
+<dd class="field-odd"><p>maximum time function can run in seconds</p>
+</dd>
+</dl>
+</dd>
+<dt>Raises:</dt><dd><p>TimeoutException if time exceeds seconds</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-generation.utils">
+<span id="utils"></span><h3>utils<a class="headerlink" href="#module-generation.utils" title="Permalink to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.utils.get_match_indexes">
+<span class="sig-prename descclassname"><span class="pre">generation.utils.</span></span><span class="sig-name descname"><span class="pre">get_match_indexes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/utils.html#get_match_indexes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.utils.get_match_indexes" title="Permalink to this definition"></a></dt>
+<dd><p>Returns indices in a of items in b</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">a (list)</dt>
+<dd class="field-odd"><p>list of values whose index in b we wish to determine</p>
+</dd>
+<dt class="field-even">b (list)</dt>
+<dd class="field-even"><p>list of values whose indices we wish to find</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">result (list)</dt>
+<dd class="field-odd"><p>indices where corresponding value of a appears in b</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.utils.get_unique_indexes">
+<span class="sig-prename descclassname"><span class="pre">generation.utils.</span></span><span class="sig-name descname"><span class="pre">get_unique_indexes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/utils.html#get_unique_indexes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.utils.get_unique_indexes" title="Permalink to this definition"></a></dt>
+<dd><p>Find the indices of the unique items in a list</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">l (list)</dt>
+<dd class="field-odd"><p>list from which we want to find unique indices</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">result (OrderedDict)</dt>
+<dd class="field-odd"><p>dictionary which returns index of unique item in l, accessed by unique item</p>
+</dd>
+<dt class="field-even">match (dict)</dt>
+<dd class="field-even"><p>dictionary which returns index of unique item in result, accessed by unique item</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.utils.locals_size">
+<span class="sig-prename descclassname"><span class="pre">generation.utils.</span></span><span class="sig-name descname"><span class="pre">locals_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">loc</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/utils.html#locals_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.utils.locals_size" title="Permalink to this definition"></a></dt>
+<dd><p>Find and print the total memory used by locals()</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">loc (dict)</dt>
+<dd class="field-odd"><p>dictionary of locals (obtained calling locals() in another script)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.utils.merge_keys">
+<span class="sig-prename descclassname"><span class="pre">generation.utils.</span></span><span class="sig-name descname"><span class="pre">merge_keys</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_sym</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/utils.html#merge_keys"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.utils.merge_keys" title="Permalink to this definition"></a></dt>
+<dd><p>Convert all_fun so that different values which give same
+item in all_sym now have the same value</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">all_fun (list)</dt>
+<dd class="field-odd"><p>list of strings containing all functions</p>
+</dd>
+<dt class="field-even">all_sym (OrderedDict)</dt>
+<dd class="field-even"><p>dictionary of sympy objects which can be accessed by their string representations.</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.utils.pprint_ntuple">
+<span class="sig-prename descclassname"><span class="pre">generation.utils.</span></span><span class="sig-name descname"><span class="pre">pprint_ntuple</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/utils.html#pprint_ntuple"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.utils.pprint_ntuple" title="Permalink to this definition"></a></dt>
+<dd><p>Printing function for memory diagnostics</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">nt (tuple)</dt>
+<dd class="field-odd"><p>tuple of memory statistics returned by psutil.virtual_memory()</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.utils.split_idx">
+<span class="sig-prename descclassname"><span class="pre">generation.utils.</span></span><span class="sig-name descname"><span class="pre">split_idx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Ntotal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indices_or_sections</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/utils.html#split_idx"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.utils.split_idx" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the rth set indices for numpy.array_split(a,indices_or_sections)
+where len(a) = Ntotal</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">Ntotal (int)</dt>
+<dd class="field-odd"><p>length of array to split</p>
+</dd>
+<dt class="field-even">r (int)</dt>
+<dd class="field-even"><p>rank whose indices are required</p>
+</dd>
+<dt class="field-odd">indices_or_sections (int)</dt>
+<dd class="field-odd"><p>how many parts to split array into</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">i (list)</dt>
+<dd class="field-odd"><p>[min, max] index used by rank</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="generation.utils.using_mem">
+<span class="sig-prename descclassname"><span class="pre">generation.utils.</span></span><span class="sig-name descname"><span class="pre">using_mem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generation/utils.html#using_mem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#generation.utils.using_mem" title="Permalink to this definition"></a></dt>
+<dd><p>Find and print current virtual memory usage</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">point (str)</dt>
+<dd class="field-odd"><p>string to print to identify where memory diagnostics calculated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="fitting">
+<h2>fitting<a class="headerlink" href="#fitting" title="Permalink to this heading"></a></h2>
+<section id="module-fitting.combine_DL">
+<span id="combine-dl"></span><h3>combine_DL<a class="headerlink" href="#module-fitting.combine_DL" title="Permalink to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.combine_DL.main">
+<span class="sig-prename descclassname"><span class="pre">fitting.combine_DL.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/combine_DL.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.combine_DL.main" title="Permalink to this definition"></a></dt>
+<dd><p>Combine the description lengths of all functions of a given complexity, sort by this and save to file.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">comp (int)</dt>
+<dd class="field-odd"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data, likelihood functions and file paths</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-fitting.fit_single">
+<span id="fit-single"></span><h3>fit_single<a class="headerlink" href="#module-fitting.fit_single" title="Permalink to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.fit_single.single_function">
+<span class="sig-prename descclassname"><span class="pre">fitting.fit_single.</span></span><span class="sig-name descname"><span class="pre">single_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis_functions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">try_integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/fit_single.html#single_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.fit_single.single_function" title="Permalink to this definition"></a></dt>
+<dd><p>Run end-to-end fitting of function for a single function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">labels (list)</dt>
+<dd class="field-odd"><p>list of strings giving node labels of tree</p>
+</dd>
+<dt class="field-even">basis_functions (list)</dt>
+<dd class="field-even"><p>list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators</p>
+</dd>
+<dt class="field-odd">likelihood (fitting.likelihood object)</dt>
+<dd class="field-odd"><p>object containing data, likelihood functions and file paths</p>
+</dd>
+<dt class="field-even">pmin (float, default=0.)</dt>
+<dd class="field-even"><p>minimum value for each parameter to consider when generating initial guess</p>
+</dd>
+<dt class="field-odd">pmax (float, default=3.)</dt>
+<dd class="field-odd"><p>maximum value for each parameter to consider when generating initial guess</p>
+</dd>
+<dt class="field-even">tmax (float, default=5.)</dt>
+<dd class="field-even"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
+</dd>
+<dt class="field-odd">try_integration (bool, default=False)</dt>
+<dd class="field-odd"><p>when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)</p>
+</dd>
+<dt class="field-even">verbose (bool, default=True)</dt>
+<dd class="field-even"><p>Whether to print results (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><p>the minimum value of -log(likelihood) (corresponding to the maximum likelihood)</p>
+</dd>
+<dt class="field-even">DL (float)</dt>
+<dd class="field-even"><p>the description length of this function</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-fitting.likelihood">
+<span id="likelihood"></span><h3>likelihood<a class="headerlink" href="#module-fitting.likelihood" title="Permalink to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="fitting.likelihood.CCLikelihood">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fitting.likelihood.</span></span><span class="sig-name descname"><span class="pre">CCLikelihood</span></span><a class="reference internal" href="_modules/fitting/likelihood.html#CCLikelihood"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.CCLikelihood" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.CCLikelihood.clear_data">
+<span class="sig-name descname"><span class="pre">clear_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#CCLikelihood.clear_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.CCLikelihood.clear_data" title="Permalink to this definition"></a></dt>
+<dd><p>Clear data used for numerical integration (not required for cosmic chronometers)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.CCLikelihood.get_pred">
+<span class="sig-name descname"><span class="pre">get_pred</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">zp1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#CCLikelihood.get_pred"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.CCLikelihood.get_pred" title="Permalink to this definition"></a></dt>
+<dd><p>Return the predicted H(z), which is the square root of the functions we are using.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">zp1 (float or np.array)</dt>
+<dd class="field-odd"><p>1 + z for redshift z</p>
+</dd>
+<dt class="field-even">a (list)</dt>
+<dd class="field-even"><p>parameters to subsitute into equation considered</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to use which gives H^2</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">H (float or np.array)</dt>
+<dd class="field-odd"><p>the predicted Hubble parameter at redshifts supplied</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.CCLikelihood.negloglike">
+<span class="sig-name descname"><span class="pre">negloglike</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#CCLikelihood.negloglike"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.CCLikelihood.negloglike" title="Permalink to this definition"></a></dt>
+<dd><p>Negative log-likelihood for a given function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">a (list)</dt>
+<dd class="field-odd"><p>parameters to subsitute into equation considered</p>
+</dd>
+<dt class="field-even">eq_numpy (numpy function)</dt>
+<dd class="field-even"><p>function to use which gives H^2</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">nll (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.CCLikelihood.run_sympify">
+<span class="sig-name descname"><span class="pre">run_sympify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fcn_i</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#CCLikelihood.run_sympify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.CCLikelihood.run_sympify" title="Permalink to this definition"></a></dt>
+<dd><p>Sympify a function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_i (str)</dt>
+<dd class="field-odd"><p>string representing function we wish to fit to data</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_i (str)</dt>
+<dd class="field-odd"><p>string representing function we wish to fit to data (with superfluous characters removed)</p>
+</dd>
+<dt class="field-even">eq (sympy object)</dt>
+<dd class="field-even"><p>sympy object representing function we wish to fit to data</p>
+</dd>
+<dt class="field-odd">integrated (bool, always False)</dt>
+<dd class="field-odd"><p>whether we analytically integrated the function (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="fitting.likelihood.MockLikelihood">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fitting.likelihood.</span></span><span class="sig-name descname"><span class="pre">MockLikelihood</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">yfracerr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#MockLikelihood"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.MockLikelihood" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.MockLikelihood.clear_data">
+<span class="sig-name descname"><span class="pre">clear_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#MockLikelihood.clear_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.MockLikelihood.clear_data" title="Permalink to this definition"></a></dt>
+<dd><p>Clear data used for numerical integration (not required for cosmic chronometers)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.MockLikelihood.get_pred">
+<span class="sig-name descname"><span class="pre">get_pred</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">zp1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#MockLikelihood.get_pred"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.MockLikelihood.get_pred" title="Permalink to this definition"></a></dt>
+<dd><p>Return the predicted H(z), which is the square root of the functions we are using.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">zp1 (float or np.array)</dt>
+<dd class="field-odd"><p>1 + z for redshift z</p>
+</dd>
+<dt class="field-even">a (list)</dt>
+<dd class="field-even"><p>parameters to subsitute into equation considered</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to use which gives H^2</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">H (float or np.array)</dt>
+<dd class="field-odd"><p>the predicted Hubble parameter at redshifts supplied</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.MockLikelihood.negloglike">
+<span class="sig-name descname"><span class="pre">negloglike</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#MockLikelihood.negloglike"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.MockLikelihood.negloglike" title="Permalink to this definition"></a></dt>
+<dd><p>Negative log-likelihood for a given function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">a (list)</dt>
+<dd class="field-odd"><p>parameters to subsitute into equation considered</p>
+</dd>
+<dt class="field-even">eq_numpy (numpy function)</dt>
+<dd class="field-even"><p>function to use which gives H^2</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">nll (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.MockLikelihood.run_sympify">
+<span class="sig-name descname"><span class="pre">run_sympify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fcn_i</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#MockLikelihood.run_sympify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.MockLikelihood.run_sympify" title="Permalink to this definition"></a></dt>
+<dd><p>Sympify a function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_i (str)</dt>
+<dd class="field-odd"><p>string representing function we wish to fit to data</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_i (str)</dt>
+<dd class="field-odd"><p>string representing function we wish to fit to data (with superfluous characters removed)</p>
+</dd>
+<dt class="field-even">eq (sympy object)</dt>
+<dd class="field-even"><p>sympy object representing function we wish to fit to data</p>
+</dd>
+<dt class="field-odd">integrated (bool, always False)</dt>
+<dd class="field-odd"><p>whether we analytically integrated the function (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="fitting.likelihood.PanthLikelihood">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fitting.likelihood.</span></span><span class="sig-name descname"><span class="pre">PanthLikelihood</span></span><a class="reference internal" href="_modules/fitting/likelihood.html#PanthLikelihood"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.PanthLikelihood" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.PanthLikelihood.clear_data">
+<span class="sig-name descname"><span class="pre">clear_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#PanthLikelihood.clear_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.PanthLikelihood.clear_data" title="Permalink to this definition"></a></dt>
+<dd><p>Clear data used for numerical integration</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.PanthLikelihood.get_pred">
+<span class="sig-name descname"><span class="pre">get_pred</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">zp1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#PanthLikelihood.get_pred"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.PanthLikelihood.get_pred" title="Permalink to this definition"></a></dt>
+<dd><p>Return the predicted distance modulus from the H^2 function supplied.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">zp1 (float or np.array)</dt>
+<dd class="field-odd"><p>1 + z for redshift z</p>
+</dd>
+<dt class="field-even">a (list)</dt>
+<dd class="field-even"><p>parameters to subsitute into equation considered</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to use which gives H^2</p>
+</dd>
+<dt class="field-even">integrated (bool, default=False)</dt>
+<dd class="field-even"><p>whether we previously analytically integrated the function (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">mu (float or np.array)</dt>
+<dd class="field-odd"><p>the predicted distance modulus at redshifts supplied</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.PanthLikelihood.negloglike">
+<span class="sig-name descname"><span class="pre">negloglike</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#PanthLikelihood.negloglike"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.PanthLikelihood.negloglike" title="Permalink to this definition"></a></dt>
+<dd><p>Negative log-likelihood for a given function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">a (list)</dt>
+<dd class="field-odd"><p>parameters to subsitute into equation considered</p>
+</dd>
+<dt class="field-even">eq_numpy (numpy function)</dt>
+<dd class="field-even"><p>function to use which gives H^2</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">nll (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.PanthLikelihood.run_sympify">
+<span class="sig-name descname"><span class="pre">run_sympify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fcn_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">try_integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#PanthLikelihood.run_sympify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.PanthLikelihood.run_sympify" title="Permalink to this definition"></a></dt>
+<dd><p>Sympify a function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_i (str)</dt>
+<dd class="field-odd"><p>string representing function we wish to fit to data</p>
+</dd>
+<dt class="field-even">tmax (float)</dt>
+<dd class="field-even"><p>maximum time in seconds to attempt analytic integration</p>
+</dd>
+<dt class="field-odd">try_integration (bool, default=True)</dt>
+<dd class="field-odd"><p>as the likelihood requires an integral, whether to try to analytically integrate (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_i (str)</dt>
+<dd class="field-odd"><p>string representing function we wish to fit to data (with superfluous characters removed)</p>
+</dd>
+<dt class="field-even">eq (sympy object)</dt>
+<dd class="field-even"><p>sympy object representing function we wish to fit to data</p>
+</dd>
+<dt class="field-odd">integrated (bool)</dt>
+<dd class="field-odd"><p>whether we we able to analytically integrate the function (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="fitting.likelihood.SimpleLikelihood">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fitting.likelihood.</span></span><span class="sig-name descname"><span class="pre">SimpleLikelihood</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#SimpleLikelihood"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.SimpleLikelihood" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.SimpleLikelihood.clear_data">
+<span class="sig-name descname"><span class="pre">clear_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#SimpleLikelihood.clear_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.SimpleLikelihood.clear_data" title="Permalink to this definition"></a></dt>
+<dd><p>Clear data used for numerical integration (not required for cosmic chronometers)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.SimpleLikelihood.get_pred">
+<span class="sig-name descname"><span class="pre">get_pred</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#SimpleLikelihood.get_pred"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.SimpleLikelihood.get_pred" title="Permalink to this definition"></a></dt>
+<dd><p>Return the predicted y(x)</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (float or np.array)</dt>
+<dd class="field-odd"><p>x value being used</p>
+</dd>
+<dt class="field-even">a (list)</dt>
+<dd class="field-even"><p>parameters to subsitute into equation considered</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to use which gives H^2</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">y (float or np.array)</dt>
+<dd class="field-odd"><p>the predicted y value at x supplied</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.SimpleLikelihood.negloglike">
+<span class="sig-name descname"><span class="pre">negloglike</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#SimpleLikelihood.negloglike"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.SimpleLikelihood.negloglike" title="Permalink to this definition"></a></dt>
+<dd><p>Negative log-likelihood for a given function. Here it is <a href="#id1"><span class="problematic" id="id2">|</span></a>y-ypred|^2</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">a (list)</dt>
+<dd class="field-odd"><p>parameters to subsitute into equation considered</p>
+</dd>
+<dt class="field-even">eq_numpy (numpy function)</dt>
+<dd class="field-even"><p>function to use which gives y</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">nll (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fitting.likelihood.SimpleLikelihood.run_sympify">
+<span class="sig-name descname"><span class="pre">run_sympify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fcn_i</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/likelihood.html#SimpleLikelihood.run_sympify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.likelihood.SimpleLikelihood.run_sympify" title="Permalink to this definition"></a></dt>
+<dd><p>Sympify a function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_i (str)</dt>
+<dd class="field-odd"><p>string representing function we wish to fit to data</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_i (str)</dt>
+<dd class="field-odd"><p>string representing function we wish to fit to data (with superfluous characters removed)</p>
+</dd>
+<dt class="field-even">eq (sympy object)</dt>
+<dd class="field-even"><p>sympy object representing function we wish to fit to data</p>
+</dd>
+<dt class="field-odd">integrated (bool, always False)</dt>
+<dd class="field-odd"><p>whether we analytically integrated the function (True) or not (False)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-fitting.match">
+<span id="match"></span><h3>match<a class="headerlink" href="#module-fitting.match" title="Permalink to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.match.main">
+<span class="sig-prename descclassname"><span class="pre">fitting.match.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">try_integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/match.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.match.main" title="Permalink to this definition"></a></dt>
+<dd><p>Apply results of fitting the unique functions to all functions and save to file</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">comp (int)</dt>
+<dd class="field-odd"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data, likelihood functions and file paths</p>
+</dd>
+<dt class="field-odd">tmax (float, default=5.)</dt>
+<dd class="field-odd"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
+</dd>
+<dt class="field-even">try_integration (bool, default=False)</dt>
+<dd class="field-even"><p>when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-fitting.plot">
+<span id="plot"></span><h3>plot<a class="headerlink" href="#module-fitting.plot" title="Permalink to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.plot.main">
+<span class="sig-prename descclassname"><span class="pre">fitting.plot.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">try_integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/plot.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.plot.main" title="Permalink to this definition"></a></dt>
+<dd><p>Plot best 50 functions at given complexity against data and save plot to file</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">comp (int)</dt>
+<dd class="field-odd"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data, functions to convert SR expressions to variable of data and output path</p>
+</dd>
+<dt class="field-odd">tmax (float, default=5.)</dt>
+<dd class="field-odd"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
+</dd>
+<dt class="field-even">try_integration (bool, default=False)</dt>
+<dd class="field-even"><p>when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-fitting.sympy_symbols">
+<span id="sympy-symbols"></span><h3>sympy_symbols<a class="headerlink" href="#module-fitting.sympy_symbols" title="Permalink to this heading"></a></h3>
+<p>Script defining functions and symbols which can be used to interpret functions used in fitting functions</p>
+</section>
+<section id="module-fitting.test_all">
+<span id="test-all"></span><h3>test_all<a class="headerlink" href="#module-fitting.test_all" title="Permalink to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.chi2_fcn_1arg">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">chi2_fcn_1arg</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#chi2_fcn_1arg"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.chi2_fcn_1arg" title="Permalink to this definition"></a></dt>
+<dd><p>Compute chi2 for a function with 1 parameter1</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (list)</dt>
+<dd class="field-odd"><p>parameters to use for function</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to pass to likelihood object to make prediction of y(x)</p>
+</dd>
+<dt class="field-even">integrated (bool)</dt>
+<dd class="field-even"><p>whether eq_numpy has already been integrated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.chi2_fcn_1arg_m">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">chi2_fcn_1arg_m</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#chi2_fcn_1arg_m"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.chi2_fcn_1arg_m" title="Permalink to this definition"></a></dt>
+<dd><p>Compute chi2 for a function with 1 parameter, assuming parameter negative and passed in log-space</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (list)</dt>
+<dd class="field-odd"><p>log_{10} of absolute value of parameter to use for function</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to pass to likelihood object to make prediction of y(x)</p>
+</dd>
+<dt class="field-even">integrated (bool)</dt>
+<dd class="field-even"><p>whether eq_numpy has already been integrated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.chi2_fcn_1arg_p">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">chi2_fcn_1arg_p</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#chi2_fcn_1arg_p"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.chi2_fcn_1arg_p" title="Permalink to this definition"></a></dt>
+<dd><p>Compute chi2 for a function with 1 parameter, assuming parameter positive and passed in log-space</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (list)</dt>
+<dd class="field-odd"><p>log_{10} of absolute value of parameter to use for function</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to pass to likelihood object to make prediction of y(x)</p>
+</dd>
+<dt class="field-even">integrated (bool)</dt>
+<dd class="field-even"><p>whether eq_numpy has already been integrated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.chi2_fcn_2args">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">chi2_fcn_2args</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#chi2_fcn_2args"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.chi2_fcn_2args" title="Permalink to this definition"></a></dt>
+<dd><p>Compute chi2 for a function with 2 parameters</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (list)</dt>
+<dd class="field-odd"><p>parameters to use for function</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to pass to likelihood object to make prediction of y(x)</p>
+</dd>
+<dt class="field-even">integrated (bool)</dt>
+<dd class="field-even"><p>whether eq_numpy has already been integrated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.chi2_fcn_2args_mm">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">chi2_fcn_2args_mm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#chi2_fcn_2args_mm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.chi2_fcn_2args_mm" title="Permalink to this definition"></a></dt>
+<dd><p>Compute chi2 for a function with 2 parameters, assuming both negative, and passed in log-space</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (list)</dt>
+<dd class="field-odd"><p>log_{10} of absolute value of parameters to use for function</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to pass to likelihood object to make prediction of y(x)</p>
+</dd>
+<dt class="field-even">integrated (bool)</dt>
+<dd class="field-even"><p>whether eq_numpy has already been integrated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.chi2_fcn_2args_mp">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">chi2_fcn_2args_mp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#chi2_fcn_2args_mp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.chi2_fcn_2args_mp" title="Permalink to this definition"></a></dt>
+<dd><p>Compute chi2 for a function with 2 parameters, assuming first negative and second positive, and passed in log-space</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (list)</dt>
+<dd class="field-odd"><p>log_{10} of absolute value of parameters to use for function</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to pass to likelihood object to make prediction of y(x)</p>
+</dd>
+<dt class="field-even">integrated (bool)</dt>
+<dd class="field-even"><p>whether eq_numpy has already been integrated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.chi2_fcn_2args_pm">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">chi2_fcn_2args_pm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#chi2_fcn_2args_pm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.chi2_fcn_2args_pm" title="Permalink to this definition"></a></dt>
+<dd><p>Compute chi2 for a function with 2 parameters, assuming first positive and second negative, and passed in log-space</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (list)</dt>
+<dd class="field-odd"><p>log_{10} of absolute value of parameters to use for function</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to pass to likelihood object to make prediction of y(x)</p>
+</dd>
+<dt class="field-even">integrated (bool)</dt>
+<dd class="field-even"><p>whether eq_numpy has already been integrated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.chi2_fcn_2args_pp">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">chi2_fcn_2args_pp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#chi2_fcn_2args_pp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.chi2_fcn_2args_pp" title="Permalink to this definition"></a></dt>
+<dd><p>Compute chi2 for a function with 2 parameters, assuming both positive and passed in log-space</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (list)</dt>
+<dd class="field-odd"><p>log_{10} of parameters to use for function</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to pass to likelihood object to make prediction of y(x)</p>
+</dd>
+<dt class="field-even">integrated (bool)</dt>
+<dd class="field-even"><p>whether eq_numpy has already been integrated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.chi2_fcn_3args">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">chi2_fcn_3args</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#chi2_fcn_3args"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.chi2_fcn_3args" title="Permalink to this definition"></a></dt>
+<dd><p>Compute chi2 for a function with 3 parameters</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (list)</dt>
+<dd class="field-odd"><p>parameters to use for function</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to pass to likelihood object to make prediction of y(x)</p>
+</dd>
+<dt class="field-even">integrated (bool)</dt>
+<dd class="field-even"><p>whether eq_numpy has already been integrated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.chi2_fcn_4args">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">chi2_fcn_4args</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq_numpy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#chi2_fcn_4args"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.chi2_fcn_4args" title="Permalink to this definition"></a></dt>
+<dd><p>Compute chi2 for a function with 4 parameters</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">x (list)</dt>
+<dd class="field-odd"><p>parameters to use for function</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">eq_numpy (numpy function)</dt>
+<dd class="field-odd"><p>function to pass to likelihood object to make prediction of y(x)</p>
+</dd>
+<dt class="field-even">integrated (bool)</dt>
+<dd class="field-even"><p>whether eq_numpy has already been integrated</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (float)</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>log(likelihood) for this function and parameters</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.get_functions">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">get_functions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unique</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#get_functions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.get_functions" title="Permalink to this definition"></a></dt>
+<dd><p>Load all functions for a given complexity to use and distribute among ranks</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">comp (int)</dt>
+<dd class="field-odd"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data, functions to convert SR expressions to variable of data and file path</p>
+</dd>
+<dt class="field-odd">unique (bool, default=True)</dt>
+<dd class="field-odd"><p>whether to load just the unique functions (True) or all functions (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_list (list)</dt>
+<dd class="field-odd"><p>list of strings representing functions to be used by given rank</p>
+</dd>
+<dt class="field-even">data_start (int)</dt>
+<dd class="field-even"><p>first index of function used by rank</p>
+</dd>
+<dt class="field-odd">data_end (int)</dt>
+<dd class="field-odd"><p>last index of function used by rank</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.main">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">try_integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.main" title="Permalink to this definition"></a></dt>
+<dd><p>Optimise all functions for a given complexity and save results to file.</p>
+<p>This optimises in log-space, with separate +ve and -ve branch (except when there are &gt;=3 params in which case it does it in linear)</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">comp (int)</dt>
+<dd class="field-odd"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data, likelihood functions and file paths</p>
+</dd>
+<dt class="field-odd">tmax (float, default=5.)</dt>
+<dd class="field-odd"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
+</dd>
+<dt class="field-even">pmin (float, default=0.)</dt>
+<dd class="field-even"><p>minimum value for each parameter to considered when generating initial guess</p>
+</dd>
+<dt class="field-odd">pmax (float, default=3.)</dt>
+<dd class="field-odd"><p>maximum value for each parameter to considered when generating initial guess</p>
+</dd>
+<dt class="field-even">try_integration (bool, default=False)</dt>
+<dd class="field-even"><p>when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all.optimise_fun">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all.</span></span><span class="sig-name descname"><span class="pre">optimise_fun</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fcn_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pmin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">try_integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all.html#optimise_fun"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all.optimise_fun" title="Permalink to this definition"></a></dt>
+<dd><p>Optimise the parameters of a function to fit data</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_i (str)</dt>
+<dd class="field-odd"><p>string representing function we wish to fit to data</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data and likelihood function</p>
+</dd>
+<dt class="field-odd">tmax (float)</dt>
+<dd class="field-odd"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
+</dd>
+<dt class="field-even">pmin (float)</dt>
+<dd class="field-even"><p>minimum value for each parameter to consider when generating initial guess</p>
+</dd>
+<dt class="field-odd">pmax (float)</dt>
+<dd class="field-odd"><p>maximum value for each parameter to consider when generating initial guess</p>
+</dd>
+<dt class="field-even">try_integration (bool, default=False)</dt>
+<dd class="field-even"><p>when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)</p>
+</dd>
+<dt class="field-odd">log_opt (bool, default=False)</dt>
+<dd class="field-odd"><p>whether to optimise 1 and 2 parameter cases in log space</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">chi2_i (float)</dt>
+<dd class="field-odd"><p>the minimum value of -log(likelihood) (corresponding to the maximum likelihood)</p>
+</dd>
+<dt class="field-even">params (list)</dt>
+<dd class="field-even"><p>the maximum likelihood values of the parameters</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-fitting.test_all_Fisher">
+<span id="test-all-fisher"></span><h3>test_all_Fisher<a class="headerlink" href="#module-fitting.test_all_Fisher" title="Permalink to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all_Fisher.convert_params">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all_Fisher.</span></span><span class="sig-name descname"><span class="pre">convert_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fcn_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrated</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta_ML</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">negloglike</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all_Fisher.html#convert_params"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all_Fisher.convert_params" title="Permalink to this definition"></a></dt>
+<dd><p>Compute Fisher, correct MLP and find parametric contirbution to description length for single function</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">fcn_i (str)</dt>
+<dd class="field-odd"><p>string representing function we wish to fit to data</p>
+</dd>
+<dt class="field-even">eq (sympy object)</dt>
+<dd class="field-even"><p>sympy object for the function we wish to fit to data</p>
+</dd>
+<dt class="field-odd">integrated (bool)</dt>
+<dd class="field-odd"><p>whether eq_numpy has already been integrated</p>
+</dd>
+<dt class="field-even">theta_ML (list)</dt>
+<dd class="field-even"><p>the maximum likelihood values of the parameters</p>
+</dd>
+<dt class="field-odd">likelihood (fitting.likelihood object)</dt>
+<dd class="field-odd"><p>object containing data, likelihood functions and file paths</p>
+</dd>
+<dt class="field-even">negloglike (float)</dt>
+<dd class="field-even"><p>the minimum log-likelihood for this function</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">params (list)</dt>
+<dd class="field-odd"><p>the corrected maximum likelihood values of the parameters</p>
+</dd>
+<dt class="field-even">negloglike (float)</dt>
+<dd class="field-even"><p>the corrected minimum log-likelihood for this function</p>
+</dd>
+<dt class="field-odd">deriv (list)</dt>
+<dd class="field-odd"><p>flattened version of the Hessian of -log(likelihood) at the maximum likelihood point</p>
+</dd>
+<dt class="field-even">codelen (float)</dt>
+<dd class="field-even"><p>the parameteric contribution to the description length of this function</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all_Fisher.load_loglike">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all_Fisher.</span></span><span class="sig-name descname"><span class="pre">load_loglike</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all_Fisher.html#load_loglike"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all_Fisher.load_loglike" title="Permalink to this definition"></a></dt>
+<dd><p>Load results of optimisation completed by test_all.py</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">comp (int)</dt>
+<dd class="field-odd"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data, likelihood functions and file paths</p>
+</dd>
+<dt class="field-odd">data_start (int)</dt>
+<dd class="field-odd"><p>minimum index of results we want to load (only if split=True)</p>
+</dd>
+<dt class="field-even">data_end (int)</dt>
+<dd class="field-even"><p>maximum index of results we want to load (only if split=True)</p>
+</dd>
+<dt class="field-odd">split (bool, deault=True)</dt>
+<dd class="field-odd"><p>whether to return subset of results given by data_start and data_end (True) or all data (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">negloglike (list)</dt>
+<dd class="field-odd"><p>list of minimum log-likelihoods</p>
+</dd>
+<dt class="field-even">param1 (list)</dt>
+<dd class="field-even"><p>list of parameters a0 at maximum likelihood points</p>
+</dd>
+<dt class="field-odd">param2 (list)</dt>
+<dd class="field-odd"><p>list of parameters a1 at maximum likelihood points</p>
+</dd>
+<dt class="field-even">param3 (list)</dt>
+<dd class="field-even"><p>list of parameters a2 at maximum likelihood points</p>
+</dd>
+<dt class="field-odd">param4 (list)</dt>
+<dd class="field-odd"><p>list of parameters a3 at maximum likelihood points</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fitting.test_all_Fisher.main">
+<span class="sig-prename descclassname"><span class="pre">fitting.test_all_Fisher.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">try_integration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fitting/test_all_Fisher.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#fitting.test_all_Fisher.main" title="Permalink to this definition"></a></dt>
+<dd><p>Compute Fisher, correct MLP and find parametric contirbution to description length for all functions and save to file</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="field-list simple">
+<dt class="field-odd">comp (int)</dt>
+<dd class="field-odd"><p>complexity of functions to consider</p>
+</dd>
+<dt class="field-even">likelihood (fitting.likelihood object)</dt>
+<dd class="field-even"><p>object containing data, likelihood functions and file paths</p>
+</dd>
+<dt class="field-odd">tmax (float, default=5.)</dt>
+<dd class="field-odd"><p>maximum time in seconds to run any one part of simplification procedure for a given function</p>
+</dd>
+<dt class="field-even">try_integration (bool, default=False)</dt>
+<dd class="field-even"><p>when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="tutorial.html" class="btn btn-neutral float-left" title="Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Deaglan Bartlett.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

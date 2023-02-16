@@ -13,8 +13,8 @@ from collections import OrderedDict
 import pprint
 import os
 
-import utils
-from custom_printer import ESRPrinter
+import esr.generation.utils as utils
+from esr.generation.custom_printer import ESRPrinter
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()

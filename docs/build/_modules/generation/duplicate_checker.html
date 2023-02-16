@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>generation.duplicate_checker &mdash; ESR 0.0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> ESR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">ESR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>generation.duplicate_checker</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for generation.duplicate_checker</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
+<span class="kn">import</span> <span class="nn">sympy</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">gc</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">pprint</span>
+
+<span class="kn">import</span> <span class="nn">esr.generation.generator</span> <span class="k">as</span> <span class="nn">generator</span>
+<span class="kn">import</span> <span class="nn">esr.generation.simplifier</span> <span class="k">as</span> <span class="nn">simplifier</span>
+<span class="kn">import</span> <span class="nn">esr.generation.utils</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">from</span> <span class="nn">esr.generation.custom_printer</span> <span class="kn">import</span> <span class="n">ESRPrinter</span>
+
+<span class="n">comm</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
+<span class="n">rank</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
+<span class="n">size</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span>
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../api.html#generation.duplicate_checker.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">runname</span><span class="p">,</span> <span class="n">compl</span><span class="p">,</span> <span class="n">track_memory</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">search_tmax</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">expand_tmax</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">1234</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Run the generation of functions for a given complexity and set of basis functions</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        :runname (str): name of run, which defines the basis functions used</span>
+<span class="sd">        :compl (int): complexity of functions to consider</span>
+<span class="sd">        :track_memory (bool, default=True): whether to compute and print memory statistics (True) or not (False)</span>
+<span class="sd">        :search_tmax (float, default=60.): maximum time in seconds to run any one part of simplification procedure for a given function</span>
+<span class="sd">        :expand_tmax (float, default=1.): maximum time in seconds to run any one part of expand/simplify procedure for a given function</span>
+<span class="sd">        :seed (int, default=1234): seed to set random number generator for shuffling functions (used to prevent one rank having similar, hard to simplify functions)</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">runname</span> <span class="o">==</span> <span class="s1">&#39;keep_duplicates&#39;</span><span class="p">:</span>
+        <span class="n">basis_functions</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">],</span>  <span class="c1"># type0</span>
+                <span class="p">[</span><span class="s2">&quot;square&quot;</span><span class="p">,</span> <span class="s2">&quot;exp&quot;</span><span class="p">,</span> <span class="s2">&quot;inv&quot;</span><span class="p">,</span> <span class="s2">&quot;sqrt_abs&quot;</span><span class="p">,</span> <span class="s2">&quot;log_abs&quot;</span><span class="p">],</span>  <span class="c1"># type1</span>
+                <span class="p">[</span><span class="s2">&quot;+&quot;</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;pow&quot;</span><span class="p">]]</span>  <span class="c1"># type2</span>
+    <span class="k">elif</span> <span class="n">runname</span> <span class="o">==</span> <span class="s1">&#39;core_maths&#39;</span><span class="p">:</span>
+        <span class="n">basis_functions</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">],</span>  <span class="c1"># type0</span>
+                <span class="p">[</span><span class="s2">&quot;inv&quot;</span><span class="p">],</span>  <span class="c1"># type1</span>
+                <span class="p">[</span><span class="s2">&quot;+&quot;</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;pow&quot;</span><span class="p">]]</span>  <span class="c1"># type2</span>
+    <span class="k">elif</span> <span class="n">runname</span> <span class="o">==</span> <span class="s1">&#39;ext_maths&#39;</span><span class="p">:</span>
+        <span class="n">basis_functions</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">],</span>  <span class="c1"># type0</span>
+                <span class="p">[</span><span class="s2">&quot;inv&quot;</span><span class="p">,</span> <span class="s2">&quot;sqrt_abs&quot;</span><span class="p">,</span> <span class="s2">&quot;square&quot;</span><span class="p">,</span> <span class="s2">&quot;exp&quot;</span><span class="p">],</span>  <span class="c1"># type1</span>
+                <span class="p">[</span><span class="s2">&quot;+&quot;</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;pow&quot;</span><span class="p">]]</span>  <span class="c1"># type2</span>
+    <span class="k">elif</span> <span class="n">runname</span> <span class="o">==</span> <span class="s1">&#39;osc_maths&#39;</span><span class="p">:</span>
+        <span class="n">basis_functions</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">],</span>  <span class="c1"># type0</span>
+                <span class="p">[</span><span class="s2">&quot;inv&quot;</span><span class="p">,</span> <span class="s2">&quot;sin&quot;</span><span class="p">],</span>  <span class="c1"># type1</span>
+                <span class="p">[</span><span class="s2">&quot;+&quot;</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;pow&quot;</span><span class="p">]]</span>  <span class="c1"># type2</span>
+
+    <span class="n">dirname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">generator</span><span class="o">.</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;..&#39;</span><span class="p">,</span> <span class="s1">&#39;function_library&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">runname</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span>
+    
+    <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">dirname</span><span class="p">)):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Making output directory:&#39;</span><span class="p">,</span> <span class="n">dirname</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">comm</span><span class="o">.</span><span class="n">Barrier</span><span class="p">()</span>
+
+    <span class="n">dirname</span> <span class="o">+=</span> <span class="s1">&#39;compl_</span><span class="si">%i</span><span class="s1">/&#39;</span><span class="o">%</span><span class="n">compl</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">dirname</span><span class="p">)):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Making output directory:&#39;</span><span class="p">,</span> <span class="n">dirname</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">comm</span><span class="o">.</span><span class="n">Barrier</span><span class="p">()</span>
+
+    <span class="n">all_fun</span><span class="p">,</span> <span class="n">extra_orig</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">generate_equations</span><span class="p">(</span><span class="n">compl</span><span class="p">,</span> <span class="n">basis_functions</span><span class="p">,</span> <span class="n">dirname</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">track_memory</span><span class="p">:</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">using_mem</span><span class="p">(</span><span class="s2">&quot;generated&quot;</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">locals_size</span><span class="p">(</span><span class="nb">locals</span><span class="p">())</span>
+
+    <span class="n">max_param</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">get_max_param</span><span class="p">(</span><span class="n">all_fun</span><span class="p">)</span>
+    <span class="n">nparam</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">count_params</span><span class="p">(</span><span class="n">all_fun</span><span class="p">,</span> <span class="n">max_param</span><span class="p">)</span>
+    <span class="n">nparam</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">nparam</span> <span class="o">==</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_param</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="n">param_list</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a</span><span class="si">%i</span><span class="s1">&#39;</span><span class="o">%</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_param</span><span class="p">)]</span>
+    
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">track_memory</span><span class="p">:</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">using_mem</span><span class="p">(</span><span class="s2">&quot;pre sympify&quot;</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">locals_size</span><span class="p">(</span><span class="nb">locals</span><span class="p">())</span>
+
+    <span class="n">nextra</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">extra_orig</span><span class="p">)</span>
+    
+    <span class="c1"># Get the mapping between original and new</span>
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Getting extra_orig indices&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="c1"># Convert list of equations to list of indices</span>
+    <span class="n">extra_orig</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_match_indexes</span><span class="p">(</span><span class="n">all_fun</span><span class="p">,</span> <span class="n">extra_orig</span><span class="p">)</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">nextra</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># Get str and sympy of the original equations</span>
+        <span class="n">all_fun</span><span class="p">[:</span><span class="o">-</span><span class="n">nextra</span><span class="p">],</span> <span class="n">all_sym</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">initial_sympify</span><span class="p">(</span><span class="n">all_fun</span><span class="p">[:</span><span class="o">-</span><span class="n">nextra</span><span class="p">],</span>
+                                            <span class="n">max_param</span><span class="p">,</span>
+                                            <span class="n">track_memory</span><span class="o">=</span><span class="n">track_memory</span><span class="p">)</span>
+
+        <span class="c1"># Get str but not sympy of the extra equations</span>
+        <span class="n">all_fun</span><span class="p">[</span><span class="o">-</span><span class="n">nextra</span><span class="p">:],</span> <span class="n">_</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">initial_sympify</span><span class="p">(</span><span class="n">all_fun</span><span class="p">[</span><span class="o">-</span><span class="n">nextra</span><span class="p">:],</span>
+                                            <span class="n">max_param</span><span class="p">,</span>
+                                            <span class="n">track_memory</span><span class="o">=</span><span class="n">track_memory</span><span class="p">,</span>
+                                            <span class="n">save_sympy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">all_fun</span><span class="p">,</span> <span class="n">all_sym</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">initial_sympify</span><span class="p">(</span><span class="n">all_fun</span><span class="p">,</span>
+                                            <span class="n">max_param</span><span class="p">,</span>
+                                            <span class="n">track_memory</span><span class="o">=</span><span class="n">track_memory</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">track_memory</span><span class="p">:</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">using_mem</span><span class="p">(</span><span class="s2">&quot;post sympify&quot;</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">locals_size</span><span class="p">(</span><span class="nb">locals</span><span class="p">())</span>
+
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Saving all equations&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dirname</span> <span class="o">+</span> <span class="s1">&#39;/all_equations_</span><span class="si">%i</span><span class="s1">.txt&#39;</span><span class="o">%</span><span class="n">compl</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="mi">80</span>
+            <span class="n">pp</span> <span class="o">=</span> <span class="n">pprint</span><span class="o">.</span><span class="n">PrettyPrinter</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="n">w</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">all_fun</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">w</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+                    <span class="n">pp</span> <span class="o">=</span> <span class="n">pprint</span><span class="o">.</span><span class="n">PrettyPrinter</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="n">w</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+                <span class="n">pp</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+    <span class="c1"># We know the extra equations are duplicates, so will use this</span>
+    <span class="k">if</span> <span class="n">nextra</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">all_fun</span><span class="p">[</span><span class="o">-</span><span class="n">nextra</span><span class="p">:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">all_fun</span><span class="p">[</span><span class="n">f</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">extra_orig</span><span class="p">]</span>
+
+    <span class="k">del</span> <span class="n">extra_orig</span><span class="p">;</span> <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">track_memory</span><span class="p">:</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">using_mem</span><span class="p">(</span><span class="s2">&quot;pre do sympy&quot;</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">locals_size</span><span class="p">(</span><span class="nb">locals</span><span class="p">())</span>
+
+    <span class="n">all_fun</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">nround</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">do_sympy</span><span class="p">(</span><span class="n">all_fun</span><span class="p">,</span> 
+                                        <span class="n">all_sym</span><span class="p">,</span> 
+                                        <span class="n">compl</span><span class="p">,</span> 
+                                        <span class="n">search_tmax</span><span class="p">,</span> 
+                                        <span class="n">expand_tmax</span><span class="p">,</span>
+                                        <span class="n">dirname</span><span class="p">,</span>
+                                        <span class="n">track_memory</span><span class="o">=</span><span class="n">track_memory</span><span class="p">)</span>
+
+    <span class="n">uniq</span><span class="p">,</span> <span class="n">match</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_unique_indexes</span><span class="p">(</span><span class="n">all_fun</span><span class="p">)</span>
+    <span class="n">uniq_fun</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">uniq</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    
+        <span class="c1"># Shuffle the unique equations</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Shuffling&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">uniq</span><span class="p">))</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">inv</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span><span class="n">j</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">))}</span>
+        <span class="n">uniq_fun</span> <span class="o">=</span> <span class="p">[</span><span class="n">uniq_fun</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">i</span><span class="p">]</span>
+        <span class="n">match_idx</span> <span class="o">=</span> <span class="p">[</span><span class="n">inv</span><span class="p">[</span><span class="n">match</span><span class="p">[</span><span class="n">f</span><span class="p">]]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">all_fun</span><span class="p">]</span>
+
+        <span class="n">ntot</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_fun</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">all_fun</span><span class="p">;</span> <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+        
+        <span class="n">uniq_nparam</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">count_params</span><span class="p">(</span><span class="n">uniq_fun</span><span class="p">,</span> <span class="n">max_param</span><span class="p">)</span>
+    
+        <span class="n">stars</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;*&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">35</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">stars</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;For complexity </span><span class="si">%i</span><span class="s1">:&#39;</span><span class="o">%</span><span class="n">compl</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Total unique: </span><span class="si">%i</span><span class="s1"> (</span><span class="si">%i</span><span class="s1">)&#39;</span><span class="o">%</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">uniq_fun</span><span class="p">),</span> <span class="n">ntot</span><span class="p">))</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_param</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Functions with 1 parameter: </span><span class="si">%i</span><span class="s1"> (</span><span class="si">%i</span><span class="s1">)&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">uniq_nparam</span> <span class="o">==</span> <span class="mi">1</span><span class="p">),</span> <span class="n">nparam</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Functions with </span><span class="si">%i</span><span class="s1"> parameters: </span><span class="si">%i</span><span class="s1"> (</span><span class="si">%i</span><span class="s1">)&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">uniq_nparam</span> <span class="o">==</span> <span class="n">i</span><span class="p">),</span> <span class="n">nparam</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+        <span class="k">del</span> <span class="n">uniq_nparam</span><span class="p">,</span> <span class="n">nparam</span><span class="p">;</span> <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">stars</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Saving results:&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Unique equations&#39;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dirname</span> <span class="o">+</span> <span class="s1">&#39;/unique_equations_</span><span class="si">%i</span><span class="s1">.txt&#39;</span><span class="o">%</span><span class="n">compl</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="mi">80</span>
+            <span class="n">pp</span> <span class="o">=</span> <span class="n">pprint</span><span class="o">.</span><span class="n">PrettyPrinter</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="n">w</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">uniq_fun</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">w</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+                    <span class="n">pp</span> <span class="o">=</span> <span class="n">pprint</span><span class="o">.</span><span class="n">PrettyPrinter</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="n">w</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+                <span class="n">pp</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">uniq_fun</span><span class="p">;</span> <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+               
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Matches&#39;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dirname</span> <span class="o">+</span> <span class="s1">&#39;/matches_</span><span class="si">%i</span><span class="s1">.txt&#39;</span><span class="o">%</span><span class="n">compl</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">match_idx</span><span class="p">)):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">match_idx</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">match_idx</span><span class="p">;</span> <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span> 
+
+    <span class="c1"># Now combine the inverse subs calculations</span>
+    <span class="k">del</span> <span class="n">all_sym</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">uniq</span><span class="p">,</span> <span class="n">match</span>
+    <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">all_inv_subs</span> <span class="o">=</span> <span class="p">[[]]</span> <span class="o">*</span> <span class="n">ntot</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Combining Inverse Subs&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nround</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Round </span><span class="si">%i</span><span class="s1"> of </span><span class="si">%i</span><span class="s1">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">r</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">nround</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+        <span class="n">inv</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">load_subs</span><span class="p">(</span><span class="n">dirname</span> <span class="o">+</span> <span class="s1">&#39;/inv_subs_</span><span class="si">%i</span><span class="s1">_round_</span><span class="si">%i</span><span class="s1">.txt&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">compl</span><span class="p">,</span><span class="n">r</span><span class="p">),</span>
+                                <span class="n">max_param</span><span class="p">,</span>
+                                <span class="n">use_sympy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inv</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">dirname</span> <span class="o">+</span> <span class="s1">&#39;/inv_idx_</span><span class="si">%i</span><span class="s1">_round_</span><span class="si">%i</span><span class="s1">.txt&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">compl</span><span class="p">,</span><span class="n">r</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">idx</span><span class="p">):</span>
+                <span class="n">all_inv_subs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_inv_subs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">inv</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">idx</span><span class="p">,</span> <span class="n">inv</span><span class="p">;</span> <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+
+        <span class="c1"># Remove subs which are followed by their inverse</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Removing unnecessary inv_subs&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">all_dup</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">get_all_dup</span><span class="p">(</span><span class="n">max_param</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_inv_subs</span><span class="p">)):</span>
+            <span class="n">all_inv_subs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">simplifier</span><span class="o">.</span><span class="n">simplify_inv_subs</span><span class="p">(</span><span class="n">all_inv_subs</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">all_dup</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Saving Inverse Subs&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_inv_subs</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">all_inv_subs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">all_inv_subs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dirname</span> <span class="o">+</span> <span class="s1">&#39;/inv_subs_</span><span class="si">%i</span><span class="s1">.txt&#39;</span><span class="o">%</span><span class="n">compl</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerows</span><span class="p">(</span><span class="n">all_inv_subs</span><span class="p">)</span>
+
+        <span class="n">all_fname</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;unique_equations_&#39;</span><span class="p">,</span> <span class="s1">&#39;all_equations_&#39;</span><span class="p">,</span> <span class="s1">&#39;trees_&#39;</span><span class="p">,</span> <span class="s1">&#39;orig_trees_&#39;</span><span class="p">,</span> <span class="s1">&#39;extra_trees_&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">all_fname</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="s2">&quot;sed &#39;s/.$//; s/^.//&#39; </span><span class="si">%s</span><span class="s2">/</span><span class="si">%s%i</span><span class="s2">.txt &gt; </span><span class="si">%s</span><span class="s2">/temp_</span><span class="si">%i</span><span class="s2">.txt&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">fname</span><span class="p">,</span><span class="n">compl</span><span class="p">,</span><span class="n">dirname</span><span class="p">,</span><span class="n">compl</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="s2">&quot;mv </span><span class="si">%s</span><span class="s2">/temp_</span><span class="si">%i</span><span class="s2">.txt </span><span class="si">%s</span><span class="s2">/</span><span class="si">%s%i</span><span class="s2">.txt&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">compl</span><span class="p">,</span><span class="n">dirname</span><span class="p">,</span><span class="n">fname</span><span class="p">,</span><span class="n">compl</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+        <span class="k">del</span> <span class="n">all_inv_subs</span><span class="p">;</span> <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+
+    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Checking Results&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">compl</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">simplifier</span><span class="o">.</span><span class="n">check_results</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="n">compl</span><span class="p">)</span>
+
+    <span class="k">return</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">compl</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">runname</span> <span class="o">=</span> <span class="s1">&#39;core_maths&#39;</span>
+    <span class="n">main</span><span class="p">(</span><span class="n">runname</span><span class="p">,</span> <span class="n">compl</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Deaglan Bartlett.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,13 +1,13 @@
 import sys
 from mpi4py import MPI
 
-import test_all
-import test_all_Fisher
-import match
-import combine_DL
-import plot
+import esr.fitting.test_all as test_all
+import esr.fitting.test_all_Fisher as test_all_Fisher
+import esr.fitting.match as match
+import esr.fitting.combine_DL as combine_DL
+import esr.fitting.plot as plot
 
-from likelihood import CCLikelihood, PanthLikelihood, MockLikelihood, SimpleLikelihood
+from esr.fitting.likelihood import CCLikelihood, PanthLikelihood, MockLikelihood, SimpleLikelihood
 
 try_integration=False
 

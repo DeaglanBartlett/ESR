@@ -1,4 +1,4 @@
-import duplicate_checker 
+import esr.generation.duplicate_checker as duplicate_checker 
 import time
 from mpi4py import MPI
 from memory_profiler import memory_usage

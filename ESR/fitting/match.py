@@ -7,12 +7,11 @@ import os
 import sys
 import numdifftools as nd
 
-import test_all
-import test_all_Fisher
-from sympy_symbols import *
+import esr.fitting.test_all as test_all
+import esr.fitting.test_all_Fisher as test_all_Fisher
+from esr.fitting.sympy_symbols import *
 
-sys.path.insert(0, '../generation/')
-import simplifier
+import esr.generation.simplifier as simplifier
 
 warnings.filterwarnings("ignore")
 

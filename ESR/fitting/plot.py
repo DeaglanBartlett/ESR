@@ -10,10 +10,8 @@ import matplotlib.cm as cm
 import matplotlib as mpl
 import os
 
-from sympy_symbols import *
-
-sys.path.insert(0, '../generation/')
-import simplifier
+from esr.fitting.sympy_symbols import *
+import esr.generation.simplifier as simplifier
 
 warnings.filterwarnings("ignore")
 

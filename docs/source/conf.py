@@ -15,10 +15,13 @@ import sys
 
 autodoc_mock_imports = ["mpi4py", "astropy"]
 
-sys.path.insert(0, os.path.abspath('../../ESR/'))
-sys.path.insert(0, os.path.abspath('../../ESR/generation/'))
-sys.path.insert(0, os.path.abspath('../../ESR/fitting/'))
-sys.path.insert(0, os.path.abspath('../../ESR/plotting/'))
+sys.path.insert(0, os.path.dirname(os.getcwd()))
+sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(1, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../../esr/'))
+sys.path.insert(0, os.path.abspath('../../esr/generation/'))
+sys.path.insert(0, os.path.abspath('../../esr/fitting/'))
+sys.path.insert(0, os.path.abspath('../../esr/plotting/'))
 
 
 # -- Project information -----------------------------------------------------

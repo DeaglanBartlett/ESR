@@ -8,11 +8,9 @@ import gc
 import os
 import pprint
 
-import simplifier
-import utils
-
-sys.path.insert(1, os.path.realpath(os.path.pardir))
-from fitting.sympy_symbols import *
+import esr.generation.simplifier as simplifier
+import esr.generation.utils as utils
+from esr.fitting.sympy_symbols import *
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()

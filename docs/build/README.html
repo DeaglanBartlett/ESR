@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ESR &mdash; ESR 0.0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> ESR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ESR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>ESR</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/README.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="esr">
+<h1>ESR<a class="headerlink" href="#esr" title="Permalink to this heading"></a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">ESR</dt>
+<dd class="field-odd"><p>Exhaustive Symbolic Regression</p>
+</dd>
+<dt class="field-even">Authors</dt>
+<dd class="field-even"><p>Deaglan J. Bartlett and Harry Desmond</p>
+</dd>
+<dt class="field-odd">Homepage</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://github.com/DeaglanBartlett/ESR">https://github.com/DeaglanBartlett/ESR</a></p>
+</dd>
+<dt class="field-even">Documentation</dt>
+<dd class="field-even"><p><a class="reference external" href="https://esr.readthedocs.io">https://esr.readthedocs.io</a></p>
+</dd>
+<dt class="field-odd">Pre-computed function sets</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://doi.org/10.5281/zenodo.7339113">https://doi.org/10.5281/zenodo.7339113</a></p>
+</dd>
+</dl>
+<a class="reference external image-reference" href="https://esr.readthedocs.io/en/latest/?badge=latest"><img alt="Documentation Status" src="https://readthedocs.org/projects/esr/badge/?version=latest" /></a>
+<a class="reference external image-reference" href="https://arxiv.org/abs/2211.11461"><img alt="https://img.shields.io/badge/astro.CO-arXiv%32211.11461-B31B1B.svg" src="https://img.shields.io/badge/astro.CO-arXiv%32211.11461-B31B1B.svg" /></a>
+<a class="reference external image-reference" href="https://doi.org/10.5281/zenodo.7339113"><img alt="https://zenodo.org/badge/DOI/10.5281/zenodo.7339113.svg" src="https://zenodo.org/badge/DOI/10.5281/zenodo.7339113.svg" /></a>
+<section id="about">
+<h2>About<a class="headerlink" href="#about" title="Permalink to this heading"></a></h2>
+<p>ESR (Exhaustive Symbolic Regression) is a symbolic regression algorithm which efficiently
+and systematically finds all possible equations at fixed complexity
+(defined to be the number of nodes in its tree representation)
+given a set of basis functions.
+This is achieved by identifying the unique equations, so that one
+minimises the number of equations which one would have to fit to data.
+These unique equations are fitted to data and the results applied to
+the full list of equations, so we know the maximum likelihood parameters
+of every equation generated.
+We then select the best function using the minimum description length principle.
+By considering all equations, this procedure is guaranteed
+to find the true optimum for a
+given complexity and basis function set.</p>
+<p>We provide all required code and plotting routines to reproduce the
+results of the original ESR paper, which applies this method
+to a catalogue of cosmic chronometers and the Pantheon+ sample of
+supernovae to learn the Hubble rate as a function of redshift.
+The functions generated for this paper and an additional function
+set containing exp, sqrt and square are
+<a class="reference external" href="https://doi.org/10.5281/zenodo.7339113">publicly available</a>.</p>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h2>
+<p>To install ESR and its dependencies in a new virtual environment, run</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3 -m venv esr_env
+<span class="nb">source</span> esr_env/bin/activate
+git clone git@github.com:DeaglanBartlett/ESR.git
+<span class="nb">cd</span> ESR
+pip install -e .
+</pre></div>
+</div>
+</section>
+<section id="licence-and-citation">
+<h2>Licence and Citation<a class="headerlink" href="#licence-and-citation" title="Permalink to this heading"></a></h2>
+<p>Users are required to cite the Exhaustive Symbolic Regression <a class="reference external" href="https://arxiv.org/abs/2211.11461">Paper</a>
+for which the following bibtex can be used</p>
+<div class="highlight-bibtex notranslate"><div class="highlight"><pre><span></span><span class="nc">@ARTICLE</span><span class="p">{</span><span class="nl">2022arXiv2211.11461</span><span class="p">,</span><span class="w"></span>
+<span class="w">     </span><span class="na">author</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{{Bartlett}, D.~J. and {Desmond}, H. and {Ferreira}, P.~G.}</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="na">title</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;{Exhaustive Symbolic Regression}&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{arXiv e-prints}</span><span class="p">,</span><span class="w"></span>
+<span class="w">   </span><span class="na">keywords</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Astrophysics - Cosmology and Nongalactic Astrophysics}</span><span class="p">,</span><span class="w"></span>
+<span class="w">       </span><span class="na">year</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="m">2022</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="na">month</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nv">nov</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="na">eid</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{arXiv:2211.11461}</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="na">pages</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{arXiv:2211.11461}</span><span class="p">,</span><span class="w"></span>
+<span class="na">archivePrefix</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{arXiv}</span><span class="p">,</span><span class="w"></span>
+<span class="w">     </span><span class="na">eprint</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{2211.11461}</span><span class="p">,</span><span class="w"></span>
+<span class="na">primaryClass</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{astro-ph.CO}</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="na">url</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{https://arxiv.org/abs/2211.11461}</span><span class="p">,</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>If the user uses the <a class="reference external" href="https://doi.org/10.5281/zenodo.7339113">pre-computed function sets</a>
+then they must also cite</p>
+<div class="highlight-bibtex notranslate"><div class="highlight"><pre><span></span><span class="nc">@dataset</span><span class="p">{</span><span class="nl">bartlett_deaglan_j_2022_7339113</span><span class="p">,</span><span class="w"></span>
+<span class="na">author</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">{Bartlett, Deaglan J. and</span>
+<span class="s">          Desmond, Harry and</span>
+<span class="s">          Ferreira, Pedro G.}</span><span class="p">,</span><span class="w"></span>
+<span class="na">title</span><span class="w">        </span><span class="p">=</span><span class="w"> </span><span class="s">{Exhaustive Symbolic Regression Function Sets}</span><span class="p">,</span><span class="w"></span>
+<span class="na">month</span><span class="w">        </span><span class="p">=</span><span class="w"> </span><span class="nv">nov</span><span class="p">,</span><span class="w"></span>
+<span class="na">year</span><span class="w">         </span><span class="p">=</span><span class="w"> </span><span class="m">2022</span><span class="p">,</span><span class="w"></span>
+<span class="na">note</span><span class="w">         </span><span class="p">=</span><span class="w"> </span><span class="s">{{DJB is supported by the Simons Collaboration on</span>
+<span class="s">           ``Learning the Universe&#39;&#39; and was supported by</span>
+<span class="s">           STFC and Oriel College, Oxford. HD is supported by</span>
+<span class="s">           a Royal Society University Research Fellowship</span>
+<span class="s">           (grant no. 211046). PGF acknowledges support from</span>
+<span class="s">           European Research Council Grant No: 693024 and the</span>
+<span class="s">           Beecroft Trust.}}</span><span class="p">,</span><span class="w"></span>
+<span class="na">publisher</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{Zenodo}</span><span class="p">,</span><span class="w"></span>
+<span class="na">doi</span><span class="w">          </span><span class="p">=</span><span class="w"> </span><span class="s">{10.5281/zenodo.7339113}</span><span class="p">,</span><span class="w"></span>
+<span class="na">url</span><span class="w">          </span><span class="p">=</span><span class="w"> </span><span class="s">{https://doi.org/10.5281/zenodo.7339113}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The software is available on the MIT licence:</p>
+<p>Copyright 2022 Deaglan J. Bartlett</p>
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p>
+<p>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
+<p>THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+</section>
+<section id="contributors">
+<h2>Contributors<a class="headerlink" href="#contributors" title="Permalink to this heading"></a></h2>
+<p>Below is a list of contributors to this repository.</p>
+<p><a class="reference external" href="https://github.com/DeaglanBartlett">Deaglan Bartlett</a> (CNRS &amp; Sorbonne Université, Institut d’Astrophysique de Paris and Astrophysics, University of Oxford)</p>
+<p><a class="reference external" href="https://github.com/harrydesmond">Harry Desmond</a> (Institute of Cosmology &amp; Gravitation, University of Portsmouth)</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h2>
+<p>To run the Pantheon example from Paper 1, one must download the
+<a class="reference external" href="https://github.com/PantheonPlusSH0ES/DataRelease">Pantheon data</a>
+and place in the ‘data’ directory.</p>
+</section>
+<section id="documentation">
+<h2>Documentation<a class="headerlink" href="#documentation" title="Permalink to this heading"></a></h2>
+<p>The documentation for this project can be found
+<a class="reference external" href="https://esr.readthedocs.io/">at this link</a></p>
+</section>
+<section id="acknowledgements">
+<h2>Acknowledgements<a class="headerlink" href="#acknowledgements" title="Permalink to this heading"></a></h2>
+<p>DJB is supported by the Simons Collaboration on “Learning the Universe” and was supported by STFC and Oriel College, Oxford.
+HD is supported by a Royal Society University Research Fellowship (grant no. 211046).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Deaglan Bartlett.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

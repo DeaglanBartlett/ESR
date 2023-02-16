@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>generation.utils &mdash; ESR 0.0.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> ESR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">ESR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>generation.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for generation.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">pympler</span> <span class="kn">import</span> <span class="n">asizeof</span>
+<span class="kn">import</span> <span class="nn">psutil</span>
+<span class="kn">from</span> <span class="nn">psutil._common</span> <span class="kn">import</span> <span class="n">bytes2human</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+
+<span class="kn">from</span> <span class="nn">esr.generation.custom_printer</span> <span class="kn">import</span> <span class="n">ESRPrinter</span>
+
+<div class="viewcode-block" id="split_idx"><a class="viewcode-back" href="../../api.html#generation.utils.split_idx">[docs]</a><span class="k">def</span> <span class="nf">split_idx</span><span class="p">(</span><span class="n">Ntotal</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">indices_or_sections</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Returns the rth set indices for numpy.array_split(a,indices_or_sections)</span>
+<span class="sd">    where len(a) = Ntotal</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        :Ntotal (int): length of array to split</span>
+<span class="sd">        :r (int): rank whose indices are required</span>
+<span class="sd">        :indices_or_sections (int): how many parts to split array into</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        :i (list): [min, max] index used by rank</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># handle array case.</span>
+        <span class="n">Nsections</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices_or_sections</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">div_points</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">indices_or_sections</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="n">Ntotal</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+        <span class="c1"># indices_or_sections is a scalar, not an array.</span>
+        <span class="n">Nsections</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">indices_or_sections</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">Nsections</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;number sections must be larger than 0.&#39;</span><span class="p">)</span> <span class="kn">from</span> <span class="bp">None</span>
+        <span class="n">Neach_section</span><span class="p">,</span> <span class="n">extras</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">Ntotal</span><span class="p">,</span> <span class="n">Nsections</span><span class="p">)</span>
+        <span class="n">section_sizes</span> <span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span>
+                         <span class="n">extras</span> <span class="o">*</span> <span class="p">[</span><span class="n">Neach_section</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span>
+                         <span class="p">(</span><span class="n">Nsections</span><span class="o">-</span><span class="n">extras</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="n">Neach_section</span><span class="p">])</span>
+        <span class="n">div_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">section_sizes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">)</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
+        
+    <span class="n">imin</span> <span class="o">=</span> <span class="n">div_points</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+    <span class="n">imax</span> <span class="o">=</span> <span class="n">div_points</span><span class="p">[</span><span class="n">r</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">imin</span> <span class="o">&gt;=</span> <span class="n">imax</span><span class="p">:</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="p">[</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        
+    <span class="k">return</span> <span class="n">i</span></div>
+
+<div class="viewcode-block" id="pprint_ntuple"><a class="viewcode-back" href="../../api.html#generation.utils.pprint_ntuple">[docs]</a><span class="k">def</span> <span class="nf">pprint_ntuple</span><span class="p">(</span><span class="n">nt</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Printing function for memory diagnostics</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        :nt (tuple): tuple of memory statistics returned by psutil.virtual_memory()</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">nt</span><span class="o">.</span><span class="n">_fields</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">nt</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="s1">&#39;percent&#39;</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">bytes2human</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">%-10s</span><span class="s1"> : </span><span class="si">%7s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(),</span> <span class="n">value</span><span class="p">))</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="using_mem"><a class="viewcode-back" href="../../api.html#generation.utils.using_mem">[docs]</a><span class="k">def</span> <span class="nf">using_mem</span><span class="p">(</span><span class="n">point</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find and print current virtual memory usage</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        :point (str): string to print to identify where memory diagnostics calculated</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="si">%s</span><span class="s1">:&#39;</span><span class="o">%</span><span class="n">point</span><span class="p">)</span>
+    <span class="n">pprint_ntuple</span><span class="p">(</span><span class="n">psutil</span><span class="o">.</span><span class="n">virtual_memory</span><span class="p">())</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="locals_size"><a class="viewcode-back" href="../../api.html#generation.utils.locals_size">[docs]</a><span class="k">def</span> <span class="nf">locals_size</span><span class="p">(</span><span class="n">loc</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find and print the total memory used by locals()</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        :loc (dict): dictionary of locals (obtained calling locals() in another script)</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">loc</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">mem</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">keys</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">mem</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">asizeof</span><span class="o">.</span><span class="n">asizeof</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="n">x</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">mem</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">mem</span><span class="p">)</span>
+
+    <span class="n">value</span> <span class="o">=</span> <span class="n">bytes2human</span><span class="p">(</span><span class="n">mem</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n\t</span><span class="si">%-15s</span><span class="s1"> : </span><span class="si">%7s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="s1">&#39;LOCALS&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">j</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">mem</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">bytes2human</span><span class="p">(</span><span class="n">mem</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">%-15s</span><span class="s1"> : </span><span class="si">%7s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">keys</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">value</span><span class="p">))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="get_unique_indexes"><a class="viewcode-back" href="../../api.html#generation.utils.get_unique_indexes">[docs]</a><span class="k">def</span> <span class="nf">get_unique_indexes</span><span class="p">(</span><span class="n">l</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find the indices of the unique items in a list</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        :l (list): list from which we want to find unique indices</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        :result (OrderedDict): dictionary which returns index of unique item in l, accessed by unique item</span>
+<span class="sd">        :match (dict): dictionary which returns index of unique item in result, accessed by unique item</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)):</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">l</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">val</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">keys</span><span class="p">())}</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">match</span></div>
+
+
+<div class="viewcode-block" id="get_match_indexes"><a class="viewcode-back" href="../../api.html#generation.utils.get_match_indexes">[docs]</a><span class="k">def</span> <span class="nf">get_match_indexes</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns indices in a of items in b</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        :a (list): list of values whose index in b we wish to determine</span>
+<span class="sd">        :b (list): list of values whose indices we wish to find</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        :result (list): indices where corresponding value of a appears in b</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">bb</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)):</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">val</span> <span class="ow">in</span> <span class="n">bb</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">result</span><span class="p">):</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">val</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="n">result</span><span class="p">[</span><span class="n">f</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">b</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="merge_keys"><a class="viewcode-back" href="../../api.html#generation.utils.merge_keys">[docs]</a><span class="k">def</span> <span class="nf">merge_keys</span><span class="p">(</span><span class="n">all_fun</span><span class="p">,</span> <span class="n">all_sym</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert all_fun so that different values which give same</span>
+<span class="sd">    item in all_sym now have the same value</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        :all_fun (list): list of strings containing all functions</span>
+<span class="sd">        :all_sym (OrderedDict): dictionary of sympy objects which can be accessed by their string representations.</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">ESRPrinter</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_fun</span><span class="p">)):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">doprint</span><span class="p">(</span><span class="n">all_sym</span><span class="p">[</span><span class="n">all_fun</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">!=</span> <span class="n">all_fun</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">s</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_sym</span><span class="p">:</span>
+                <span class="n">all_sym</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_sym</span><span class="p">[</span><span class="n">all_fun</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+            <span class="n">all_sym</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">all_fun</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">all_fun</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span>
+    <span class="k">return</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Deaglan Bartlett.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

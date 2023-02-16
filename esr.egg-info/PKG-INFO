@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: esr
+Version: 0.1.0
+Summary: A Python package to perform Exhaustive Symbolic Regression
+Home-page: https://github.com/DeaglanBartlett/ESR
+Author: Deaglan Bartlett and Harry Desmond
+Author-email: deaglan.bartlett@physics.ox.ac.uk
+License: MIT licence
+Classifier: Development Status :: 1 - Planning
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: MIT License
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Programming Language :: Python :: 3

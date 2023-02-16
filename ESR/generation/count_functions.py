@@ -1,6 +1,6 @@
 import subprocess
 import numpy as np
-import simplifier
+import esr.generation.simplifier as simplifier
 
 all_compl = np.arange(4, 11)
 dirname = 'core_maths/'

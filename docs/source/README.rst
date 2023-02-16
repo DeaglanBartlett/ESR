@@ -42,6 +42,19 @@ The functions generated for this paper and an additional function
 set containing exp, sqrt and square are 
 `publicly available <https://doi.org/10.5281/zenodo.7339113>`_.
 
+Installation
+=============
+
+To install ESR and its dependencies in a new virtual environment, run
+
+.. code:: bash
+
+	python3 -m venv esr_env
+	source esr_env/bin/activate
+	git clone git@github.com:DeaglanBartlett/ESR.git
+	cd ESR
+	pip install -e .
+
 Licence and Citation
 ====================
 

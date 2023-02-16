@@ -4,7 +4,8 @@ from pympler import asizeof
 import psutil
 from psutil._common import bytes2human
 from collections import OrderedDict
-from custom_printer import ESRPrinter
+
+from esr.generation.custom_printer import ESRPrinter
 
 def split_idx(Ntotal, r, indices_or_sections):
     """ Returns the rth set indices for numpy.array_split(a,indices_or_sections)
