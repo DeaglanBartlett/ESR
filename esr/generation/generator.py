@@ -53,7 +53,7 @@ class Node:
             
 class DecoratedNode:
 
-    def __init__(self, fun, parent_op=None):
+    def __init__(self, fun, basis_functions, parent_op=None, parent=None):
         
         self.expr = fun
         self.type = type(fun)
@@ -61,6 +61,7 @@ class DecoratedNode:
         self.degree = len(fun.args)
         self.op = fun.__class__.__name__
         self.parent_op = parent_op
+        self.parent = parent
         self.tree = None
         
         if self.constant:
@@ -70,29 +71,29 @@ class DecoratedNode:
         else:
             self.val = None
             
-        if self.op == 'Pow' and fun.args[1] == 2.0:
+        if self.op == 'Pow' and fun.args[1] == 2.0 and 'square' in basis_functions[1]:
             self.op = 'Square'
-            self.children = [DecoratedNode(fun.args[0], parent_op=self.op)]
-        elif self.op == 'Pow' and fun.args[1] == 3.0:
+            self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
+        elif self.op == 'Pow' and fun.args[1] == 3.0 and 'cube' in basis_functions[1]:
             self.op = 'Cube'
-            self.children = [DecoratedNode(fun.args[0], parent_op=self.op)]
-        elif self.op == 'Pow' and fun.args[1] == 1/2:
+            self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
+        elif self.op == 'Pow' and fun.args[1] == 1/2 and ('sqrt' in basis_functions[1]) or ('sqrt_abs' in basis_functions[1]):
             self.op = 'Sqrt'
-            self.children = [DecoratedNode(fun.args[0], parent_op=self.op)]
+            self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
         elif self.op == 'Mul' and len(fun.args) == 2 and fun.args[1].__class__.__name__ == 'Pow' and fun.args[1].args[1] == -1:
             self.op = 'Div'
-            self.children = [DecoratedNode(fun.args[0], parent_op=self.op),
-                            DecoratedNode(fun.args[1].args[0], parent_op=self.op)]
-        elif self.op == 'Pow' and fun.args[1] == -1:
+            self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self),
+                            DecoratedNode(fun.args[1].args[0], basis_functions, parent_op=self.op, parent=self)]
+        elif self.op == 'Pow' and fun.args[1] == -1 and 'inv' in basis_functions[1]:
             self.op = 'Inv'
-            self.children = [DecoratedNode(fun.args[0], parent_op=self.op)]
+            self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
         else:
             if (len(fun.args) > 2):
                 f = fun.as_two_terms()
-                self.children = [DecoratedNode(f[0], parent_op=self.op),
-                                DecoratedNode(f[1], parent_op=self.op)]
+                self.children = [DecoratedNode(f[0], basis_functions, parent_op=self.op, parent=self),
+                                DecoratedNode(f[1], basis_functions, parent_op=self.op, parent=self)]
             else:
-                self.children = [DecoratedNode(a, parent_op=self.op) for a in fun.args]
+                self.children = [DecoratedNode(a, basis_functions, parent_op=self.op, parent=self) for a in fun.args]
                 
     def is_unity(self):
         try:
@@ -153,19 +154,25 @@ class DecoratedNode:
         if self.degree == 0:
             return [str(self.val)]
         elif self.degree == 1:
-            return [self.op, self.children[0].op]
+            return [self.op] + self.children[0].to_list(basis_functions)
         # Sqrt(x) instead of pow(x, 1/2)
         elif self.op == "Pow" and (self.children[1].type==sympy.core.numbers.Half) and (("sqrt" in basis_functions[1]) or ("sqrt_abs" in basis_functions[1])):
             if ("sqrt" in basis_functions[1]):
                 return ["sqrt"] + self.children[0].to_list(basis_functions)
             else:
                 return ["sqrt_abs"] + self.children[0].to_list(basis_functions)
-        # Square(x) instead of pow(x, 2)
+        # Square(x) instead of pow(x, 2) if possible
         elif self.op == "Pow" and (self.children[1].val == str(2)) and "square" in basis_functions[1]:
             return ["square"] + self.children[0].to_list(basis_functions)
+        # pow(x,2) instead of Square(x) if necessary
+        elif self.op == "Square" and "sqaure" not in basis_functions[1]:
+            return ["pow"] + self.children[0].to_list(basis_functions) + ["2"]
         # Cube(x) instead of pow(x, 3)
         elif self.op == "Pow" and (self.children[1].val == str(3)) and "cube" in basis_functions[1]:
             return ["cube"] + self.children[0].to_list(basis_functions)
+        # pow(x,2) instead of Square(x) if necessary
+        elif self.op == "Cube" and "cube" not in basis_functions[1]:
+            return ["pow"] + self.children[0].to_list(basis_functions) + ["3"]
         # Inv(x) instead of pow(x, -1)
         elif self.op == "Pow" and (self.children[1].type==sympy.core.numbers.NegativeOne) and ("inv" in basis_functions[1]):
             return ["Inv"] + self.children[0].to_list(basis_functions)
@@ -191,6 +198,43 @@ class DecoratedNode:
             for c in self.children:
                 r = r + c.to_list(basis_functions)
             return r
+            
+    def get_lineage(self):
+        p = [self.op, self.parent_op]
+        q = self.parent
+        while q is not None:
+            p += [q.parent_op]
+            q = q.parent
+        p.reverse()
+        p = [tuple(p)]
+        for c in self.children:
+            p += c.get_lineage()
+        return p
+
+    def get_sibling_lineage(self):
+        q = self
+        p = []
+        while q is not None:
+            if q.parent is None:
+                p += [(None, None)]
+            elif len(q.parent.children) > 1:
+                p += [tuple([c.op for c in q.parent.children])]
+            else:
+                p += [(q.op, 'None')]
+            q = q.parent
+        p = [p]
+        for c in self.children:
+            p += c.get_lineage()
+        return p
+        
+    def get_siblings(self):
+        if self.parent is not None and len(self.parent.children) > 1:
+            p = [tuple([c.op for c in self.parent.children])]
+        else:
+            p = [(self.op, 'None')]
+        for c in self.children:
+            p += c.get_siblings()
+        return p
 
         
 def check_tree(s):
@@ -397,17 +441,17 @@ def string_to_node(s, basis_functions):
 
     i = 0
     expr[i] = string_to_expr(s, kern=False, evaluate=True)
-    nodes[i] = DecoratedNode(expr[i])
+    nodes[i] = DecoratedNode(expr[i], basis_functions)
     c[i] = nodes[i].count_nodes(basis_functions)
     
     i = 1
     expr[i] = string_to_expr(s, kern=False, evaluate=False)
-    nodes[i] = DecoratedNode(expr[i])
+    nodes[i] = DecoratedNode(expr[i], basis_functions)
     c[i] = nodes[i].count_nodes(basis_functions)
 
     i = 2
     expr[i] = string_to_expr(s, kern=True)
-    nodes[i] = DecoratedNode(expr[i])
+    nodes[i] = DecoratedNode(expr[i], basis_functions)
     c[i] = nodes[i].count_nodes(basis_functions)
     
     i = c.argmin()
