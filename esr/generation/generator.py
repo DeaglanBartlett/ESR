@@ -381,13 +381,14 @@ def node_to_string(idx, tree, labels):
     return
     
     
-def string_to_expr(s, kern=False, evaluate=False):
+def string_to_expr(s, kern=False, evaluate=False, locs=None):
     """Convert a string giving function into a sympy object
     
     Args:
         :s (str): string representation of the function considered
         :kern (bool): whether to use sympy's kernS function or sympify
         :evaluate (bool): whether to use powsimp, factor and subs
+        :locs (dict): dictionary of string:sympy objects. If None, will create here
         
     Returns:
         :expr (sympy object): expression corresponding to s
@@ -399,14 +400,15 @@ def string_to_expr(s, kern=False, evaluate=False):
     s = s.replace('Sqrt', 'sqrt')
     s = s.replace('*^', '*10^')
     
-    locs = {"inv": inv,
-            "square": square,
-            "cube": cube,
-            "sqrt": sqrt,
-            "log": log,
-            "pow": pow,
-            "x": x
-            }
+    if locs is None:
+        locs = {"inv": inv,
+                "square": square,
+                "cube": cube,
+                "sqrt": sqrt,
+                "log": log,
+                "pow": pow,
+                "x": x
+                }
     
     if kern:
         expr = kernS(s)
@@ -422,12 +424,13 @@ def string_to_expr(s, kern=False, evaluate=False):
     return expr
     
     
-def string_to_node(s, basis_functions):
+def string_to_node(s, basis_functions, locs=None):
     """Convert a string giving function into a tree with labels
     
     Args:
         :s (str): string representation of the function considered
         :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+        :locs (dict): dictionary of string:sympy objects. If None, will create here
         
     Returns:
         :tree (list): list of Node objects corresponding to the tree
@@ -440,17 +443,17 @@ def string_to_node(s, basis_functions):
     c = np.ones(3, dtype=int)
 
     i = 0
-    expr[i] = string_to_expr(s, kern=False, evaluate=True)
+    expr[i] = string_to_expr(s, kern=False, evaluate=True, locs=locs)
     nodes[i] = DecoratedNode(expr[i], basis_functions)
     c[i] = nodes[i].count_nodes(basis_functions)
     
     i = 1
-    expr[i] = string_to_expr(s, kern=False, evaluate=False)
+    expr[i] = string_to_expr(s, kern=False, evaluate=False, locs=locs)
     nodes[i] = DecoratedNode(expr[i], basis_functions)
     c[i] = nodes[i].count_nodes(basis_functions)
 
     i = 2
-    expr[i] = string_to_expr(s, kern=True)
+    expr[i] = string_to_expr(s, kern=True, locs=locs)
     nodes[i] = DecoratedNode(expr[i], basis_functions)
     c[i] = nodes[i].count_nodes(basis_functions)
     
