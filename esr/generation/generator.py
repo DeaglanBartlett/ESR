@@ -212,20 +212,39 @@ class DecoratedNode:
         return p
 
     def get_sibling_lineage(self):
-        q = self
-        p = []
+        # First get direct lineage of nodes
+        p = [self.op, self.parent_op]
+        v = [self.val]
+        if self.parent_op is None:
+            v += [None]
+        else:
+            v += [self.parent.val]
+        q = self.parent
         while q is not None:
-            if q.parent is None:
-                p += [(None, None)]
-            elif len(q.parent.children) > 1:
-                p += [tuple([c.op for c in q.parent.children])]
+            p += [q.parent_op]
+            if q.parent_op is None:
+                v += [None]
             else:
-                p += [(q.op, 'None')]
+                v += [q.parent.val]
             q = q.parent
-        p = [p]
+        p.reverse()
+        v.reverse()
+        # Now add the siblings
+        if len(self.children) == 1:
+            p += [(self.children[0].op, None)]
+            v += [(self.children[0].val, None)]
+        elif len(self.children) > 1:
+            p += [tuple([c.op for c in self.children])]
+            v += [tuple([c.val for c in self.children])]
+        
+        p = [tuple(p)]
+        v = [tuple(v)]
         for c in self.children:
-            p += c.get_lineage()
-        return p
+            if len(c.children) > 0:
+                pp, vv = c.get_sibling_lineage()
+                p += pp
+                v += vv
+        return p, v
         
     def get_siblings(self):
         if self.parent is not None and len(self.parent.children) > 1:
