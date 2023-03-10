@@ -21,7 +21,9 @@ setup(
 		'prettytable',
 		'numdifftools',
 		'mpi4py',
-		'astropy'
+		'astropy',
+                'treelib',
+                'networkx'
 		],
 
     classifiers=[
