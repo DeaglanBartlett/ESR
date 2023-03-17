@@ -25,7 +25,7 @@ def main(comp, likelihood):
 
     unifn_file = likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt"%(comp,comp)
     allfn_file = likelihood.fn_dir + "/compl_%i/all_equations_%i.txt"%(comp,comp)
-    aifeyn_file = likelihood.fn_dir + "/compl_%i/aifeyn_%i.txt"%(comp,comp)
+    aifeyn_file = likelihood.fn_dir + "/compl_%i/%s%i.txt"%(comp,likelihood.fnprior_prefix,comp)
 
     use_deriv = False
 
@@ -85,26 +85,28 @@ def main(comp, likelihood):
         aifeyn_min[i] = aifeyn_i[np.nanargmin(DL)]
 
     out_arr = np.transpose(np.vstack([DL_min, param1_min, param2_min, param3_min, param4_min, negloglike_min, codelen_min, aifeyn_min]))
+    
+    prefix = likelihood.combineDL_prefix
 
-    np.savetxt(likelihood.temp_dir + '/combine_DL_'+str(comp)+'_'+str(rank)+'.dat', out_arr, fmt='%.16e')        # Save the data for this proc in Partial
-    np.savetxt(likelihood.temp_dir + '/combine_DL_fcn_'+str(comp)+'_'+str(rank)+'.dat', fcn_min, fmt="%s")
+    np.savetxt(likelihood.temp_dir + '/'+prefix+str(comp)+'_'+str(rank)+'.dat', out_arr, fmt='%.16e')        # Save the data for this proc in Partial
+    np.savetxt(likelihood.temp_dir + '/'+prefix+'fcn_'+str(comp)+'_'+str(rank)+'.dat', fcn_min, fmt="%s")
     # One per unique eqn, but I save the form in "all" that gives the lowest DL
 
     comm.Barrier()
 
     if rank == 0:
-        string = 'cat `find ' + likelihood.temp_dir + '/ -name "combine_DL_'+str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + '/combine_DL_comp'+str(comp)+'.dat'
+        string = 'cat `find ' + likelihood.temp_dir + '/ -name "'+prefix+str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + '/'+prefix+'comp'+str(comp)+'.dat'
         os.system(string)
-        string = 'rm ' + likelihood.temp_dir + '/combine_DL_'+str(comp)+'_*.dat'
+        string = 'rm ' + likelihood.temp_dir + '/'+prefix+str(comp)+'_*.dat'
         os.system(string)
         
-        string = 'cat `find ' + likelihood.temp_dir + '/ -name "combine_DL_fcn_'+str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + '/combine_DL_fcn_comp'+str(comp)+'.dat'
+        string = 'cat `find ' + likelihood.temp_dir + '/ -name "'+prefix+'fcn_'+str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + '/'+prefix+'fcn_comp'+str(comp)+'.dat'
         os.system(string)
-        string = 'rm ' + likelihood.temp_dir + '/combine_DL_fcn_'+str(comp)+'_*.dat'
+        string = 'rm ' + likelihood.temp_dir + '/'+prefix+'fcn_'+str(comp)+'_*.dat'
         os.system(string)
         
     if rank==0:         # The rest is done by just one proc
-        DL_min, param1_min, param2_min, param3_min, param4_min, negloglike_min, codelen_min, aifeyn_min = np.genfromtxt(likelihood.out_dir + '/combine_DL_comp'+str(comp)+'.dat', unpack=True)            # This is the combined results from all procs, and the rest should be as before
+        DL_min, param1_min, param2_min, param3_min, param4_min, negloglike_min, codelen_min, aifeyn_min = np.genfromtxt(likelihood.out_dir + '/'+prefix+'comp'+str(comp)+'.dat', unpack=True)            # This is the combined results from all procs, and the rest should be as before
         
         DL_min = np.atleast_1d(DL_min)
         param1_min = np.atleast_1d(param1_min)
@@ -115,7 +117,7 @@ def main(comp, likelihood):
         codelen_min = np.atleast_1d(codelen_min)
         aifeyn_min = np.atleast_1d(aifeyn_min)
 
-        with open(likelihood.out_dir + '/combine_DL_fcn_comp'+str(comp)+'.dat', "r") as f:         # All
+        with open(likelihood.out_dir + '/'+prefix+'fcn_comp'+str(comp)+'.dat', "r") as f:         # All
             fcn_min = f.read().splitlines()
 
         mask = ~np.isnan(DL_min)
@@ -139,8 +141,8 @@ def main(comp, likelihood):
         codelen_sort = codelen_min[indices_sort]
         aifeyn_sort = aifeyn_min[indices_sort]
 
-        if os.path.exists(likelihood.out_dir + '/final_'+str(comp)+'.dat'):           # Start this file from scratch here
-            os.remove(likelihood.out_dir + '/final_'+str(comp)+'.dat')
+        if os.path.exists(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat'):           # Start this file from scratch here
+            os.remove(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat')
 
         Nfuncs = 10
 
@@ -167,7 +169,7 @@ def main(comp, likelihood):
                 ptab.add_row([i+1, fcn_min_sort[i], '%.2f'%DL_sort[i], '%.2e'%Prel[i], '%.2f'%negloglike_sort[i], '%.2f'%codelen_sort[i], '%.2e'%aifeyn_sort[i], '%.2e'%param1_sort[i], '%.2e'%param2_sort[i], '%.2e'%param3_sort[i], '%.2e'%param4_sort[i]])
 
             
-            with open(likelihood.out_dir + '/final_'+str(comp)+'.dat', 'a') as f:
+            with open(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat', 'a') as f:
                 writer = csv.writer(f, delimiter=';')
                 writer.writerow([i, fcn_min_sort[i], DL_sort[i], Prel[i], negloglike_sort[i], codelen_sort[i], aifeyn_sort[i], param1_sort[i], param2_sort[i], param3_sort[i], param4_sort[i]])
                 

@@ -11,3 +11,5 @@ prettytable
 numdifftools
 mpi4py
 astropy
+treelib
+networkx

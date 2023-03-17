@@ -27,6 +27,9 @@ class CCLikelihood:
         self.like_dir = esr_dir + "/fitting/"
         self.like_file = "likelihood_cc"
         self.sym_file = "symbols_cc"
+        self.fnprior_prefix = "aifeyn_"
+        self.combineDL_prefix = "combine_DL_"
+        self.final_prefix = "final_"
     
         self.base_out_dir = self.like_dir + "/output/"
         self.temp_dir = self.base_out_dir + "/partial_cc_dimful"
@@ -127,6 +130,9 @@ class PanthLikelihood:
         self.cov_file = self.data_dir + 'Pantheon+SH0ES_STAT+SYS.cov'
         self.fn_dir = esr_dir + "function_library/core_maths/"
         self.like_dir = esr_dir + "/fitting/"
+        self.fnprior_prefix = "aifeyn_"
+        self.combineDL_prefix = "combine_DL_"
+        self.final_prefix = "final_"
 
         self.base_out_dir = self.like_dir + "/output/"
         self.temp_dir = self.base_out_dir + "/partial_panth_dimful"
@@ -307,6 +313,9 @@ class MockLikelihood:
         self.like_dir = esr_dir + "/fitting/"
         self.like_file = "likelihood_cc"
         self.sym_file = "symbols_cc"
+        self.fnprior_prefix = "aifeyn_"
+        self.combineDL_prefix = "combine_DL_"
+        self.final_prefix = "final_"
 
         self.base_out_dir = self.like_dir + "/output/"
         self.temp_dir = self.base_out_dir + "/partial_mock_%i_"%nz + str(yfracerr)
@@ -403,6 +412,9 @@ class SimpleLikelihood:
         self.data_file = self.data_dir + '/' + data_file
         self.fn_dir = esr_dir + "function_library/core_maths/"
         self.like_dir = esr_dir + "/fitting/"
+        self.fnprior_prefix = "aifeyn_"
+        self.combineDL_prefix = "combine_DL_"
+        self.final_prefix = "final_"
         
         self.base_out_dir = self.like_dir + "/output/"
         self.temp_dir = self.base_out_dir + "/partial_simple_test"
