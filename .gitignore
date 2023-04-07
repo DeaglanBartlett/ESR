@@ -36,6 +36,7 @@ esr/function_library/core_maths/
 esr/function_library/ext_maths/
 esr/function_library/osc_maths/
 esr/function_library/tests/
+esr/function_library/new_osc_maths/
 
 
 ExhaustiveSR/fitting/output

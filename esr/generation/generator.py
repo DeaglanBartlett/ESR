@@ -460,41 +460,54 @@ def string_to_node(s, basis_functions, locs=None, evalf=False):
     
     expr = [None] * 4
     nodes = [None] * 4
-    c = np.ones(4, dtype=int)
+    c = np.ones(4)
 
     i = 0
-    expr[i] = string_to_expr(s, kern=False, evaluate=True, locs=locs)
-    if evalf:
-        expr[i] = expr[i].evalf()
-    nodes[i] = DecoratedNode(expr[i], basis_functions)
-    c[i] = nodes[i].count_nodes(basis_functions)
+    try:
+        expr[i] = string_to_expr(s, kern=False, evaluate=True, locs=locs)
+        if evalf:
+            expr[i] = expr[i].evalf()
+        nodes[i] = DecoratedNode(expr[i], basis_functions)
+        c[i] = nodes[i].count_nodes(basis_functions)
+    except:
+        c[i] = np.nan
+
     
     i = 1
-    expr[i] = string_to_expr(s, kern=False, evaluate=False, locs=locs)
-    if evalf:
-        expr[i] = expr[i].evalf()
-    nodes[i] = DecoratedNode(expr[i], basis_functions)
-    c[i] = nodes[i].count_nodes(basis_functions)
+    try:
+        expr[i] = string_to_expr(s, kern=False, evaluate=False, locs=locs)
+        if evalf:
+            expr[i] = expr[i].evalf()
+        nodes[i] = DecoratedNode(expr[i], basis_functions)
+        c[i] = nodes[i].count_nodes(basis_functions)
+    except:
+        c[i] = np.nan
 
     i = 2
-    expr[i] = string_to_expr(s, kern=True, evaluate=True, locs=locs)
-    if evalf:
-        expr[i] = expr[i].evalf()
-    nodes[i] = DecoratedNode(expr[i], basis_functions)
-    c[i] = nodes[i].count_nodes(basis_functions)
+    try:
+        expr[i] = string_to_expr(s, kern=True, evaluate=True, locs=locs)
+        if evalf:
+            expr[i] = expr[i].evalf()
+        nodes[i] = DecoratedNode(expr[i], basis_functions)
+        c[i] = nodes[i].count_nodes(basis_functions)
+    except:
+        c[i] = np.nan
     
     i = 3
-    expr[i] = string_to_expr(s, kern=True, evaluate=False, locs=locs)
-    if evalf:
-        expr[i] = expr[i].evalf()
-    nodes[i] = DecoratedNode(expr[i], basis_functions)
-    c[i] = nodes[i].count_nodes(basis_functions)
+    try:
+        expr[i] = string_to_expr(s, kern=True, evaluate=False, locs=locs)
+        if evalf:
+            expr[i] = expr[i].evalf()
+        nodes[i] = DecoratedNode(expr[i], basis_functions)
+        c[i] = nodes[i].count_nodes(basis_functions)
+    except:
+        c[i] = np.nan
     
-    i = c.argmin()
+    i = np.nanargmin(c)
     
     # FINISH THIS OFF
 
-    return expr[i], nodes[i], c[i]
+    return expr[i], nodes[i], int(c[i])
     
     
 def update_tree(tree, labels, try_idx, basis_functions):

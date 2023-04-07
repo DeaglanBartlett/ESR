@@ -172,7 +172,7 @@ def main(comp, likelihood):
             with open(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat', 'a') as f:
                 writer = csv.writer(f, delimiter=';')
                 writer.writerow([i, fcn_min_sort[i], DL_sort[i], Prel[i], negloglike_sort[i], codelen_sort[i], aifeyn_sort[i], param1_sort[i], param2_sort[i], param3_sort[i], param4_sort[i]])
-                
+
             negloglike_previous = negloglike_sort[i]
         print(ptab)
         

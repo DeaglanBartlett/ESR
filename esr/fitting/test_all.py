@@ -405,6 +405,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
         chi2_i = chi2_min       # This is after all the iterations, so it's the best we have; reduced chi2
 
     except NameError:
+        print(NameError)
         # Occurs if function produced not implemented in numpy
         raise NameError
 
@@ -425,6 +426,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
             params[:] = 0.
     
     except Exception as e:
+        print(e)
         return np.nan, params
 
     return chi2_i, params
