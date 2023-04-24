@@ -15,168 +15,33 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def chi2_fcn_4args(x, likelihood, eq_numpy, integrated):
-    """Compute chi2 for a function with 4 parameters
+def chi2_fcn(x, likelihood, eq_numpy, integrated, signs):
+    """Compute chi2 for a function
     
     Args:
         :x (list): parameters to use for function
         :likelihood (fitting.likelihood object): object containing data and likelihood function
         :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
         :integrated (bool): whether eq_numpy has already been integrated
+        :signs (list): each entry specifies whether than parameter should be optimised logarithmically. If None, then do nothing, if '+' then optimise 10**x[i] and if '-' then optimise -10**x[i]
         
     Returns:
         :negloglike (float): - log(likelihood) for this function and parameters
     
     """
-    return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-    
-
-def chi2_fcn_3args(x, likelihood, eq_numpy, integrated):
-    """Compute chi2 for a function with 3 parameters
-    
-    Args:
-        :x (list): parameters to use for function
-        :likelihood (fitting.likelihood object): object containing data and likelihood function
-        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
-        :integrated (bool): whether eq_numpy has already been integrated
-        
-    Returns:
-        :negloglike (float): - log(likelihood) for this function and parameters
-    
-    """
-    return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-
-
-def chi2_fcn_2args(x, likelihood, eq_numpy, integrated):
-    """Compute chi2 for a function with 2 parameters
-    
-    Args:
-        :x (list): parameters to use for function
-        :likelihood (fitting.likelihood object): object containing data and likelihood function
-        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
-        :integrated (bool): whether eq_numpy has already been integrated
-        
-    Returns:
-        :negloglike (float): - log(likelihood) for this function and parameters
-    
-    """
-    return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-
-
-def chi2_fcn_1arg(x, likelihood, eq_numpy, integrated):
-    """Compute chi2 for a function with 1 parameter1
-
-    Args:
-        :x (list): parameters to use for function
-        :likelihood (fitting.likelihood object): object containing data and likelihood function
-        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
-        :integrated (bool): whether eq_numpy has already been integrated
-
-    Returns:
-        :negloglike (float): - log(likelihood) for this function and parameters
-
-    """
-    return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-    
-def chi2_fcn_2args_pp(x, likelihood, eq_numpy, integrated):
-    """Compute chi2 for a function with 2 parameters, assuming both positive and passed in log-space
-    
-    Args:
-        :x (list): log_{10} of parameters to use for function
-        :likelihood (fitting.likelihood object): object containing data and likelihood function
-        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
-        :integrated (bool): whether eq_numpy has already been integrated
-        
-    Returns:
-        :negloglike (float): - log(likelihood) for this function and parameters
-    
-    """
-    p = [10.**x[0], 10.**x[1]]
-    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
-    
-
-def chi2_fcn_2args_pm(x, likelihood, eq_numpy, integrated):
-    """Compute chi2 for a function with 2 parameters, assuming first positive and second negative, and passed in log-space
-    
-    Args:
-        :x (list): log_{10} of absolute value of parameters to use for function
-        :likelihood (fitting.likelihood object): object containing data and likelihood function
-        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
-        :integrated (bool): whether eq_numpy has already been integrated
-        
-    Returns:
-        :negloglike (float): - log(likelihood) for this function and parameters
-    
-    """
-    p = [10.**x[0], -10.**x[1]]
-    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
-    
-
-def chi2_fcn_2args_mp(x, likelihood, eq_numpy, integrated):
-    """Compute chi2 for a function with 2 parameters, assuming first negative and second positive, and passed in log-space
-    
-    Args:
-        :x (list): log_{10} of absolute value of parameters to use for function
-        :likelihood (fitting.likelihood object): object containing data and likelihood function
-        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
-        :integrated (bool): whether eq_numpy has already been integrated
-        
-    Returns:
-        :negloglike (float): - log(likelihood) for this function and parameters
-    
-    """
-    p = [-10.**x[0], 10.**x[1]]
-    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
-    
-    
-def chi2_fcn_2args_mm(x, likelihood, eq_numpy, integrated):
-    """Compute chi2 for a function with 2 parameters, assuming both negative, and passed in log-space
-    
-    Args:
-        :x (list): log_{10} of absolute value of parameters to use for function
-        :likelihood (fitting.likelihood object): object containing data and likelihood function
-        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
-        :integrated (bool): whether eq_numpy has already been integrated
-        
-    Returns:
-        :negloglike (float): - log(likelihood) for this function and parameters
-    
-    """
-    p = [-10.**x[0], -10.**x[1]]
-    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
-    
-    
-def chi2_fcn_1arg_p(x, likelihood, eq_numpy, integrated):
-    """Compute chi2 for a function with 1 parameter, assuming parameter positive and passed in log-space
-    
-    Args:
-        :x (list): log_{10} of absolute value of parameter to use for function
-        :likelihood (fitting.likelihood object): object containing data and likelihood function
-        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
-        :integrated (bool): whether eq_numpy has already been integrated
-        
-    Returns:
-        :negloglike (float): - log(likelihood) for this function and parameters
-    
-    """
-    p = [10.**x[0]]
-    return likelihood.negloglike(p,eq_numpy, integrated=integrated)
-    
-
-def chi2_fcn_1arg_m(x, likelihood, eq_numpy, integrated):
-    """Compute chi2 for a function with 1 parameter, assuming parameter negative and passed in log-space
-    
-    Args:
-        :x (list): log_{10} of absolute value of parameter to use for function
-        :likelihood (fitting.likelihood object): object containing data and likelihood function
-        :eq_numpy (numpy function): function to pass to likelihood object to make prediction of y(x)
-        :integrated (bool): whether eq_numpy has already been integrated
-        
-    Returns:
-        :negloglike (float): - log(likelihood) for this function and parameters
-    
-    """
-    p = [-10.**x[0]]
+    if signs is None:
+        p = x
+    else:
+        p = [None] * len(signs)
+        for i in range(len(signs)):
+            if signs[i] == None:
+                p[i] = x[i]
+            elif signs[i] == '+':
+                p[i] = 10 ** x[i]
+            elif signs[i] == '-':
+                p[i] = - 10 ** x[i]
+            else:
+                raise ValueError
     return likelihood.negloglike(p,eq_numpy, integrated=integrated)
     
     
@@ -318,21 +183,19 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
         exception_count = 0
         
         for j in range(Niter):
-            #if rank == 0:
-            #    print('\t', j, Niter, flush=True)
             if ("a3" in fcn_i) and ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
                 inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]
-                res = minimize(chi2_fcn_4args, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 7000})    # Default=3000
+                res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 7000})    # Default=3000
             elif ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
                 inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]      # Larger range bc linear search here
-                res = minimize(chi2_fcn_3args, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 5000})    # Default=3000
+                res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 5000})    # Default=3000
             elif ("a1" in fcn_i) and ("a0" in fcn_i):
                 if log_opt:
                     inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]           # These are now in log-space, so this is 1e-1 -- 1e1; was -10:10
-                    res_pp = minimize(chi2_fcn_2args_pp, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
-                    res_mp = minimize(chi2_fcn_2args_mp, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
-                    res_pm = minimize(chi2_fcn_2args_pm, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
-                    res_mm = minimize(chi2_fcn_2args_mm, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                    res_pp = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['+','+']), method="BFGS")
+                    res_mp = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['-','+']), method="BFGS")
+                    res_pm = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['+','-']), method="BFGS")
+                    res_mm = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['-','-']), method="BFGS")
                 
                     choose = np.argmin([res_pp['fun'], res_mp['fun'], res_pm['fun'], res_mm['fun']])
                     if choose==0:
@@ -353,13 +216,13 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                 else:
                     flag_three = True
                     inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]
-                    res = minimize(chi2_fcn_2args, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 5000})    # Default=3000
+                    res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 5000})    # Default=3000
                     
             else:
                 if log_opt:
                     inpt = np.random.uniform(pmin,pmax)
-                    res_p = minimize(chi2_fcn_1arg_p, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
-                    res_m = minimize(chi2_fcn_1arg_m, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS")
+                    res_p = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['+']), method="BFGS")
+                    res_m = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['-']), method="BFGS")
 
                     if res_p['fun']<res_m['fun']:
                         res = res_p
@@ -372,7 +235,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                 else:
                     flag_three = True
                     inpt = np.random.uniform(pmin,pmax)
-                    res = minimize(chi2_fcn_1arg, inpt, args=(likelihood, eq_numpy, integrated), method="BFGS", options={'maxiter': 5000})    # Default=3000
+                    res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 5000})    # Default=3000
 
             if np.isinf(res['fun']):
                 inf_count += 1
@@ -435,7 +298,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
 def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_opt=False):
     """Optimise all functions for a given complexity and save results to file.
     
-    This optimises in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
+    This can optimise in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
     
     Args:
         :comp (int): complexity of functions to consider
