@@ -1,14 +1,14 @@
-from setuptools import setup
+from setuptools import (setup, find_packages)
 
 setup(
     name='esr',
-    version='0.1.0',    
+    version='0.1.0',
     description='A Python package to perform Exhaustive Symbolic Regression',
     url='https://github.com/DeaglanBartlett/ESR',
     author='Deaglan Bartlett and Harry Desmond',
     author_email='deaglan.bartlett@physics.ox.ac.uk',
     license='MIT licence',
-    packages=['esr'],
+    packages=find_packages(),
     install_requires=['sympy',
 		'myst-parser',
 		'numpy',
@@ -29,8 +29,8 @@ setup(
     classifiers=[
         'Development Status :: 1 - Planning',
         'Intended Audience :: Science/Research',
-        'License :: MIT License',  
-        'Operating System :: POSIX :: Linux',        
+        'License :: MIT License',
+        'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 3',
     ],
 )
