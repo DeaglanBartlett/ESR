@@ -92,6 +92,6 @@ The following script initially loads the cosmic chronometer data then fits the f
 							cc_like, 
 							verbose=True)
 
-To fit a function to your own data, one must create an alternative likelihood class which contains all the functions 
-found in the ``esr.fitting.likelihood.CCLikelihood`` object.
+To fit a function to your own data, one must create an alternative likelihood using the parent class ``esr.fitting.likelihood.Likelihood``. In the ``__init__()`` for this likelihood, you must define ``xvar``, ``yvar`` and ``yerr`` (the x, y and error on y variables) and a function ``negloglike(self, a, eq_numpy, **kwargs)`` which returns the negative log-likelihood.
+See ``esr.fitting.likelihood.MSELikelihood`` for a minimal example.
 

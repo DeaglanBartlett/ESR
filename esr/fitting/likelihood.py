@@ -12,7 +12,83 @@ from esr.fitting.sympy_symbols import *
 from esr.generation.simplifier import time_limit
 import esr.generation.simplifier
 
-class CCLikelihood:
+class Likelihood:
+
+    def __init__(self, data_file, cov_file, run_name, data_dir=None):
+        """Likelihood class used to fit a function directly
+        
+        """
+
+        esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
+        if data_dir is None:
+            self.data_dir = esr_dir + '/data/'
+        else:
+            self.data_dir = data_dir
+        self.data_file = self.data_dir + '/' + data_file
+        self.cov_file = self.data_dir + '/' + cov_file
+        self.fn_dir = esr_dir + "function_library/core_maths/"
+        self.like_dir = esr_dir + "/fitting/"
+        self.fnprior_prefix = "aifeyn_"
+        self.combineDL_prefix = "combine_DL_"
+        self.final_prefix = "final_"
+        
+        self.base_out_dir = self.like_dir + "/output/"
+        self.temp_dir = self.base_out_dir + "/partial_" + run_name
+        self.out_dir = self.base_out_dir + "/output_" + run_name
+        self.fig_dir = self.base_out_dir + "/figs_" + run_name
+
+    def get_pred(self, x, a, eq_numpy, **kwargs):
+        """Return the predicted y(x)
+        
+        Args:
+            :x (float or np.array): x value being used
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives H^2
+            
+        Returns:
+            :y (float or np.array): the predicted y value at x supplied
+        
+        """
+        return eq_numpy(x, *a)
+        
+
+    def clear_data(self):
+        """Clear data used for numerical integration (not required in most cases)"""
+        pass
+    
+
+    def run_sympify(self, fcn_i, **kwargs):
+        """Sympify a function
+
+        Args:
+            :fcn_i (str): string representing function we wish to fit to data
+
+        Returns:
+            :fcn_i (str): string representing function we wish to fit to data (with superfluous characters removed)
+            :eq (sympy object): sympy object representing function we wish to fit to data
+            :integrated (bool, always False): whether we analytically integrated the function (True) or not (False)
+
+        """
+
+        fcn_i = fcn_i.replace('\n', '')
+        fcn_i = fcn_i.replace('\'', '')
+
+        eq = sympy.sympify(fcn_i,
+                    locals={"inv": inv,
+                            "square": square,
+                            "cube": cube,
+                            "sqrt": sqrt,
+                            "log": log,
+                            "pow": pow,
+                            "x": x,
+                            "a0": a0,
+                            "a1": a1,
+                            "a2": a2})
+        return fcn_i, eq, False
+
+
+
+class CCLikelihood(Likelihood):
 
     def __init__(self):
         """Likelihood class used to fit cosmic chronometer data.
@@ -20,33 +96,15 @@ class CCLikelihood:
         
         """
 
-        esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
-        self.data_dir = esr_dir + '/data/'
-        self.data_file = self.data_dir + '/CC_Hubble.dat'
-        self.fn_dir = esr_dir + "function_library/core_maths/"
-        self.like_dir = esr_dir + "/fitting/"
-        self.like_file = "likelihood_cc"
-        self.sym_file = "symbols_cc"
-        self.fnprior_prefix = "aifeyn_"
-        self.combineDL_prefix = "combine_DL_"
-        self.final_prefix = "final_"
-    
-        self.base_out_dir = self.like_dir + "/output/"
-        self.temp_dir = self.base_out_dir + "/partial_cc_dimful"
-        self.out_dir = self.base_out_dir + "/output_cc_dimful"
-        self.fig_dir = self.base_out_dir + "/figs_cc_dimful"
-        self.Hfid = 1.
+        super().__init__('CC_Hubble.dat', 'CC_Hubble.dat', 'cc_dimful')
         
+        self.Hfid = 1.
         self.ylabel = r'$H \left( z \right) \ / \ H_{\rm fid}$'  # for plotting
-
         self.xvar, self.yvar, self.yerr = np.genfromtxt(self.data_file, unpack=True)
         self.xvar += 1
         self.yvar /= self.Hfid
         self.yerr /= self.Hfid
         self.inv_cov = 1 / self.yerr ** 2
-        
-#        for j in range(len(self.xvar)):
-#            print(self.xvar, self.yvar)
 
 
     def get_pred(self, zp1, a, eq_numpy, **kwargs):
@@ -62,10 +120,6 @@ class CCLikelihood:
         
         """
         return np.sqrt(eq_numpy(zp1, *a))
-
-    def clear_data(self):
-        """Clear data used for numerical integration (not required for cosmic chronometers)"""
-        pass
 
 
     def negloglike(self, a, eq_numpy, **kwargs):
@@ -88,58 +142,19 @@ class CCLikelihood:
             return np.inf
         return nll
 
-    def run_sympify(self, fcn_i, **kwargs):
-        """Sympify a function
-        
-        Args:
-            :fcn_i (str): string representing function we wish to fit to data
-            
-        Returns:
-            :fcn_i (str): string representing function we wish to fit to data (with superfluous characters removed)
-            :eq (sympy object): sympy object representing function we wish to fit to data
-            :integrated (bool, always False): whether we analytically integrated the function (True) or not (False)
-        
-        """
-    
-        fcn_i = fcn_i.replace('\n', '')
-        fcn_i = fcn_i.replace('\'', '')
 
-        eq = sympy.sympify(fcn_i,
-                    locals={"inv": inv,
-                            "square": square,
-                            "cube": cube,
-                            "sqrt": sqrt,
-                            "log": log,
-                            "pow": pow,
-                            "x": x,
-                            "a0": a0,
-                            "a1": a1,
-                            "a2": a2})
-        return fcn_i, eq, False
-
-
-class PanthLikelihood:
+class PanthLikelihood(Likelihood):
 
     def __init__(self):
         """Likelihood class used to fit Pantheon data"""
 
-        esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
-        self.data_dir = esr_dir + '/data/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/'
+        super().__init__(
+            '/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES.dat',
+            '/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STAT+SYS.cov',
+            'panth_dimful',
+        )
 
-        self.data_file = self.data_dir + 'Pantheon+SH0ES.dat'
-        self.cov_file = self.data_dir + 'Pantheon+SH0ES_STAT+SYS.cov'
-        self.fn_dir = esr_dir + "function_library/core_maths/"
-        self.like_dir = esr_dir + "/fitting/"
-        self.fnprior_prefix = "aifeyn_"
-        self.combineDL_prefix = "combine_DL_"
-        self.final_prefix = "final_"
-
-        self.base_out_dir = self.like_dir + "/output/"
-        self.temp_dir = self.base_out_dir + "/partial_panth_dimful"
-        self.out_dir = self.base_out_dir + "/output_panth_dimful"
-        self.fig_dir = self.base_out_dir + "/figs_panth_dimful"
         self.Hfid = 1.0 * apu.km / apu.s / apu.Mpc
-
         data = pd.read_csv(self.data_file, delim_whitespace=True)
         origlen = len(data)
         ww = (data['zHD']>0.01)
@@ -295,9 +310,9 @@ class PanthLikelihood:
 
 
 
-class MockLikelihood:
+class MockLikelihood(Likelihood):
 
-    def __init__(self, nz, yfracerr):
+    def __init__(self, nz, yfracerr, data_dir=None):
         """Likelihood class used to fit mock cosmic chronometer data
         
         Args:
@@ -305,26 +320,15 @@ class MockLikelihood:
             :yfracerr (float): the fractional uncertainty on the cosmic chronometer mock we are using
         
         """
+        super().__init__(
+            '/mock/CC_Hubble_%i_'%nz + str(yfracerr) + '.dat',
+            '/mock/CC_Hubble_%i_'%nz + str(yfracerr) + '.dat',
+            'mock_%i_'%nz + str(yfracerr),
+            data_dir=data_dir
+        )
 
-        esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
-        self.data_dir = esr_dir + '/data/mock/'
-        self.data_file = self.data_dir + '/CC_Hubble_%i_'%nz + str(yfracerr) + '.dat'
-        self.fn_dir = esr_dir + "function_library/core_maths/"
-        self.like_dir = esr_dir + "/fitting/"
-        self.like_file = "likelihood_cc"
-        self.sym_file = "symbols_cc"
-        self.fnprior_prefix = "aifeyn_"
-        self.combineDL_prefix = "combine_DL_"
-        self.final_prefix = "final_"
-
-        self.base_out_dir = self.like_dir + "/output/"
-        self.temp_dir = self.base_out_dir + "/partial_mock_%i_"%nz + str(yfracerr)
-        self.out_dir = self.base_out_dir + "/output_mock_%i_"%nz + str(yfracerr)
-        self.fig_dir = self.base_out_dir + "/figs_mock_%i_"%nz + str(yfracerr)
         self.Hfid = 1.
-
         self.ylabel = r'$H \left( z \right) \ / \ H_{\rm fid}$'  # for plotting
-
         self.xvar, self.yvar, self.yerr = np.genfromtxt(self.data_file, unpack=True)
         self.xvar += 1
         self.yvar /= self.Hfid
@@ -346,10 +350,6 @@ class MockLikelihood:
         """
         return np.sqrt(eq_numpy(zp1, *a))
 
-    def clear_data(self):
-        """Clear data used for numerical integration (not required for cosmic chronometers)"""
-        pass
-
 
     def negloglike(self, a, eq_numpy, **kwargs):
         """Negative log-likelihood for a given function
@@ -370,81 +370,20 @@ class MockLikelihood:
             return np.inf
         return nll
 
-    def run_sympify(self, fcn_i, **kwargs):
-        """Sympify a function
-        
-        Args:
-            :fcn_i (str): string representing function we wish to fit to data
-            
-        Returns:
-            :fcn_i (str): string representing function we wish to fit to data (with superfluous characters removed)
-            :eq (sympy object): sympy object representing function we wish to fit to data
-            :integrated (bool, always False): whether we analytically integrated the function (True) or not (False)
+
+class MSELikelihood(Likelihood):
+
+    def __init__(self, data_file, run_name, data_dir=None):
+        """Likelihood class used to fit a function directly using a MSE
         
         """
         
-        fcn_i = fcn_i.replace('\n', '')
-        fcn_i = fcn_i.replace('\'', '')
-
-        eq = sympy.sympify(fcn_i,
-                    locals={"inv": inv,
-                            "square": square,
-                            "cube": cube,
-                            "sqrt": sqrt,
-                            "log": log,
-                            "pow": pow,
-                            "x": x,
-                            "a0": a0,
-                            "a1": a1,
-                            "a2": a2})
-        return fcn_i, eq, False
-
-
-class SimpleLikelihood:
-
-    def __init__(self, data_file):
-        """Likelihood class used to fit a function directly
-        
-        """
-
-        esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
-        self.data_dir = esr_dir + '/data/'
-        self.data_file = self.data_dir + '/' + data_file
-        self.fn_dir = esr_dir + "function_library/core_maths/"
-        self.like_dir = esr_dir + "/fitting/"
-        self.fnprior_prefix = "aifeyn_"
-        self.combineDL_prefix = "combine_DL_"
-        self.final_prefix = "final_"
-        
-        self.base_out_dir = self.like_dir + "/output/"
-        self.temp_dir = self.base_out_dir + "/partial_simple_test"
-        self.out_dir = self.base_out_dir + "/output_simple_test"
-        self.fig_dir = self.base_out_dir + "/figs_simple_test"
-
+        super().__init__(self, data_file, data_file, run_name, data_dir=data_dir)
         self.ylabel = r'$y$'    # for plotting
-
         df = np.array(pd.read_table(self.data_file, sep="\t"))
         self.xvar = df[:,0]
         self.yvar = df[:,1]
         self.yerr = 0.
-
-    def get_pred(self, x, a, eq_numpy, **kwargs):
-        """Return the predicted y(x)
-        
-        Args:
-            :x (float or np.array): x value being used
-            :a (list): parameters to subsitute into equation considered
-            :eq_numpy (numpy function): function to use which gives H^2
-            
-        Returns:
-            :y (float or np.array): the predicted y value at x supplied
-        
-        """
-        return eq_numpy(x, *a)
-
-    def clear_data(self):
-        """Clear data used for numerical integration (not required for cosmic chronometers)"""
-        pass
 
 
     def negloglike(self, a, eq_numpy, **kwargs):
@@ -466,34 +405,4 @@ class SimpleLikelihood:
         if np.isnan(nll):
             return np.inf
         return nll
-    
-
-    def run_sympify(self, fcn_i, **kwargs):
-        """Sympify a function
-
-        Args:
-            :fcn_i (str): string representing function we wish to fit to data
-
-        Returns:
-            :fcn_i (str): string representing function we wish to fit to data (with superfluous characters removed)
-            :eq (sympy object): sympy object representing function we wish to fit to data
-            :integrated (bool, always False): whether we analytically integrated the function (True) or not (False)
-
-        """
-
-        fcn_i = fcn_i.replace('\n', '')
-        fcn_i = fcn_i.replace('\'', '')
-
-        eq = sympy.sympify(fcn_i,
-                    locals={"inv": inv,
-                            "square": square,
-                            "cube": cube,
-                            "sqrt": sqrt,
-                            "log": log,
-                            "pow": pow,
-                            "x": x,
-                            "a0": a0,
-                            "a1": a1,
-                            "a2": a2})
-        return fcn_i, eq, False
 

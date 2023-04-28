@@ -1,5 +1,6 @@
 README.rst
 setup.py
+esr/__init__.py
 esr.egg-info/PKG-INFO
 esr.egg-info/SOURCES.txt
 esr.egg-info/dependency_links.txt
