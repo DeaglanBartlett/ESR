@@ -119,7 +119,7 @@ def main(comp, likelihood, tmax=5, try_integration=False):
             ax1.plot(likelihood.xvar-1, ypred, color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
         
     ax1.errorbar(likelihood.xvar-1, likelihood.yvar, yerr=likelihood.yerr, fmt='.', markersize=5, zorder=len(fcn_list)+1, capsize=1, elinewidth=1, color='k', alpha=1)
-    ax1.set_xlabel(r'$z$')
+    ax1.set_xlabel(likelihood.xlabel)
     ax1.set_ylabel(likelihood.ylabel)
     ax1.set_xlim(0, None)
 
