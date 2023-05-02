@@ -378,7 +378,7 @@ class MSELikelihood(Likelihood):
         
         """
         
-        super().__init__(self, data_file, data_file, run_name, data_dir=data_dir)
+        super().__init__(data_file, data_file, run_name, data_dir=data_dir)
         self.ylabel = r'$y$'    # for plotting
         df = np.array(pd.read_table(self.data_file, sep="\t"))
         self.xvar = df[:,0]

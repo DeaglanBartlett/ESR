@@ -19,7 +19,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def main(comp, likelihood, tmax=5, try_integration=False):
+def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscale='linear'):
     """Plot best 50 functions at given complexity against data and save plot to file
     
     Args:
@@ -27,6 +27,8 @@ def main(comp, likelihood, tmax=5, try_integration=False):
         :likelihood (fitting.likelihood object): object containing data, functions to convert SR expressions to variable of data and output path
         :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        :xscale (str), default='linear'): Scaling for x-axis
+        :yscale (str), default='linear'): Scaling for y-axis
         
     Returns:
         None
@@ -36,7 +38,7 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     if rank != 0:
         return
 
-    vmin = 1e-50
+    vmin = 1e-3
     vmax = 1
     tmax = 5
 
@@ -121,12 +123,18 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     ax1.errorbar(likelihood.xvar-1, likelihood.yvar, yerr=likelihood.yerr, fmt='.', markersize=5, zorder=len(fcn_list)+1, capsize=1, elinewidth=1, color='k', alpha=1)
     ax1.set_xlabel(r'$z$')
     ax1.set_ylabel(likelihood.ylabel)
-    ax1.set_xlim(0, None)
+    ax1.set_xscale(xscale)
+    ax1.set_yscale(yscale)
+    if xscale != 'log':
+        ax1.set_xlim(0, None)
+    ax1.set_ylim(likelihood.yvar.min() * 0.9, likelihood.yvar.max() * 1.1)
 
     ax2  = fig.add_axes([0.85,0.10,0.05,0.85])
     cb1  = mpl.colorbar.ColorbarBase(ax2,cmap=cmap,norm=norm,orientation='vertical')
     cb1.set_label(r'$\exp \left( MDL - DL \right)$')
     fig.tight_layout()
     fig.savefig(likelihood.fig_dir + '/plot_%i.png'%comp)
+    fig.clf()
+    plt.close(fig)
 
     return
