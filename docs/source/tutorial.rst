@@ -185,7 +185,6 @@ We also have a Poisson likelihood already implemented, which can be run as
 	np.random.seed(123)
 	x = np.random.uniform(0.1, 5, 100)
 	y = 0.5 * x ** 2
-	yerr = np.full(x.shape, 0.1)
 	y = np.random.poisson(y)
 	np.savetxt('data.txt', np.array([x, y]).T)
 	likelihood = PoissonLikelihood('data.txt', 'poisson_example', data_dir=os.getcwd())
