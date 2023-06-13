@@ -6,6 +6,7 @@ import scipy.integrate
 import sympy
 import sys
 import os
+import warnings
 
 from esr.fitting.sympy_symbols import *
 
@@ -27,7 +28,12 @@ class Likelihood:
         self.data_file = self.data_dir + '/' + data_file
         self.cov_file = self.data_dir + '/' + cov_file
         self.fn_dir = esr_dir + "function_library/core_maths/"
-        self.like_dir = esr_dir + "/fitting/"
+        if data_dir is None:
+            self.like_dir = esr_dir + "/fitting/"
+        else:
+            self.like_dir = data_dir + "/fitting/"
+        if not os.path.isdir(self.like_dir):
+            os.mkdir(self.like_dir)
         self.fnprior_prefix = "aifeyn_"
         self.combineDL_prefix = "combine_DL_"
         self.final_prefix = "final_"
@@ -371,10 +377,14 @@ class MockLikelihood(Likelihood):
         return nll
 
 
-class MSELikelihood(Likelihood):
+class MSE(Likelihood):
 
     def __init__(self, data_file, run_name, data_dir=None):
         """Likelihood class used to fit a function directly using a MSE
+        
+        IMPORTANT - MSE is NOT a likelihood in the probabilistic sense.
+        It should not be used for MDL calculations as the answer will
+        be nonesense since an uncertainty is required for MDL to have meaning.
         
         """
         
@@ -384,10 +394,14 @@ class MSELikelihood(Likelihood):
         self.xvar = df[:,0]
         self.yvar = df[:,1]
         self.yerr = 0.
+        
+        warnings.warn("You are using the MSE class. SE is NOT a likelihood in the probabilistic sense. It should not be used for MDL calculations as the answer will be nonesense since an uncertainty is required for MDL to have meaning.")
 
 
     def negloglike(self, a, eq_numpy, **kwargs):
         """Negative log-likelihood for a given function. Here it is |y-ypred|^2
+        Note that this is technically not a log-likelihood, but the function
+        name is required to be accessed by other functions.
         
         Args:
             :a (list): parameters to subsitute into equation considered
@@ -406,3 +420,71 @@ class MSELikelihood(Likelihood):
             return np.inf
         return nll
 
+
+class GaussLikelihood(Likelihood):
+
+    def __init__(self, data_file, run_name, data_dir=None):
+        """Likelihood class used to fit a function directly using a Gaussian likelihood
+        
+        """
+        
+        super().__init__(data_file, data_file, run_name, data_dir=data_dir)
+        self.ylabel = r'$y$'    # for plotting
+        self.xvar, self.yvar, self.yerr = np.loadtxt(self.data_file, unpack=True)
+
+
+    def negloglike(self, a, eq_numpy, **kwargs):
+        """Negative log-likelihood for a given function.
+        
+        Args:
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives y
+            
+        Returns:
+            :nll (float): - log(likelihood) for this function and parameters
+        
+        
+        """
+
+        ypred = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
+        if not np.all(np.isreal(ypred)):
+            return np.inf
+        nll = np.sum((ypred - self.yvar) ** 2)
+        nll = np.sum(0.5 * (ypred - self.yvar) ** 2 / self.yerr ** 2 + 0.5 * np.log(2 * np.pi) + np.log(yerr))
+        if np.isnan(nll):
+            return np.inf
+        return nll
+        
+
+class PoissonLikelihood(Likelihood):
+
+    def __init__(self, data_file, run_name, data_dir=None):
+        """Likelihood class used to fit a function directly using a Poisson likelihood
+        
+        """
+        
+        super().__init__(data_file, data_file, run_name, data_dir=data_dir)
+        self.ylabel = r'$y$'    # for plotting
+        self.xvar, self.yvar = np.loadtxt(self.data_file, unpack=True)
+        self.yerr = np.sqrt(self.yvar)
+        
+    def negloglike(self, a, eq_numpy, **kwargs):
+        """Negative log-likelihood for a given function. Here it is a Poisson
+        
+        Args:
+            :a (list): parameters to subsitute into equation considered
+            :eq_numpy (numpy function): function to use which gives y
+            
+        Returns:
+            :nll (float): - log(likelihood) for this function and parameters
+        
+        """
+
+        ypred = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
+        if (not np.all(np.isreal(ypred))) or (not np.all(ypred > 0)):
+            return np.inf
+        nll = np.sum(ypred - self.yvar * np.log(ypred))
+        if np.isnan(nll):
+            return np.inf
+        return nll
+    
