@@ -139,9 +139,9 @@ For example, a Gaussian likelihood can be defined as
 		    return np.inf
 		return nll
 	
-although note that this is already included as ``esr.fitting.likelihood.GaussLikelihood`` for a minimal example.
+although note that this is already included as ``esr.fitting.likelihood.GaussLikelihood``.
 
-We can then combine the above code with the belwo to fit a mock dataset
+We can then combine the above code with the below to fit a mock dataset
 
 .. code-block:: python
 
@@ -189,5 +189,13 @@ We also have a Poisson likelihood already implemented, which can be run as
 	y = np.random.poisson(y)
 	np.savetxt('data.txt', np.array([x, y]).T)
 	likelihood = PoissonLikelihood('data.txt', 'poisson_example', data_dir=os.getcwd())
+
+	comp = 5
+
+        esr.fitting.test_all.main(comp, likelihood)
+        esr.fitting.test_all_Fisher.main(comp, likelihood)
+        esr.fitting.match.main(comp, likelihood)
+        esr.fitting.combine_DL.main(comp, likelihood)
+        esr.fitting.plot.main(comp, likelihood)
 
 
