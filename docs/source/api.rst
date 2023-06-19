@@ -126,3 +126,15 @@ test_all_Fisher
    :undoc-members:
    :show-inheritance:
 
+
+plotting
+--------
+
+plot
+~~~~
+
+.. automodule:: plotting.plot
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
