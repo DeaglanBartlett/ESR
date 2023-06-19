@@ -64,6 +64,14 @@ Suppose we have already generated the equations required for the ``CCLikelihood`
 	esr.fitting.combine_DL.main(comp, likelihood)
 	esr.fitting.plot.main(comp, likelihood)
 
+Once you have run this more many complexities, you can plot the pareto front and save it to file using the following function.
+
+.. code-block:: python
+
+	import esr.plotting.plot
+
+	esr.plotting.plot.pareto_plot(likelihood.out_dir, 'pareto.png')
+
 
 
 Fitting a single function
