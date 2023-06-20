@@ -48,6 +48,6 @@ esr/fitting/test_script.py
 
 ext_maths
 esr_env
-ESR
+#ESR
 build/
 docs/build/
