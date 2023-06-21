@@ -55,6 +55,12 @@ To install ESR and its dependencies in a new virtual environment, run
 	cd ESR
 	pip install -e .
 
+If you are unable to clone the repo with the above, try the https version instead
+
+.. code:: bash
+
+	git clone https://github.com/DeaglanBartlett/ESR.git
+
 Licence and Citation
 ====================
 
