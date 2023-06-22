@@ -450,7 +450,7 @@ class GaussLikelihood(Likelihood):
         if not np.all(np.isreal(ypred)):
             return np.inf
         nll = np.sum((ypred - self.yvar) ** 2)
-        nll = np.sum(0.5 * (ypred - self.yvar) ** 2 / self.yerr ** 2 + 0.5 * np.log(2 * np.pi) + np.log(yerr))
+        nll = np.sum(0.5 * (ypred - self.yvar) ** 2 / self.yerr ** 2 + 0.5 * np.log(2 * np.pi) + np.log(self.yerr))
         if np.isnan(nll):
             return np.inf
         return nll
