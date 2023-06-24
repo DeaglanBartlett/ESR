@@ -11,6 +11,7 @@ import numdifftools as nd
 
 import esr.fitting.test_all as test_all
 from esr.fitting.sympy_symbols import *
+import esr.generation.simplifier as simplifier
 
 warnings.filterwarnings("ignore")
 
@@ -54,7 +55,7 @@ def load_loglike(comp, likelihood, data_start, data_end, split=True):
     return negloglike, param1, param2, param3, param4
 
 
-def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
+def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_param=4):
     """Compute Fisher, correct MLP and find parametric contirbution to description length for single function
     
     Args:
@@ -64,6 +65,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
         :theta_ML (list): the maximum likelihood values of the parameters
         :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
         :negloglike (float): the minimum log-likelihood for this function
+        :max_param (int, default=4): The maximum number of parameters considered. This sets the shapes of arrays used.
     
     Returns:
         :params (list): the corrected maximum likelihood values of the parameters
@@ -73,196 +75,83 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
         
     """
 
-    def f4(x):
-        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-
-    def f3(x):
-        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-
-    def f2(x):
-        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-
-    def f1(x):
-        return likelihood.negloglike([x],eq_numpy, integrated=integrated)
-
-    params = np.zeros(4)
-    deriv = np.zeros(10)
+    nparam = simplifier.get_max_param([fcn_i], verbose=False)
     
+    if nparam > 0:
+        def fop(x):
+            return likelihood.negloglike(x,eq_numpy, integrated=integrated)
+    else:
+        def fop(x):
+            return likelihood.negloglike([x],eq_numpy, integrated=integrated)
+
+    params = np.zeros(nparam)
+    deriv = np.full(int(max_param * (max_param + 1) / 2), np.nan)
+
+    # Step-sizes to try in case the function misbehvaes
     d_list = [1.e-5, 10.**(-5.5), 10.**(-4.5), 1.e-6, 1.e-4, 10.**(-6.5), 10.**(-3.5), 1.e-7, 1.e-3, 10.**(-7.5), 10.**(-2.5), 1.e-8, 1.e-2, 1.e-9, 1.e-10, 1.e-11]
+    
     method_list = ["central", "forward", "backward"]
 
-    if ("a3" in fcn_i) and ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
-        k=4
-    
-        try:
-            eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
-        except Exception:
-            print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
-            Fisher_diag = np.nan
-            deriv[:] = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
-            return params, negloglike, deriv, codelen
-    
-        Hfun = nd.Hessian(f4)
-        Hmat = Hfun(theta_ML)
-    
-        Fisher_diag = np.array([Hmat[0,0], Hmat[1,1], Hmat[2,2], Hmat[3,3]])                # 2nd derivatives of -log(L) wrt params
-    
-        deriv[:] = np.array([Hmat[0,0], Hmat[0,1], Hmat[0,2], Hmat[0,3], Hmat[1,1], Hmat[1,2], Hmat[1,3], Hmat[2,2], Hmat[2,3], Hmat[3,3]])
-    
-        Delta = np.sqrt(12./Fisher_diag)
-        Nsteps = abs(np.array(theta_ML))/Delta
-    
-        if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0) or (np.sum(np.isinf(Fisher_diag)) > 0) or (np.sum(Nsteps<1) > 0):
-            for d2, meth in itertools.product(d_list, method_list):
-                if use_relative_dx:
-                    Hfun = nd.Hessian(f4, step = np.abs(d2*theta_ML)+1.e-15, method=meth)          # Step is array, one for each param
-                else:
-                    Hfun = nd.Hessian(f4, step = d2, method=meth)
-                Hmat = Hfun(theta_ML)
-                Fisher_diag_tmp = np.array([Hmat[0,0], Hmat[1,1], Hmat[2,2], Hmat[3,3]])
-                Delta_tmp = np.sqrt(12./Fisher_diag_tmp)
-                Nsteps_tmp = abs(np.array(theta_ML))/Delta_tmp
-                if (np.sum(Fisher_diag_tmp <= 0.) <= 0) and (np.sum(np.isnan(Fisher_diag_tmp)) <= 0) and (np.sum(np.isinf(Fisher_diag)) <= 0) and (np.sum(Nsteps_tmp<1)<=0):
-                    if negloglike<0.:
-                        print("Succeeded at rectifying Fisher:", fcn_i, d2, meth, Fisher_diag_tmp, theta_ML, Delta_tmp, Nsteps_tmp, flush=True)
-                    Fisher_diag = Fisher_diag_tmp
-                    Delta, Nsteps = Delta_tmp, Nsteps_tmp
-                    deriv[:] = np.array([Hmat[0,0], Hmat[0,1], Hmat[0,2], Hmat[0,3], Hmat[1,1], Hmat[1,2], Hmat[1,3], Hmat[2,2], Hmat[2,3], Hmat[3,3]])
-                    break
-    
-    elif ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
-        k=3
-    
-        theta_ML = theta_ML[:-1]            # Only keep as many params as we have for this fcn
-    
-        try:
-            eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
-        except Exception:
-            print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
-            Fisher_diag = np.nan
-            deriv[:] = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
-            return params, negloglike, deriv, codelen
-    
-        Hfun = nd.Hessian(f3)
-        Hmat = Hfun(theta_ML)
-    
-        Fisher_diag = np.array([Hmat[0,0], Hmat[1,1], Hmat[2,2]])
-    
-        deriv[:] = np.array([Hmat[0,0], Hmat[0,1], Hmat[0,2], np.nan, Hmat[1,1], Hmat[1,2], np.nan, Hmat[2,2], np.nan, np.nan])
-    
-        Delta = np.sqrt(12./Fisher_diag)
-        Nsteps = abs(np.array(theta_ML))/Delta
-    
-        if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0) or (np.sum(np.isinf(Fisher_diag)) > 0) or (np.sum(Nsteps<1) > 0):
-            for d2, meth in itertools.product(d_list, method_list):
-                if use_relative_dx:
-                    Hfun = nd.Hessian(f3, step = np.abs(d2*theta_ML)+1.e-15, method=meth)
-                else:
-                    Hfun = nd.Hessian(f3, step = d2, method=meth)
-                Hmat = Hfun(theta_ML)
-                Fisher_diag_tmp = np.array([Hmat[0,0], Hmat[1,1], Hmat[2,2]])
-                Delta_tmp = np.sqrt(12./Fisher_diag_tmp)
-                Nsteps_tmp = abs(np.array(theta_ML))/Delta_tmp
-                if (np.sum(Fisher_diag_tmp <= 0.) <= 0) and (np.sum(np.isnan(Fisher_diag_tmp)) <= 0) and (np.sum(np.isinf(Fisher_diag)) <= 0) and (np.sum(Nsteps_tmp<1)<=0):
-                    if negloglike<0.:
-                        print("Succeeded at rectifying Fisher:", fcn_i, d2, meth, Fisher_diag_tmp, theta_ML, Delta_tmp, Nsteps_tmp, flush=True)
-                    Fisher_diag = Fisher_diag_tmp
-                    Delta, Nsteps = Delta_tmp, Nsteps_tmp
-                    deriv[:] = np.array([Hmat[0,0], Hmat[0,1], Hmat[0,2], np.nan, Hmat[1,1], Hmat[1,2], np.nan, Hmat[2,2], np.nan, np.nan])
-                    break
-    
-    elif ("a1" in fcn_i) and ("a0" in fcn_i):
-        k=2
-    
-        theta_ML = theta_ML[:-2]
-    
-        try:
-            eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
-        except Exception:
-            print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
-            Fisher_diag = np.nan
-            deriv[:] = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
-            return params, negloglike, deriv, codelen
-        
-        Hfun = nd.Hessian(f2)                       # Calculate the fcn in general
-        Hmat = Hfun(theta_ML)       # Evaluate it at the ML point
-    
-        Fisher_diag = np.array([Hmat[0,0], Hmat[1,1]])
-    
-        deriv[:] = np.array([Hmat[0,0], Hmat[0,1], np.nan, np.nan, Hmat[1,1], np.nan, np.nan, np.nan, np.nan, np.nan])
-        
-        Delta = np.sqrt(12./Fisher_diag)
-        Nsteps = abs(np.array(theta_ML))/Delta
-
-        if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0) or (np.sum(np.isinf(Fisher_diag)) > 0) or (np.sum(Nsteps<1) > 0):
-            for d2, meth in itertools.product(d_list, method_list):
-                if use_relative_dx:
-                    Hfun = nd.Hessian(f2, step = np.abs(d2*theta_ML)+1.e-15, method=meth)
-                else:
-                    Hfun = nd.Hessian(f2, step = d2, method=meth)
-                Hmat = Hfun(theta_ML)
-                Fisher_diag_tmp = np.array([Hmat[0,0], Hmat[1,1]])
-                Delta_tmp = np.sqrt(12./Fisher_diag_tmp)
-                Nsteps_tmp = abs(np.array(theta_ML))/Delta_tmp
-                if (np.sum(Fisher_diag_tmp <= 0.) <= 0) and (np.sum(np.isnan(Fisher_diag_tmp)) <= 0) and (np.sum(np.isinf(Fisher_diag)) <= 0) and (np.sum(Nsteps_tmp<1)<=0):
-                    if negloglike<0.:
-                        print("Succeeded at rectifying Fisher:", fcn_i, d2, meth, Fisher_diag_tmp, theta_ML, Delta_tmp, Nsteps_tmp, flush=True)
-                    Fisher_diag = Fisher_diag_tmp
-                    Delta, Nsteps = Delta_tmp, Nsteps_tmp
-                    deriv[:] = np.array([Hmat[0,0], Hmat[0,1], np.nan, np.nan, Hmat[1,1], np.nan, np.nan, np.nan, np.nan, np.nan])
-                    break
-
-    elif ("a0" in fcn_i):
-        k=1
-        
-        theta_ML = theta_ML[:-3]            # Only keep as many params as we have for this fcn
-        
-        try:
-            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
-        except Exception:
-            print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
-            Fisher_diag = np.nan
-            deriv[:] = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
-            return params, negloglike, deriv, codelen
-        
-        Hfun = nd.Hessian(f1)
-        Hmat = Hfun(theta_ML)
-    
-        Fisher_diag = Hmat[0,0]
-    
-        deriv[:] = np.array([Hmat[0,0], np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
-    
-        Delta = np.sqrt(12./Fisher_diag)
-        Nsteps = abs(np.array(theta_ML))/Delta
-    
-        if (np.sum(Fisher_diag <= 0.) > 0) or (np.sum(np.isnan(Fisher_diag)) > 0) or (np.sum(np.isinf(Fisher_diag)) > 0) or (np.sum(Nsteps<1) > 0):
-            for d2, meth in itertools.product(d_list, method_list):
-                if use_relative_dx:
-                    Hfun = nd.Hessian(f1, step = np.abs(d2*theta_ML)+1.e-15, method=meth)
-                else:
-                    Hfun = nd.Hessian(f1, step = d2, method=meth)
-                Hmat = Hfun(theta_ML)
-                Fisher_diag_tmp = Hmat[0,0]
-                Delta_tmp = np.sqrt(12./Fisher_diag_tmp)
-                Nsteps_tmp = abs(np.array(theta_ML))/Delta_tmp
-                if (np.sum(Fisher_diag_tmp <= 0.) <= 0) and (np.sum(np.isnan(Fisher_diag_tmp)) <= 0) and (np.sum(np.isinf(Fisher_diag)) <= 0) and (np.sum(Nsteps_tmp<1)<=0):
-                    if negloglike<0.:
-                        print("Succeeded at rectifying Fisher:", fcn_i, d2, meth, Fisher_diag_tmp, theta_ML, Delta_tmp, Nsteps_tmp, flush=True)
-                    Fisher_diag = Fisher_diag_tmp
-                    Delta, Nsteps = Delta_tmp, Nsteps_tmp
-                    deriv[:] = np.array([Hmat[0,0], np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
-                    break
-    
-    else:                   # No params
+    if nparam == 0:
         codelen = 0
         return params, negloglike, deriv, codelen
 
+    try:
+        if nparam > 1:
+            all_a = ' '.join([f'a{i}' for i in range(nparam)])
+            all_a = list(sympy.symbols(all_a, real=True))
+            eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+        else:
+            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+    except Exception:
+        print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
+        Fisher_diag = np.nan
+        deriv[:] = np.nan
+        return params, negloglike, deriv, codelen
+    
+    # Get Hessian
+    theta_ML = theta_ML[:nparam]
+    Hfun = nd.Hessian(fop)
+    Hmat = Hfun(theta_ML)
+    
+    # 2nd derivatives of -log(L) wrt params
+    Fisher_diag = np.array([Hmat[i,i] for i in range(nparam)])
+    
+    # Precision to know constants
+    Delta = np.sqrt(12./Fisher_diag)
+    Nsteps = abs(np.array(theta_ML))/Delta
+    
+    for i in range(nparam):
+        start = int(i * max_param - (i - 1) * i / 2)
+        deriv[start:start+nparam-i] = Hmat[i,i:]
+    
+    if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0) or (np.sum(np.isinf(Fisher_diag)) > 0) or (np.sum(Nsteps<1) > 0):
+        for d2, meth in itertools.product(d_list, method_list):
+            if use_relative_dx:
+                Hfun = nd.Hessian(fop, step=np.abs(d2*theta_ML)+1.e-15, method=meth)
+            else:
+                Hfun = nd.Hessian(fop, step = d2, method=meth)
+            Hmat = Hfun(theta_ML)
+            Fisher_diag_tmp = np.array([Hmat[i,i] for i in range(nparam)])
+            Delta_tmp = np.sqrt(12./Fisher_diag_tmp)
+            Nsteps_tmp = abs(np.array(theta_ML))/Delta_tmp
+            
+            if (np.sum(Fisher_diag_tmp <= 0.) <= 0) and (np.sum(np.isnan(Fisher_diag_tmp)) <= 0) and (np.sum(np.isinf(Fisher_diag)) <= 0) and (np.sum(Nsteps_tmp<1)<=0):
+                print("Succeeded at rectifying Fisher:", fcn_i, d2, meth, Fisher_diag_tmp, theta_ML, Delta_tmp, Nsteps_tmp, flush=True)
+                Fisher_diag = Fisher_diag_tmp
+                Delta, Nsteps = Delta_tmp, Nsteps_tmp
+                start = int(i * max_param - (i - 1) * i / 2)
+                deriv[start:start+nparam-i] = Hmat[i,i:]
+                break
+                
     # Must indicate a bad fcn, so just need to make sure it doesn't have a good -log(L)
     if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0):
         if negloglike<0.:
             print("ATTENTION, a relatively good function has Fisher element negative, zero or nan: ", fcn_i, negloglike, Fisher_diag, flush=True)
         codelen = np.nan
         return params, negloglike, deriv, codelen
+    
+    k = nparam
 
     if np.sum(Nsteps<1)>0:         # Possibly should reevaluate -log(L) with the param(s) set to 0, but doesn't matter unless the fcn is a very good one
         if negloglike<-1500.:
@@ -272,19 +161,15 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
         
         negloglike_orig = np.copy(negloglike)
         
-        if k==1:
-            negloglike = f1(theta_ML)                    # Modified here but if this doesn't happen they stay the same
-        elif k==2:
-            negloglike = f2(theta_ML)       # All params still here, just some of them might be 0
-        elif k==3:
-            negloglike = f3(theta_ML)
-        elif k==4:
-            negloglike = f4(theta_ML)
+        # See new value with theta = 0
+        negloglike = fop(theta_ML)
             
-        if negloglike_orig<-1500.:          # Should be exactly the same condition as the above
+        # Should be exactly the same condition as the above
+        if negloglike_orig<-1500.:
             print("negloglikes:", negloglike_orig, negloglike, flush=True)
 
-        k -= np.sum(Nsteps<1)       # For the codelen, we effectively don't have the parameter that had Nsteps<1
+        # For the codelen, we effectively don't have the parameter that had Nsteps<1
+        k -= np.sum(Nsteps<1)
             
         if k<0:
             print("This shouldn't have happened", flush=True)
@@ -298,7 +183,8 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike):
     
     codelen = -k/2.*math.log(3.) + np.sum( 0.5*np.log(Fisher_diag) + np.log(abs(np.array(theta_ML))) )
 
-    params[:] = np.pad(theta_ML, (0, 4-len(theta_ML)))            # New params after the setting to 0, padded to length 4 as always
+    # New params after the setting to 0, padded to length max_param as always
+    params[:] = np.pad(theta_ML, (0, max_param-len(theta_ML)))
 
     if (np.isinf(codelen) or codelen>200.) and negloglike<-1500.:
         print("ATTENTION, a relative good function has a very big codelength:", fcn_i, k, Fisher_diag, theta_ML, Delta, Nsteps, negloglike, codelen, flush=True)

@@ -40,13 +40,14 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
                             tmax,
                             pmin,
                             pmax,
-                            try_integration=try_integration)
+                            try_integration=try_integration,
+                            max_param=max_param)
 
     # (3) Obtain the Fisher matrix for this function
     fcn, eq, integrated = likelihood.run_sympify(fstr,
                                             tmax=tmax, 
                                             try_integration=try_integration)
-    params, negloglike, deriv, codelen = convert_params(fcn, eq, integrated, params, likelihood, chi2) 
+    params, negloglike, deriv, codelen = convert_params(fcn, eq, integrated, params, likelihood, chi2, max_param=max_param)
     if verbose:
         print('theta_ML:', params)
         print('Residuals:', negloglike, chi2)
