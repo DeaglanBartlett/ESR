@@ -126,7 +126,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
     Niter = 30
     Nconv = 5
     
-    nparam = simplifier.get_max_param([fcn_i], verbose=False)
+    nparam = simplifier.count_params([fcn_i], max_param)[0]
     params = np.zeros(max_param)
     
     try:
@@ -144,7 +144,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
         count_lowest = 0
         inf_count = 0
         exception_count = 0
-        
+             
         if nparam > 1:
             all_a = ' '.join([f'a{i}' for i in range(nparam)])
             all_a = list(sympy.symbols(all_a, real=True))
@@ -306,9 +306,12 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
     """
 
     fcn_list_proc, _, _ = get_functions(comp, likelihood)
+    
+    # Set max param >=4 for backwards compatibility
+    max_param = int(max(4, np.floor((comp - 1) / 2)))
 
     chi2 = np.zeros(len(fcn_list_proc))     # This is now only for this proc
-    params = np.zeros([len(fcn_list_proc), 4])
+    params = np.zeros([len(fcn_list_proc), max_param])
     for i in range(len(fcn_list_proc)):           # Consider all possible complexities
         if rank == 0:
             print(rank, i, len(fcn_list_proc), flush=True)
@@ -321,7 +324,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
                                                     pmin, 
                                                     pmax, 
                                                     try_integration=try_integration,
-                                                    log_opt=log_opt)
+                                                    log_opt=log_opt,
+                                                    max_param=max_param)
                 except NameError:
                     if try_integration:
                         chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], 
@@ -330,14 +334,15 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
                                                     pmin, 
                                                     pmax, 
                                                     try_integration=False,
-                                                    log_opt=log_opt)
+                                                    log_opt=log_opt,
+                                                    max_param=max_param)
                     else:
                         raise NameError
         except:
             chi2[i] = np.nan
             params[i,:] = 0.
 
-    out_arr = np.transpose(np.vstack([chi2, params[:,0], params[:,1], params[:,2], params[:,3]]))
+    out_arr = np.transpose(np.vstack([chi2] + [params[:,i] for i in range(max_param)]))
 
     # Save the data for this proc in Partial
     np.savetxt(likelihood.temp_dir + '/chi2_comp'+str(comp)+'weights_'+str(rank)+'.dat', out_arr, fmt='%.7e')
@@ -349,6 +354,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
         os.system(string)
         string = 'rm ' + likelihood.temp_dir + '/chi2_comp'+str(comp)+'weights_*.dat'
         os.system(string)
+        
+    comm.Barrier()
 
     return
 

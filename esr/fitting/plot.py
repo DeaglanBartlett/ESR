@@ -42,25 +42,23 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     vmax = 1
     tmax = 5
 
-    if comp==8:
-        sys.setrecursionlimit(2000)
-    elif comp==9:
-        sys.setrecursionlimit(2500)
-    elif comp==10:
-        sys.setrecursionlimit(3000)
+    if comp>=8:
+        sys.setrecursionlimit(2000 + 500 * (comp - 8))
 
     if not os.path.isdir(likelihood.fig_dir):
         print('Making:', likelihood.fig_dir)
         os.mkdir(likelihood.fig_dir)
 
-    max_param = 4
+#    max_param = 4
 
     with open(likelihood.out_dir + '/final_'+str(comp)+'.dat', "r") as f:
         reader = csv.reader(f, delimiter=';')
         data = [row for row in reader]
+    
+    max_param = len(data[0]) - 7
         
     fcn_list = [d[1] for d in data]
-    params = np.array([d[-4:] for d in data], dtype=float)
+    params = np.array([d[-max_param:] for d in data], dtype=float)
     DL = np.array([d[2] for d in data], dtype=float)
     DL_min = np.amin(DL[np.isfinite(DL)])
     print('MIN', DL_min)
@@ -87,31 +85,26 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
         
         try:
             fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
+            
             if k == 0:
                 eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
-            elif k==1:
+            elif k > 1:
+                all_a = ' '.join([f'a{i}' for i in range(k)])
+                all_a = list(sympy.symbols(all_a, real=True))
+                eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+            else:
                 eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
-            elif k==2:
-                eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
-            elif k==3:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
-            elif k==4:
-                eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
             ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
         except:
             if try_integration:
                 fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False)
-                if k == 0:
+                if k > 0:
+                    all_a = ' '.join([f'a{i}' for i in range(k)])
+                    all_a = list(sympy.symbols(all_a, real=True))
+                    eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+                else:
                     eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
-                elif k==1:
-                    eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
-                elif k==2:
-                    eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
-                elif k==3:
-                    eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
-                elif k==4:
-                    eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
-                ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
+                    ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
             else:
                 continue
 

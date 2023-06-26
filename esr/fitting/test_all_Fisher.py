@@ -33,26 +33,18 @@ def load_loglike(comp, likelihood, data_start, data_end, split=True):
         
     Returns:
         :negloglike (list): list of minimum log-likelihoods
-        :param1 (list): list of parameters a0 at maximum likelihood points
-        :param2 (list): list of parameters a1 at maximum likelihood points
-        :param3 (list): list of parameters a2 at maximum likelihood points
-        :param4 (list): list of parameters a3 at maximum likelihood points
+        :params (np.ndarray): list of parameters at maximum likelihood points. Shape = (nfun, nparam).
 
     """
-
-    negloglike, param1, param2, param3, param4 = np.genfromtxt(likelihood.out_dir + "/negloglike_comp"+str(comp)+".dat", unpack=True)
-    negloglike = np.atleast_1d(negloglike)
-    param1 = np.atleast_1d(param1)
-    param2 = np.atleast_1d(param2)
-    param3 = np.atleast_1d(param3)
-    param4 = np.atleast_1d(param4)
+    if rank == 0:
+        print(likelihood.out_dir + "/negloglike_comp"+str(comp)+".dat")
+    data = np.genfromtxt(likelihood.out_dir + "/negloglike_comp"+str(comp)+".dat")
+    negloglike = np.atleast_1d(data[:,0])
+    params = np.atleast_2d(data[:,1:])
     if split:
         negloglike = negloglike[data_start:data_end]               # Assuming same order of fcn and chi2 files
-        param1 = param1[data_start:data_end]
-        param2 = param2[data_start:data_end]
-        param3 = param3[data_start:data_end]
-        param4 = param4[data_start:data_end]
-    return negloglike, param1, param2, param3, param4
+        params = params[data_start:data_end,:]
+    return negloglike, params
 
 
 def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_param=4):
@@ -75,7 +67,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         
     """
 
-    nparam = simplifier.get_max_param([fcn_i], verbose=False)
+    nparam = simplifier.count_params([fcn_i], max_param)[0]
     
     if nparam > 0:
         def fop(x):
@@ -84,7 +76,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         def fop(x):
             return likelihood.negloglike([x],eq_numpy, integrated=integrated)
 
-    params = np.zeros(nparam)
+    params = np.zeros(max_param)
     deriv = np.full(int(max_param * (max_param + 1) / 2), np.nan)
 
     # Step-sizes to try in case the function misbehvaes
@@ -206,19 +198,16 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     
     """
 
-    if comp==8:
-        sys.setrecursionlimit(2000)
-    elif comp==9:
-        sys.setrecursionlimit(2500)
-    elif comp==10:
-        sys.setrecursionlimit(3000)
+    if comp>=8:
+        sys.setrecursionlimit(2000 + 500 * (comp - 8))
 
     fcn_list_proc, data_start, data_end = test_all.get_functions(comp, likelihood)
-    negloglike, param1_proc, param2_proc, param3_proc, param4_proc = load_loglike(comp, likelihood, data_start, data_end)
+    negloglike, params_proc = load_loglike(comp, likelihood, data_start, data_end)
+    max_param = params_proc.shape[1]
 
     codelen = np.zeros(len(fcn_list_proc))          # This is now only for this proc
-    params = np.zeros([len(fcn_list_proc), 4])
-    deriv = np.zeros([len(fcn_list_proc), 10])
+    params = np.zeros([len(fcn_list_proc), max_param])
+    deriv = np.zeros([len(fcn_list_proc), int(max_param * (max_param+1) / 2)])
 
     for i in range(len(fcn_list_proc)):           # Consider all possible complexities
         if rank == 0:
@@ -228,20 +217,20 @@ def main(comp, likelihood, tmax=5, try_integration=False):
             codelen[i]=np.nan
             continue
 
-        theta_ML = np.array([param1_proc[i], param2_proc[i], param3_proc[i], param4_proc[i]])
+        theta_ML = params_proc[i,:]
             
         try:
             fcn_i = fcn_list_proc[i].replace('\n', '')
             fcn_i = fcn_list_proc[i].replace('\'', '')
             fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
-            params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i])
+            params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param)
         except NameError:
             # Occurs if function produced not implemented in numpy
             if try_integration:
                 fcn_i = fcn_list_proc[i].replace('\n', '')
                 fcn_i = fcn_list_proc[i].replace('\'', '')
-                fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False) 
-                params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i])
+                fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False)
+                params[i,:], negloglike[i], deriv[i,:], codelen[i] = convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param)
             else:
                 params[i,:] = 0.
                 deriv[i,:] = 0.
@@ -252,9 +241,10 @@ def main(comp, likelihood, tmax=5, try_integration=False):
             deriv[i,:] = 0.
             codelen[i] = 0
         
-    out_arr = np.transpose(np.vstack([codelen, negloglike, params[:,0], params[:,1], params[:,2], params[:,3]]))
+    out_arr = np.transpose(np.vstack([codelen, negloglike] + [params[:,i] for i in range(max_param)]))
 
     out_arr_deriv = np.transpose(np.vstack([deriv[:,0], deriv[:,1], deriv[:,2], deriv[:,3], deriv[:,4], deriv[:,5], deriv[:,6], deriv[:,7], deriv[:,8], deriv[:,9]]))
+    out_arr_deriv = np.transpose(np.vstack([deriv[:,i] for i in range(deriv.shape[1])]))
 
     np.savetxt(likelihood.temp_dir + '/codelen_deriv_'+str(comp)+'_'+str(rank)+'.dat', out_arr, fmt='%.7e')
     np.savetxt(likelihood.temp_dir + '/derivs_'+str(comp)+'_'+str(rank)+'.dat', out_arr_deriv, fmt='%.7e')
@@ -271,5 +261,7 @@ def main(comp, likelihood, tmax=5, try_integration=False):
         os.system(string)
         string = 'rm ' + likelihood.temp_dir + '/derivs_'+str(comp)+'_*.dat'
         os.system(string)
+        
+    comm.Barrier()
 
     return

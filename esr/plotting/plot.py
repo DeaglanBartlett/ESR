@@ -19,6 +19,7 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
 
     all_f = os.listdir(dirname)
     all_f = [f for f in all_f if f.startswith('final_')]
+    print(all_f)
     all_comp = [int(f[len('final_'):-len('.dat')]) for f in all_f]
     all_logL = np.empty(len(all_comp))
     all_DL = np.empty(len(all_comp))

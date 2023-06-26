@@ -35,7 +35,12 @@ def main(comp, likelihood):
     with open(allfn_file, "r") as f:         # All
         fcn_list_all = f.read().splitlines()
 
-    negloglike, codelen, index, param1, param2, param3, param4 = np.genfromtxt(likelihood.out_dir + "/codelen_matches_comp"+str(comp)+".dat", unpack=True)        # All
+#    negloglike, codelen, index, param1, param2, param3, param4 = np.genfromtxt(likelihood.out_dir + "/codelen_matches_comp"+str(comp)+".dat", unpack=True)        # All
+    data = np.genfromtxt(likelihood.out_dir + "/codelen_matches_comp"+str(comp)+".dat") # All
+    negloglike = data[:,0]
+    codelen = data[:,1]
+    index = data[:,2]
+    params = data[:,3:]
     aifeyn = np.genfromtxt(aifeyn_file) # All
     codelen = np.atleast_1d(codelen)
     index = np.atleast_1d(index)
@@ -44,10 +49,7 @@ def main(comp, likelihood):
     fcn_list_proc, data_start, data_end = test_all.get_functions(comp, likelihood)
 
     DL_min = np.zeros(len(fcn_list_proc))
-    param1_min = np.zeros(len(fcn_list_proc))
-    param2_min = np.zeros(len(fcn_list_proc))
-    param3_min = np.zeros(len(fcn_list_proc))            # These are all now specific to the proc
-    param4_min = np.zeros(len(fcn_list_proc))
+    params_min = np.zeros((len(fcn_list_proc), params.shape[1]))  # These are all now specific to the proc
 
     fcn_min = [None] * len(fcn_list_proc)
     negloglike_min = np.zeros(len(fcn_list_proc))
@@ -65,8 +67,7 @@ def main(comp, likelihood):
         
         m = (index==xarr_proc[i])
         fcn_list_all_i = [fcn_list_all[j] for j in range(len(m)) if m[j]]
-        param1_i, param2_i, param3_i, param4_i = param1[index==xarr_proc[i]], param2[index==xarr_proc[i]], param3[index==xarr_proc[i]], param4[index==xarr_proc[i]]
-
+        params_i = params[index==xarr_proc[i], :]
         DL = negloglike_i + codelen_i + aifeyn_i
         
         if np.sum(~np.isnan(DL))==0:
@@ -74,17 +75,14 @@ def main(comp, likelihood):
             continue
 
         DL_min[i] = np.nanmin(DL)
-        param1_min[i] = param1_i[np.nanargmin(DL)]
-        param2_min[i] = param2_i[np.nanargmin(DL)]
-        param3_min[i] = param3_i[np.nanargmin(DL)]
-        param4_min[i] = param4_i[np.nanargmin(DL)]
+        params_min[i,:] = params_i[np.nanargmin(DL),:]
         fcn_min[i] = fcn_list_all_i[np.nanargmin(DL)]
         
         negloglike_min[i] = negloglike_i[np.nanargmin(DL)]
         codelen_min[i] = codelen_i[np.nanargmin(DL)]
         aifeyn_min[i] = aifeyn_i[np.nanargmin(DL)]
 
-    out_arr = np.transpose(np.vstack([DL_min, param1_min, param2_min, param3_min, param4_min, negloglike_min, codelen_min, aifeyn_min]))
+    out_arr = np.transpose(np.vstack([DL_min] + [params_min[:,i] for i in range(params_min.shape[1])] + [negloglike_min, codelen_min, aifeyn_min]))
     
     prefix = likelihood.combineDL_prefix
 
@@ -106,13 +104,16 @@ def main(comp, likelihood):
         os.system(string)
         
     if rank==0:         # The rest is done by just one proc
-        DL_min, param1_min, param2_min, param3_min, param4_min, negloglike_min, codelen_min, aifeyn_min = np.genfromtxt(likelihood.out_dir + '/'+prefix+'comp'+str(comp)+'.dat', unpack=True)            # This is the combined results from all procs, and the rest should be as before
+        data = np.genfromtxt(likelihood.out_dir + '/'+prefix+'comp'+str(comp)+'.dat')            # This is the combined results from all procs, and the rest should be as before
+        DL_min = data[:,0]
+        params_min = data[:,1:1+params.shape[1]]
+        print(data.shape)
+        negloglike_min = data[:,-3]
+        codelen_min = data[:,-2]
+        aifeyn_min = data[:,-1]
         
         DL_min = np.atleast_1d(DL_min)
-        param1_min = np.atleast_1d(param1_min)
-        param2_min = np.atleast_1d(param2_min)
-        param3_min = np.atleast_1d(param3_min)
-        param4_min = np.atleast_1d(param4_min)
+        params_min = np.atleast_2d(params_min)
         negloglike_min = np.atleast_1d(negloglike_min)
         codelen_min = np.atleast_1d(codelen_min)
         aifeyn_min = np.atleast_1d(aifeyn_min)
@@ -131,10 +132,7 @@ def main(comp, likelihood):
         DL_sort = arr_sort[0,:]
         indices_sort = arr_sort[1,:].astype(int)
 
-        param1_sort = param1_min[indices_sort]
-        param2_sort = param2_min[indices_sort]
-        param3_sort = param3_min[indices_sort]
-        param4_sort = param4_min[indices_sort]
+        params_sort = params_min[indices_sort,:]
         fcn_min_sort = [fcn_min[i] for i in indices_sort]
 
         negloglike_sort = negloglike_min[indices_sort]
@@ -158,7 +156,7 @@ def main(comp, likelihood):
         Prel /= np.sum(Prel)                # Relative probability of fcn, normalised over the top 1000 functions just of this complexity
 
         ptab = PrettyTable()
-        ptab.field_names = ["Rank", "Function", "L(D)", "Prel", "-logL", "Codelen", "AIFeyn", "a0", "a1", "a2", "a3"]
+        ptab.field_names = ["Rank", "Function", "L(D)", "Prel", "-logL", "Codelen", "AIFeyn"] + [f"a{i}" for i in range(params.shape[1])]
 
         negloglike_previous = np.nan
 
@@ -166,15 +164,17 @@ def main(comp, likelihood):
             
             # Only happens for non-duplicates; all Prels should be non-zero
             if i < Nfuncs:
-                ptab.add_row([i+1, fcn_min_sort[i], '%.2f'%DL_sort[i], '%.2e'%Prel[i], '%.2f'%negloglike_sort[i], '%.2f'%codelen_sort[i], '%.2e'%aifeyn_sort[i], '%.2e'%param1_sort[i], '%.2e'%param2_sort[i], '%.2e'%param3_sort[i], '%.2e'%param4_sort[i]])
+                ptab.add_row([i+1, fcn_min_sort[i], '%.2f'%DL_sort[i], '%.2e'%Prel[i], '%.2f'%negloglike_sort[i], '%.2f'%codelen_sort[i], '%.2e'%aifeyn_sort[i]] + [ '%.2e'%params_sort[i,j] for j in range(params.shape[1])])
 
             
             with open(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat', 'a') as f:
                 writer = csv.writer(f, delimiter=';')
-                writer.writerow([i, fcn_min_sort[i], DL_sort[i], Prel[i], negloglike_sort[i], codelen_sort[i], aifeyn_sort[i], param1_sort[i], param2_sort[i], param3_sort[i], param4_sort[i]])
+                writer.writerow([i, fcn_min_sort[i], DL_sort[i], Prel[i], negloglike_sort[i], codelen_sort[i], aifeyn_sort[i]] + [params_sort[i,j] for j in range(params.shape[1])])
 
             negloglike_previous = negloglike_sort[i]
         print(ptab)
+    
+    comm.Barrier()
         
     return
     

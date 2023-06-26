@@ -51,3 +51,6 @@ esr_env
 #ESR
 build/
 docs/build/
+
+examples/fitting/
+examples/data.txt
