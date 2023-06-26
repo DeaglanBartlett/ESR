@@ -5,6 +5,7 @@ import os
 import sys
 from mpi4py import MPI
 from scipy.optimize import minimize
+import itertools
 
 from esr.fitting.sympy_symbols import *
 import esr.generation.simplifier as simplifier
@@ -65,12 +66,8 @@ def get_functions(comp, likelihood, unique=True):
     else:
         unifn_file = likelihood.fn_dir + "/compl_%i/all_equations_%i.txt"%(comp,comp)
     
-    if comp==8:
-        sys.setrecursionlimit(2000)
-    elif comp==9:
-        sys.setrecursionlimit(2500)
-    elif comp==10:
-        sys.setrecursionlimit(3000)
+    if comp>=8:
+        sys.setrecursionlimit(2000 + 500 * (comp - 8))
 
     if rank == 0:
         for dirname in [likelihood.base_out_dir, likelihood.out_dir, likelihood.temp_dir]:
@@ -105,7 +102,7 @@ def get_functions(comp, likelihood, unique=True):
     return fcn_list[data_start:data_end], data_start, data_end
     
     
-def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log_opt=False):
+def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log_opt=False, max_param=4):
     """Optimise the parameters of a function to fit data
     
     Args:
@@ -116,6 +113,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
         :pmax (float): maximum value for each parameter to consider when generating initial guess
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
+        :max_param (int, default=4): The maximum number of parameters considered. This sets the shapes of arrays used.
         
     Returns:
         :chi2_i (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
@@ -125,10 +123,11 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
 
     xvar, yvar = likelihood.xvar, likelihood.yvar
 
-    Niter_1, Niter_2, Niter_3, Niter_4 = 30, 30, 30, 30
-    Nconv_1, Nconv_2, Nconv_3, Nconv_4 = 5, 5, 5, 5
-
-    params = np.zeros(4)
+    Niter = 30
+    Nconv = 5
+    
+    nparam = simplifier.count_params([fcn_i], max_param)[0]
+    params = np.zeros(max_param)
     
     try:
         fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
@@ -140,56 +139,42 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
             return chi2_i, params
 
         flag_three = False
-        if ("a3" in fcn_i) and ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
-            Niter = Niter_4
-            Nconv = Nconv_4
-            flag_three = True           # In this case we don't have any mult_param
 
-            eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
-            if np.sum(np.isnan(eq_numpy(xvar,1,1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,-1,1)))>0  and np.sum(np.isnan(eq_numpy(xvar,1,-1,-1,1)))>0  and np.sum(np.isnan(eq_numpy(xvar,-1,-1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,-1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,-1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,1,-1,-1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,-1,-1,-1,-1)))>0:
-                chi2_i = np.inf            # Don't bother trying to optimise bc this fcn is clearly really bad
-                return chi2_i, params
-                
-        elif ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
-            Niter = Niter_3
-            Nconv = Nconv_3
-            flag_three = True           # In this case we don't have any mult_param
-            eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
-            if np.sum(np.isnan(eq_numpy(xvar,1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,1,-1,-1)))>0  and np.sum(np.isnan(eq_numpy(xvar,-1,-1,-1)))>0:
-                chi2_i = np.inf            # Don't bother trying to optimise bc this fcn is clearly really bad
-                return chi2_i, params
-                
-        elif ("a1" in fcn_i) and ("a0" in fcn_i):
-            Niter = Niter_2
-            Nconv = Nconv_2
-            eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
-            if np.sum(np.isnan(eq_numpy(xvar,1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,1,-1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1,-1)))>0:
-                chi2_i = np.inf
-                return chi2_i, params
-
-        else:
-            Niter = Niter_1
-            Nconv = Nconv_1
-            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
-            if np.sum(np.isnan(eq_numpy(xvar,1)))>0 and np.sum(np.isnan(eq_numpy(xvar,-1)))>0:
-                chi2_i = np.inf
-                return chi2_i, params
-
-        chi2_min = np.inf            # Reset chi2 for this fcn to make sure that every attempt at minimisation improves on this
-
-        mult_arr = np.array([1,1,1,1])
+        mult_arr = np.ones(max_param)
         count_lowest = 0
         inf_count = 0
         exception_count = 0
+             
+        if nparam > 1:
+            all_a = ' '.join([f'a{i}' for i in range(nparam)])
+            all_a = list(sympy.symbols(all_a, real=True))
+            eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+        else:
+            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+    
+        bad_fun = True
+        for p in itertools.product([1, -1], repeat=nparam):
+            if not (np.sum(np.isnan(eq_numpy(xvar,*p)))>0):
+                bad_fun = False
+                break
+        
+        if bad_fun:
+            # Don't bother trying to optimise bc this fcn is clearly really bad
+            chi2_i = np.inf
+            return chi2_i, params
+            
+        # Reset chi2
+        chi2_min = np.inf
+            
+        if nparam > 2:
+            flag_three = True
         
         for j in range(Niter):
-            if ("a3" in fcn_i) and ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
-                inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]
+        
+            if nparam > 2:
+                inpt = [np.random.uniform(pmin,pmax) for _ in range(nparam)]
                 res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 7000})    # Default=3000
-            elif ("a2" in fcn_i) and ("a1" in fcn_i) and ("a0" in fcn_i):
-                inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]      # Larger range bc linear search here
-                res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 5000})    # Default=3000
-            elif ("a1" in fcn_i) and ("a0" in fcn_i):
+            elif nparam == 2:
                 if log_opt:
                     inpt = [np.random.uniform(pmin,pmax), np.random.uniform(pmin,pmax)]           # These are now in log-space, so this is 1e-1 -- 1e1; was -10:10
                     res_pp = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['+','+']), method="BFGS")
@@ -198,18 +183,19 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                     res_mm = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['-','-']), method="BFGS")
                 
                     choose = np.argmin([res_pp['fun'], res_mp['fun'], res_pm['fun'], res_mm['fun']])
+                    mult_arr = np.one(max_param)
                     if choose==0:
                         res = res_pp
-                        mult_arr = np.array([1,1,1,1])
                     elif choose==1:
                         res = res_mp
-                        mult_arr = np.array([-1,1,1,1])
+                        mult_arr[0] = -1
                     elif choose==2:
                         res = res_pm
-                        mult_arr = np.array([1,-1,1,1])
+                        mult_arr[1] = -1
                     elif choose==3:
                         res = res_mm
-                        mult_arr = np.array([-1,-1,1,1])
+                        mult_arr[0] = -1
+                        mult_arr[1] = -1
                     else:
                         print("Some ambiguity in choose", eq, flush=True)
                         res = res_pp
@@ -224,48 +210,54 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                     res_p = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['+']), method="BFGS")
                     res_m = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['-']), method="BFGS")
 
+                    mult_arr = np.one(max_param)
                     if res_p['fun']<res_m['fun']:
                         res = res_p
-                        mult_arr = np.array([1,1,1,1])
                     elif res_p['fun']>res_m['fun']:
                         res = res_m
-                        mult_arr = np.array([-1,1,1,1])
+                        mult_arr[0] = -1
                     else:
-                        res = res_p     # Arbitrarily decide to take the +ve in cases where they're the same, but don't update mult_arr
+                        # Both give same. Choose positive (arbitrarily)
+                        res = res_p
                 else:
                     flag_three = True
                     inpt = np.random.uniform(pmin,pmax)
-                    res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 5000})    # Default=3000
+                    res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 5000})
 
             if np.isinf(res['fun']):
                 inf_count += 1
 
-            if inf_count==50 and np.isinf(chi2_min):        # If you get inf all of the first 50 times, consider this a failure
+            # Failure if first 50 all give inf
+            if inf_count==50 and np.isinf(chi2_min):
                 break
 
-            if res['fun']-chi2_min < -2.:     # negloglike has got better by 2, so reset the count to 0
+            # Reset count if log-like improves by 2
+            if res['fun']-chi2_min < -2.:
                 count_lowest=0
 
-            if abs(res['fun']-chi2_min) < 0.5:  # If we've ended up within 0.5 of the best value we say this run has converged to that
+            # If within 0.5 of lowest, say converged to that value
+            if abs(res['fun']-chi2_min) < 0.5:
                 count_lowest += 1
 
             if res['fun'] < chi2_min:
                 best = res
-                mult_arr_best = mult_arr        # If you're looking at 3 params this is just [1,1,1]
+                mult_arr_best = mult_arr
                 chi2_min = res['fun']
 
-            # We've converged the required number of times, so we call this a success
+            # Converged the required number of times, so a success
             if count_lowest==Nconv:
                 break
 
-            
-        if chi2_min < 1.e100:            # This means that some optimisation has happened, so we have something to print for params
+        if chi2_min < 1.e100:
+            # Optimisation happened. Print something
             if flag_three:
-                params = np.pad(np.array(best.x), (0, 4-len(best.x)))       # Params go in directly
+                params = np.pad(np.array(best.x), (0, max_param-len(best.x)))
             else:
-                params = np.pad(10.**np.array(best.x), (0, 4-len(best.x))) * mult_arr_best      # Params put in linear space and sign added back in
-                        
-        chi2_i = chi2_min       # This is after all the iterations, so it's the best we have; reduced chi2
+                # Params put in linear space and sign added back in
+                params = np.pad(10.**np.array(best.x), (0, max_param-len(best.x))) * mult_arr_best
+                 
+        # This is after all the iterations, so it's the best we have; reduced chi2
+        chi2_i = chi2_min
 
     except NameError:
         print(NameError)
@@ -277,9 +269,9 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
         try:
             if chi2_min < 1.e100:
                 if flag_three:
-                    params = np.pad(np.array(best.x), (0, 4-len(best.x)))   
+                    params = np.pad(np.array(best.x), (0, max_param-len(best.x)))
                 else:
-                    params = np.pad(10.**np.array(best.x), (0, 4-len(best.x))) * mult_arr_best
+                    params = np.pad(10.**np.array(best.x), (0, max_param-len(best.x))) * mult_arr_best
                 chi2_i = chi2_min
             else:
                 chi2_i = np.nan
@@ -287,7 +279,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
         except:
             chi2_i = np.nan
             params[:] = 0.
-    
+
     except Exception as e:
         print(e)
         return np.nan, params
@@ -314,9 +306,12 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
     """
 
     fcn_list_proc, _, _ = get_functions(comp, likelihood)
+    
+    # Set max param >=4 for backwards compatibility
+    max_param = int(max(4, np.floor((comp - 1) / 2)))
 
     chi2 = np.zeros(len(fcn_list_proc))     # This is now only for this proc
-    params = np.zeros([len(fcn_list_proc), 4])
+    params = np.zeros([len(fcn_list_proc), max_param])
     for i in range(len(fcn_list_proc)):           # Consider all possible complexities
         if rank == 0:
             print(rank, i, len(fcn_list_proc), flush=True)
@@ -329,7 +324,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
                                                     pmin, 
                                                     pmax, 
                                                     try_integration=try_integration,
-                                                    log_opt=log_opt)
+                                                    log_opt=log_opt,
+                                                    max_param=max_param)
                 except NameError:
                     if try_integration:
                         chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], 
@@ -338,14 +334,15 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
                                                     pmin, 
                                                     pmax, 
                                                     try_integration=False,
-                                                    log_opt=log_opt)
+                                                    log_opt=log_opt,
+                                                    max_param=max_param)
                     else:
                         raise NameError
         except:
             chi2[i] = np.nan
             params[i,:] = 0.
 
-    out_arr = np.transpose(np.vstack([chi2, params[:,0], params[:,1], params[:,2], params[:,3]]))
+    out_arr = np.transpose(np.vstack([chi2] + [params[:,i] for i in range(max_param)]))
 
     # Save the data for this proc in Partial
     np.savetxt(likelihood.temp_dir + '/chi2_comp'+str(comp)+'weights_'+str(rank)+'.dat', out_arr, fmt='%.7e')
@@ -357,6 +354,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
         os.system(string)
         string = 'rm ' + likelihood.temp_dir + '/chi2_comp'+str(comp)+'weights_*.dat'
         os.system(string)
+        
+    comm.Barrier()
 
     return
 

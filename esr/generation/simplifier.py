@@ -1259,13 +1259,18 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
                 all_subs[i][j] = dict(zip(k, v))
                 if not use_sympy:
                     all_subs[i][j] = str(all_subs[i][j])
-                
+    comm.Barrier()
+    
     all_subs = comm.gather(all_subs, root=0)
+    
     if rank == 0:
         all_subs = list(itertools.chain(*all_subs))
     if bcast_res:
         all_subs = comm.bcast(all_subs, root=0)
-    
+        # Fix MPI4PY bug for empty lists
+        if isinstance(all_subs, int):
+            all_subs = [[] for _ in range(all_subs)]
+
     return all_subs
     
 

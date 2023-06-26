@@ -33,15 +33,9 @@ def main(comp, likelihood, tmax=5, try_integration=False):
         
     """
 
-    def f4(x):
+    def fop(x):
         return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-
-    def f3(x):
-        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-
-    def f2(x):
-        return likelihood.negloglike(x,eq_numpy, integrated=integrated)
-
+        
     def f1(x):
         return likelihood.negloglike([x],eq_numpy, integrated=integrated)
         
@@ -49,10 +43,9 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     match_file = likelihood.fn_dir + "/compl_%i/matches_%i.txt"%(comp,comp)
     
     fcn_list_proc, data_start, data_end = test_all.get_functions(comp, likelihood, unique=False)
-    negloglike, param1, param2, param3, param4 = test_all_Fisher.load_loglike(comp, likelihood, data_start, data_end, split=False)
-
-    max_param = 4
-
+    negloglike, params_meas = test_all_Fisher.load_loglike(comp, likelihood, data_start, data_end, split=False)
+    max_param = params_meas.shape[1]
+    
     all_inv_subs_proc = simplifier.load_subs(invsubs_file, max_param)[data_start:data_end]
     matches_proc = np.atleast_1d(np.loadtxt(match_file).astype(int))[data_start:data_end]
 
@@ -62,11 +55,11 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     codelen = np.zeros(len(fcn_list_proc))              # Both of these are also just for this proc
     negloglike_all = np.zeros(len(fcn_list_proc))
     index_arr = np.zeros(len(fcn_list_proc))
-    params = np.zeros([len(fcn_list_proc), 4])
+    params = np.zeros([len(fcn_list_proc), max_param])
 
     for i in range(len(fcn_list_proc)):                 # The part of all eqs analysed by this proc
         if i%1000==0 and rank==0:
-            print(i)
+            print(i, len(fcn_list_proc))
 
         fcn_i = fcn_list_proc[i].replace('\'', '')
         
@@ -84,26 +77,14 @@ def main(comp, likelihood, tmax=5, try_integration=False):
 
         if nparams==0:
             continue
-        elif nparams==1:
-            k=1
-            measured = [param1[index]]
-        elif nparams==2:
-            k=2
-            measured = [param1[index], param2[index]]
-        elif nparams==3:
-            k=3
-            measured = [param1[index], param2[index], param3[index]]
-        elif nparams==4:
-            k=4
-            measured = [param1[index], param2[index], param3[index], param4[index]]
         else:
-            print("Bad number of params")
-            quit()
+            k = nparams
+            measured = params_meas[index,:nparams]
         
         fish_measured = all_fish[index,:]               # Access from the unique eqs all_fish array, common to all procs
-
+                
         try:
-            p, fish = simplifier.convert_params(measured, fish_measured, all_inv_subs_proc[i])
+            p, fish = simplifier.convert_params(measured, fish_measured, all_inv_subs_proc[i], n=max_param)
         except Exception as ex:
             codelen[i] = np.inf
             continue
@@ -133,15 +114,11 @@ def main(comp, likelihood, tmax=5, try_integration=False):
                 if k==1:
                     eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                     negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
-                elif k==2:
-                    eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
-                    negloglike_all[i] = f2(p)       # All params still here, just some of them might be 0
-                elif k==3:
-                    eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
-                    negloglike_all[i] = f3(p)
-                elif k==4:
-                    eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
-                    negloglike_all[i] = f4(p)
+                else:
+                    all_a = ' '.join([f'a{i}' for i in range(nparam)])
+                    all_a = list(sympy.symbols(all_a, real=True))
+                    eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+                    negloglike_all[i] = fop(p)
 
             except NameError:
                 if try_integration:
@@ -149,15 +126,11 @@ def main(comp, likelihood, tmax=5, try_integration=False):
                     if k==1:
                         eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                         negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
-                    elif k==2:
-                        eq_numpy = sympy.lambdify([x, a0, a1], eq, modules=["numpy"])
-                        negloglike_all[i] = f2(p)       # All params still here, just some of them might be 0
-                    elif k==3:
-                        eq_numpy = sympy.lambdify([x, a0, a1, a2], eq, modules=["numpy"])
-                        negloglike_all[i] = f3(p)
-                    elif k==4:
-                        eq_numpy = sympy.lambdify([x, a0, a1, a2, a3], eq, modules=["numpy"])
-                        negloglike_all[i] = f4(p)
+                    else:
+                        all_a = ' '.join([f'a{i}' for i in range(nparam)])
+                        all_a = list(sympy.symbols(all_a, real=True))
+                        eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+                        negloglike_all[i] = fop(p)
                 else:
                     negloglike_all[i] = np.nan
 
@@ -174,24 +147,25 @@ def main(comp, likelihood, tmax=5, try_integration=False):
             
             fish = fish[Nsteps>=1]     # Only consider these parameters in the codelen
             p = p[Nsteps>=1]
-        
+            
         try:        # If p was an array, we can make a list out of it
             list_p = list(p)
-            params[i,:] = np.pad(p, (0, 4-len(p)))
+            params[i,:] = np.pad(p, (0, max_param-len(p)))
         except:     # p is either a number or nothing
             if p:   # p is a number
-                params[i,:] = np.array([p, 0, 0, 0])
+                params[i,:] = 0
+                params[i,0] = p
             else:
-                params[i,:] = np.zeros(4)
+                params[i,:] = np.zeros(max_param)
         
-        assert len(params[i,:])==4
+        assert len(params[i,:])==max_param
         
         try:
             codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish) + np.log(abs(np.array(p))) )
         except:
             codelen[i] = np.nan
 
-    out_arr = np.transpose(np.vstack([negloglike_all, codelen, index_arr, params[:,0], params[:,1], params[:,2], params[:,3]]))
+    out_arr = np.transpose(np.vstack([negloglike_all, codelen, index_arr] + [params[:,i] for i in range(max_param)]))
 
     np.savetxt(likelihood.temp_dir + '/codelen_matches_'+str(comp)+'_'+str(rank)+'.dat', out_arr, fmt='%.7e')        # Save the data for this proc in Partial
 
@@ -202,6 +176,8 @@ def main(comp, likelihood, tmax=5, try_integration=False):
         os.system(string)
         string = 'rm ' + likelihood.temp_dir + '/codelen_matches_'+str(comp)+'_*.dat'
         os.system(string)
+        
+    comm.Barrier()
         
     return
 

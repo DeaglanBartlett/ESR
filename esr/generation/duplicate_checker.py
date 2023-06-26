@@ -269,6 +269,9 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         print('\nChecking Results', flush=True)
     if compl > 2:
         simplifier.check_results(dirname, compl)
+        
+    sys.stdout.flush()
+    comm.Barrier()
 
     return
 
