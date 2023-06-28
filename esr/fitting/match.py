@@ -32,6 +32,8 @@ def main(comp, likelihood, tmax=5, try_integration=False):
         None
         
     """
+    if likelihood.is_mse:
+        raise ValueError('Cannot use MSE with description length')
 
     def fop(x):
         return likelihood.negloglike(x,eq_numpy, integrated=integrated)

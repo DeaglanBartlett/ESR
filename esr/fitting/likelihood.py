@@ -42,6 +42,9 @@ class Likelihood:
         self.temp_dir = self.base_out_dir + "/partial_" + run_name
         self.out_dir = self.base_out_dir + "/output_" + run_name
         self.fig_dir = self.base_out_dir + "/figs_" + run_name
+        
+        # Warning to not use MSE for DL
+        self.is_mse = False
 
     def get_pred(self, x, a, eq_numpy, **kwargs):
         """Return the predicted y(x)
@@ -390,12 +393,11 @@ class MSE(Likelihood):
         
         super().__init__(data_file, data_file, run_name, data_dir=data_dir)
         self.ylabel = r'$y$'    # for plotting
-        df = np.array(pd.read_table(self.data_file, sep="\t"))
-        self.xvar = df[:,0]
-        self.yvar = df[:,1]
+        self.xvar, self.yvar, self.yerr = np.loadtxt(self.data_file, unpack=True)[:,:2]
         self.yerr = 0.
         
-        warnings.warn("You are using the MSE class. SE is NOT a likelihood in the probabilistic sense. It should not be used for MDL calculations as the answer will be nonesense since an uncertainty is required for MDL to have meaning.")
+        warnings.warn("You are using the MSE class. MSE is NOT a likelihood in the probabilistic sense. It should not be used for MDL calculations as the answer will be nonesense since an uncertainty is required for MDL to have meaning.")
+        self.is_mse = True # Warning to not use MSE for DL
 
 
     def negloglike(self, a, eq_numpy, **kwargs):

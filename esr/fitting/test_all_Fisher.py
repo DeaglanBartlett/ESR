@@ -197,6 +197,9 @@ def main(comp, likelihood, tmax=5, try_integration=False):
         None
     
     """
+    
+    if likelihood.is_mse:
+        raise ValueError('Cannot use MSE with description length')
 
     if comp>=8:
         sys.setrecursionlimit(2000 + 500 * (comp - 8))

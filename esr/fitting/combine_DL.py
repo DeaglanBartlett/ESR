@@ -22,6 +22,8 @@ def main(comp, likelihood):
         None
     
     """
+    if likelihood.is_mse:
+        raise ValueError('Cannot use MSE with description length')
 
     unifn_file = likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt"%(comp,comp)
     allfn_file = likelihood.fn_dir + "/compl_%i/all_equations_%i.txt"%(comp,comp)

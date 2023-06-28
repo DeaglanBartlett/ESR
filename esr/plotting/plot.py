@@ -19,6 +19,7 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
 
     all_f = os.listdir(dirname)
     all_f = [f for f in all_f if f.startswith('final_')]
+    all_f.sort()
     print(all_f)
     all_comp = [int(f[len('final_'):-len('.dat')]) for f in all_f]
     all_logL = np.empty(len(all_comp))
@@ -83,8 +84,9 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
     
     fig.tight_layout()
     fig.savefig(dirname + '/' + savename, bbox_inches='tight')
-    
-    fig.clf()
-    plt.close(fig)
+    print(dirname + '/' + savename)
+#    fig.clf()
+#    plt.close(fig)
+    plt.show()
         
     return
