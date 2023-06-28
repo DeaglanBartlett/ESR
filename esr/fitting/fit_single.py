@@ -46,6 +46,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
     if likelihood.is_mse:
         print('Not computing DL as using MSE')
         DL = np.nan
+        negloglike = chi2
     else:
         # (3) Obtain the Fisher matrix for this function
         fcn, eq, integrated = likelihood.run_sympify(fstr,
