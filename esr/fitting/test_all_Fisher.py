@@ -127,7 +127,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
             Fisher_diag_tmp = np.array([Hmat[i,i] for i in range(nparam)])
             Delta_tmp = np.sqrt(12./Fisher_diag_tmp)
             Nsteps_tmp = abs(np.array(theta_ML))/Delta_tmp
-            
+
             if (np.sum(Fisher_diag_tmp <= 0.) <= 0) and (np.sum(np.isnan(Fisher_diag_tmp)) <= 0) and (np.sum(np.isinf(Fisher_diag)) <= 0) and (np.sum(Nsteps_tmp<1)<=0):
                 print("Succeeded at rectifying Fisher:", fcn_i, d2, meth, Fisher_diag_tmp, theta_ML, Delta_tmp, Nsteps_tmp, flush=True)
                 Fisher_diag = Fisher_diag_tmp

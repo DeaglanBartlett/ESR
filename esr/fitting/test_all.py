@@ -102,7 +102,7 @@ def get_functions(comp, likelihood, unique=True):
     return fcn_list[data_start:data_end], data_start, data_end
     
     
-def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log_opt=False, max_param=4):
+def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log_opt=False, max_param=4, Niter=30, Nconv=5):
     """Optimise the parameters of a function to fit data
     
     Args:
@@ -114,6 +114,8 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
         :max_param (int, default=4): The maximum number of parameters considered. This sets the shapes of arrays used.
+        :Niter (int, default=30): Maximum number of parameter optimisation iterations to attempt.
+        :Nconv (int, default=5): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters
         
     Returns:
         :chi2_i (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
@@ -122,9 +124,6 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
     """
 
     xvar, yvar = likelihood.xvar, likelihood.yvar
-
-    Niter = 30
-    Nconv = 5
     
     nparam = simplifier.count_params([fcn_i], max_param)[0]
     params = np.zeros(max_param)
@@ -223,6 +222,9 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                     flag_three = True
                     inpt = np.random.uniform(pmin,pmax)
                     res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 5000})
+                    
+            if not res.success:
+                continue
 
             if np.isinf(res['fun']):
                 inf_count += 1
@@ -247,7 +249,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
             # Converged the required number of times, so a success
             if count_lowest==Nconv:
                 break
-
+        
         if chi2_min < 1.e100:
             # Optimisation happened. Print something
             if flag_three:
@@ -255,6 +257,8 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
             else:
                 # Params put in linear space and sign added back in
                 params = np.pad(10.**np.array(best.x), (0, max_param-len(best.x))) * mult_arr_best
+        elif not np.isfinite(chi2_min):
+            print('Failed to find parameters for function:', fcn_i)
                  
         # This is after all the iterations, so it's the best we have; reduced chi2
         chi2_i = chi2_min

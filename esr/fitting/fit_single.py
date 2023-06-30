@@ -6,7 +6,7 @@ from esr.fitting.test_all_Fisher import convert_params
 import esr.generation.generator as generator
 import esr.generation.simplifier as simplifier
 
-def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False):
+def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False, Niter=30, Nconv=5):
     """Run end-to-end fitting of function for a single function
     
     Args:
@@ -18,6 +18,8 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
         :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :verbose (bool, default=True): Whether to print results (True) or not (False)
+        :Niter (int, default=30): Maximum number of parameter optimisation iterations to attempt.
+        :Nconv (int, default=5): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters
     
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
@@ -41,7 +43,9 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
                             pmin,
                             pmax,
                             try_integration=try_integration,
-                            max_param=max_param)
+                            max_param=max_param,
+                            Niter=Niter,
+                            Nconv=Nconv)
                             
     if likelihood.is_mse:
         print('Not computing DL as using MSE')
@@ -54,7 +58,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
                                                 try_integration=try_integration)
         params, negloglike, deriv, codelen = convert_params(fcn, eq, integrated, params, likelihood, chi2, max_param=max_param)
         if verbose:
-            print('theta_ML:', params)
+            print('\ntheta_ML:', params)
             print('Residuals:', negloglike, chi2)
             print('Parameter:', codelen)
 
