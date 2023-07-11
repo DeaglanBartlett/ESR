@@ -393,7 +393,7 @@ class MSE(Likelihood):
         
         super().__init__(data_file, data_file, run_name, data_dir=data_dir)
         self.ylabel = r'$y$'    # for plotting
-        self.xvar, self.yvar, self.yerr = np.loadtxt(self.data_file, unpack=True)[:,:2]
+        self.xvar, self.yvar, self.yerr = np.loadtxt(self.data_file, unpack=True)
         self.yerr = 0.
         
         warnings.warn("You are using the MSE class. MSE is NOT a likelihood in the probabilistic sense. It should not be used for MDL calculations as the answer will be nonesense since an uncertainty is required for MDL to have meaning.")
