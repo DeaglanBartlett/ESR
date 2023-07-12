@@ -46,7 +46,7 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
     if do_DL and do_logL:
         ax2 = ax1.twinx()
         ax1.plot(all_comp, all_DL, marker='.', color=cm(0), markersize=5)
-        ax1.plot(all_comp, all_logL, marker='.', color=cm(1), markersize=5)
+        ax2.plot(all_comp, all_logL, marker='.', color=cm(1), markersize=5)
         
         ax1.set_ylabel(r'$\Delta L \left( D \right)$')
         ax2.set_ylabel(r'$ \left| \Delta \log\mathcal{L} \right|$')
