@@ -175,6 +175,8 @@ def main(comp, likelihood):
 
             negloglike_previous = negloglike_sort[i]
         print(ptab)
+        with open(likelihood.out_dir + '/results_pretty_'+str(comp)+'.txt', 'w') as f:
+            print(ptab, file=f)
     
     comm.Barrier()
         
