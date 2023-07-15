@@ -130,16 +130,22 @@ def main(comp, likelihood):
         DL_min = DL_min[mask]
         xarr = xarr[mask]
 
-        arr_sort = np.transpose( sorted( np.transpose(np.vstack([DL_min, xarr])), key = lambda x: x[0] ) )     # Sort by DL but keep track of array indices
-        DL_sort = arr_sort[0,:]
-        indices_sort = arr_sort[1,:].astype(int)
+        if len(DL_min) > 0:
+            arr_sort = np.transpose( sorted( np.transpose(np.vstack([DL_min, xarr])), key = lambda x: x[0] ) )     # Sort by DL but keep track of array indices
+            DL_sort = arr_sort[0,:]
+            indices_sort = arr_sort[1,:].astype(int)
 
-        params_sort = params_min[indices_sort,:]
-        fcn_min_sort = [fcn_min[i] for i in indices_sort]
+            params_sort = params_min[indices_sort,:]
+            fcn_min_sort = [fcn_min[i] for i in indices_sort]
 
-        negloglike_sort = negloglike_min[indices_sort]
-        codelen_sort = codelen_min[indices_sort]
-        aifeyn_sort = aifeyn_min[indices_sort]
+            negloglike_sort = negloglike_min[indices_sort]
+            codelen_sort = codelen_min[indices_sort]
+            aifeyn_sort = aifeyn_min[indices_sort]
+        else:
+            negloglike_sort = []
+            codelen_sort = []
+            aifeyn_sort = []
+            DL_sort = []
 
         if os.path.exists(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat'):           # Start this file from scratch here
             os.remove(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat')
@@ -174,7 +180,12 @@ def main(comp, likelihood):
                 writer.writerow([i, fcn_min_sort[i], DL_sort[i], Prel[i], negloglike_sort[i], codelen_sort[i], aifeyn_sort[i]] + [params_sort[i,j] for j in range(params.shape[1])])
 
             negloglike_previous = negloglike_sort[i]
+        
+        if len(DL_sort) == 0:
+            os.system("touch " + likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat')
+        
         print(ptab)
+        
         with open(likelihood.out_dir + '/results_pretty_'+str(comp)+'.txt', 'w') as f:
             print(ptab, file=f)
     

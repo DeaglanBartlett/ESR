@@ -49,11 +49,13 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
         print('Making:', likelihood.fig_dir)
         os.mkdir(likelihood.fig_dir)
 
-#    max_param = 4
-
     with open(likelihood.out_dir + '/final_'+str(comp)+'.dat', "r") as f:
         reader = csv.reader(f, delimiter=';')
         data = [row for row in reader]
+    
+    if len(data) == 0:
+        print("No functions with finite DL found, so will not make figure")
+        return
     
     max_param = len(data[0]) - 7
         
@@ -61,7 +63,6 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     params = np.array([d[-max_param:] for d in data], dtype=float)
     DL = np.array([d[2] for d in data], dtype=float)
     DL_min = np.amin(DL[np.isfinite(DL)])
-    print('MIN', DL_min)
     alpha = DL_min - DL
     alpha = np.exp(alpha)
     m = (alpha > vmin)
