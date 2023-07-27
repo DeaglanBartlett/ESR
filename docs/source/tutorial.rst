@@ -100,6 +100,29 @@ The following script initially loads the cosmic chronometer data then fits the f
 							cc_like, 
 							verbose=True)
 
+
+One can also fit the function directly from writing it as a string. This will convert
+the string to a list of labels, which are also returned. Note that this conversion
+if not guaranteed to produce the tree representation with the shortest description
+length, but does provide an upper limit on the DL of a function.
+
+.. code-block:: python
+
+        from esr.fitting.fit_single import fit_from_string
+        from esr.fitting.likelihood import CCLikelihood
+
+        cc_like = CCLikelihood()
+
+        basis_functions = [["x", "a"],  # type0
+                        ["inv"],  # type1
+                        ["+", "*", "-", "/", "pow"]]  # type2
+
+        logl_lcdm_cc, dl_lcdm_cc, labels = single_function("a0 + a1 * x ** 3",
+                                                        basis_functions,
+                                                        cc_like,
+                                                        verbose=True)
+
+
 Custom Likelihoods
 ------------------
 
