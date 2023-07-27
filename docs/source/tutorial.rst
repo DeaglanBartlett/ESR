@@ -117,7 +117,7 @@ length, but does provide an upper limit on the DL of a function.
                         ["inv"],  # type1
                         ["+", "*", "-", "/", "pow"]]  # type2
 
-        logl_lcdm_cc, dl_lcdm_cc, labels = single_function("a0 + a1 * x ** 3",
+        logl_lcdm_cc, dl_lcdm_cc, labels = fit_from_string("a0 + a1 * x ** 3",
                                                         basis_functions,
                                                         cc_like,
                                                         verbose=True)
