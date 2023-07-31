@@ -291,7 +291,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
     return chi2_i, params
     
     
-def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_opt=False):
+def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_opt=False, Niter=30, Nconv=5):
     """Optimise all functions for a given complexity and save results to file.
     
     This can optimise in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
@@ -303,6 +303,9 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
         :pmin (float, default=0.): minimum value for each parameter to considered when generating initial guess
         :pmax (float, default=3.): maximum value for each parameter to considered when generating initial guess
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
+        :Niter (int, default=30): Maximum number of parameter optimisation iterations to attempt.
+        :Nconv (int, default=5): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters
         
     Returns:
         None
@@ -329,7 +332,9 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
                                                     pmax, 
                                                     try_integration=try_integration,
                                                     log_opt=log_opt,
-                                                    max_param=max_param)
+                                                    max_param=max_param,
+                                                    Niter=Niter,
+                                                    Nconv=Nconv)
                 except NameError:
                     if try_integration:
                         chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], 
@@ -339,7 +344,9 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
                                                     pmax, 
                                                     try_integration=False,
                                                     log_opt=log_opt,
-                                                    max_param=max_param)
+                                                    max_param=max_param,
+                                                    Niter=Niter,
+                                                    Nconv=Nconv)
                     else:
                         raise NameError
         except:
