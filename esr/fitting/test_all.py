@@ -102,8 +102,13 @@ def get_functions(comp, likelihood, unique=True):
     return fcn_list[data_start:data_end], data_start, data_end
     
     
-def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log_opt=False, max_param=4, Niter=30, Nconv=5):
+def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log_opt=False, max_param=4, Niter_params=[40,60], Nconv_params=[-5,20]):
     """Optimise the parameters of a function to fit data
+    
+    The list of parameters, P, passed as Niter_params and Nconv_params compute these values, N, to be
+    N = P[0] + P[1] * nparam + P[2] * nparam ** 2 + ...
+    where nparam is the number of parameters of the function. The order of the polynomial is determined by
+    the length of P, so P can be arbirary in length.
     
     Args:
         :fcn_i (str): string representing function we wish to fit to data
@@ -114,8 +119,8 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
         :max_param (int, default=4): The maximum number of parameters considered. This sets the shapes of arrays used.
-        :Niter (int, default=30): Maximum number of parameter optimisation iterations to attempt.
-        :Nconv (int, default=5): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters
+        :Niter_params (list, default=[40, 60]): Parameters determining maximum number of parameter optimisation iterations to attempt.
+        :Nconv_params (list, default=[-5, 20]): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters. These parameters determine Nconv.
         
     Returns:
         :chi2_i (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
@@ -127,6 +132,11 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
     
     nparam = simplifier.count_params([fcn_i], max_param)[0]
     params = np.zeros(max_param)
+    
+    Niter = int(np.sum(nparam ** np.arange(len(Niter_params)) * np.array(Niter_params)))
+    Nconv = int(np.sum(nparam ** np.arange(len(Nconv_params)) * np.array(Nconv_params)))
+    if (Nconv <= 0) or (Niter <= 0) or (Nconv > Niter):
+        raise ValueError("Nconv and/or Niter have unacceptable values")
     
     try:
         fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
@@ -291,10 +301,15 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
     return chi2_i, params
     
     
-def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_opt=False, Niter=30, Nconv=5):
+def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_opt=False, Niter_params=[40,60], Nconv_params=[-5,20]):
     """Optimise all functions for a given complexity and save results to file.
     
     This can optimise in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
+    
+    The list of parameters, P, passed as Niter_params and Nconv_params compute these values, N, to be
+    N = P[0] + P[1] * nparam + P[2] * nparam ** 2 + ...
+    where nparam is the number of parameters of the function. The order of the polynomial is determined by
+    the length of P, so P can be arbirary in length.
     
     Args:
         :comp (int): complexity of functions to consider
@@ -304,8 +319,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
         :pmax (float, default=3.): maximum value for each parameter to considered when generating initial guess
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
-        :Niter (int, default=30): Maximum number of parameter optimisation iterations to attempt.
-        :Nconv (int, default=5): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters
+        :Niter_params (list, default=[40, 60]): Parameters determining maximum number of parameter optimisation iterations to attempt.
+        :Nconv_params (list, default=[-5, 20]): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters. These parameters determine Nconv.
         
     Returns:
         None
@@ -333,8 +348,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
                                                     try_integration=try_integration,
                                                     log_opt=log_opt,
                                                     max_param=max_param,
-                                                    Niter=Niter,
-                                                    Nconv=Nconv)
+                                                    Niter_params=Niter_params,
+                                                    Nconv_params=Nconv_params)
                 except NameError:
                     if try_integration:
                         chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], 
@@ -345,8 +360,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
                                                     try_integration=False,
                                                     log_opt=log_opt,
                                                     max_param=max_param,
-                                                    Niter=Niter,
-                                                    Nconv=Nconv)
+                                                    Niter_params=Niter_params,
+                                                    Nconv_params=Nconv_params)
                     else:
                         raise NameError
         except:

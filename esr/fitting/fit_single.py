@@ -61,8 +61,8 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
                             pmax,
                             try_integration=try_integration,
                             max_param=max_param,
-                            Niter=Niter,
-                            Nconv=Nconv,
+                            Niter_params=[Niter],
+                            Nconv_params=[Nconv],
                             log_opt=log_opt)
                             
     if likelihood.is_mse:
