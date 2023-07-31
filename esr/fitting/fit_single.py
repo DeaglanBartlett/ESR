@@ -22,7 +22,7 @@ def is_float(string):
     except ValueError:
         return False
 
-def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False, Niter=30, Nconv=5):
+def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False, Niter=30, Nconv=5, log_opt=False):
     """Run end-to-end fitting of function for a single function
     
     Args:
@@ -36,6 +36,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
         :verbose (bool, default=True): Whether to print results (True) or not (False)
         :Niter (int, default=30): Maximum number of parameter optimisation iterations to attempt.
         :Nconv (int, default=5): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters
+        :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
     
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
@@ -61,7 +62,8 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
                             try_integration=try_integration,
                             max_param=max_param,
                             Niter=Niter,
-                            Nconv=Nconv)
+                            Nconv=Nconv,
+                            log_opt=log_opt)
                             
     if likelihood.is_mse:
         print('Not computing DL as using MSE')
@@ -92,7 +94,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
     return negloglike, DL
     
     
-def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False, Niter=30, Nconv=5, maxvar=20):
+def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False, Niter=30, Nconv=5, maxvar=20, log_opt=False):
     """Run end-to-end fitting of function for a single function, given as a string. Note that this is not guaranteed to find the optimimum representation as a tree, so there could be a lower description-length representation of the function
     
     Args:
@@ -107,6 +109,7 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, tr
         :Niter (int, default=30): Maximum number of parameter optimisation iterations to attempt.
         :Nconv (int, default=5): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters
         :maxvar (int): The maximum number of variables which could appear in the function
+        :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
     
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
@@ -156,7 +159,8 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, tr
             try_integration=try_integration,
             verbose=verbose,
             Niter=Niter,
-            Nconv=Nconv
+            Nconv=Nconv,
+            log_opt=log_opt,
     )
 
     return negloglike, DL, labels
