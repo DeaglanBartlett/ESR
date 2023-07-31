@@ -15,18 +15,11 @@ import os
 
 import esr.generation.utils as utils
 from esr.generation.custom_printer import ESRPrinter
+from esr.fitting.sympy_symbols import *
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
-
-a, b = sympy.symbols('a b', real=True)
-inv = sympy.Lambda(a, 1/a)
-square = sympy.Lambda(a, a*a)
-cube = sympy.Lambda(a, a*a*a)
-pow_abs = sympy.Lambda((a,b), sympy.Pow(sympy.Abs(a, evaluate=False), b))
-sqrt_abs = sympy.Lambda(a, sympy.sqrt(sympy.Abs(a, evaluate=False)))
-log_abs = sympy.Lambda(a, sympy.log(sympy.Abs(a, evaluate=False)))
 
 class TimeoutException(Exception): pass
 
