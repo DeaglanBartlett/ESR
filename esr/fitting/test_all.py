@@ -192,7 +192,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                     res_mm = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['-','-']), method="BFGS")
                 
                     choose = np.argmin([res_pp['fun'], res_mp['fun'], res_pm['fun'], res_mm['fun']])
-                    mult_arr = np.one(max_param)
+                    mult_arr = np.ones(max_param)
                     if choose==0:
                         res = res_pp
                     elif choose==1:
@@ -219,7 +219,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                     res_p = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['+']), method="BFGS")
                     res_m = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, ['-']), method="BFGS")
 
-                    mult_arr = np.one(max_param)
+                    mult_arr = np.ones(max_param)
                     if res_p['fun']<res_m['fun']:
                         res = res_p
                     elif res_p['fun']>res_m['fun']:
