@@ -420,14 +420,7 @@ def string_to_expr(s, kern=False, evaluate=False, locs=None):
     s = s.replace('*^', '*10^')
     
     if locs is None:
-        locs = {"inv": inv,
-                "square": square,
-                "cube": cube,
-                "sqrt": sqrt,
-                "log": log,
-                "pow": pow,
-                "x": x
-                }
+        locs = sympy_locs
     
     if kern:
         expr = kernS(s)
