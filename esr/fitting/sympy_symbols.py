@@ -18,3 +18,19 @@ pow = sympy.Lambda((a,b), sympy.Pow(sympy.Abs(a, evaluate=False), b))
 pow_abs = sympy.Lambda((a,b), sympy.Pow(sympy.Abs(a, evaluate=False), b))
 sqrt_abs = sympy.Lambda(a, sympy.sqrt(sympy.Abs(a, evaluate=False)))
 log_abs = sympy.Lambda(a, sympy.log(sympy.Abs(a, evaluate=False)))
+
+log10_abs = sympy.Lambda(a, sympy.log(sympy.Abs(a, evaluate=False), 10))
+tenexp = sympy.Lambda(a, sympy.Pow(10, a))
+
+
+sympy_locs = {"inv": inv,
+            "square": square,
+            "cube": cube,
+            "pow": pow_abs,
+            "Abs": sympy.Abs,
+            "x":x,
+            "sqrt_abs":sqrt_abs,
+            "log_abs":log_abs,
+            "log10_abs":log10_abs,
+            "tenexp":tenexp
+            }

@@ -1,0 +1,1738 @@
+pow(10,(pow(10,(pow(10,(pow(10,x)))))))
+pow(10,(pow(10,(pow(10,(1/x))))))
+pow(10,(pow(10,x)))
+pow(10,(pow(10,(pow(10,(-x))))))
+pow(10,(pow(10,x)))
+pow(10,(pow(10,(log(10)/log(x)))))
+pow(10,(pow(10,x)))
+pow(10,(1/x))
+exp(Abs(log(x)))
+pow(10,(pow(10,(-pow(10,x)))))
+pow(10,(pow(10,(-1/x))))
+pow(10,(1/x))
+pow(10,(pow(10,x)))
+pow(10,(1/x))
+x
+pow(10,(log(10)/log(pow(10,x))))
+pow(10,(log(10)/log(1/x)))
+pow(10,(log(10)/log(Abs(log(x))/log(10))))
+pow(10,(pow(10,x)))
+pow(10,(1/x))
+x
+pow(10,(-x))
+x
+log(10)/Abs(log(x))
+Abs(log(pow(10,x)))/log(10)
+Abs(log(1/x))/log(10)
+Abs(log(Abs(log(x))/log(10)))/log(10)
+pow(10,(-pow(10,(pow(10,x)))))
+pow(10,(-pow(10,(1/x))))
+pow(10,(-x))
+pow(10,(-1/pow(10,x)))
+pow(10,(-x))
+pow(10,(-log(10)/log(x)))
+pow(10,(-x))
+x
+log(10)/Abs(log(x))
+pow(10,(pow(10,x)))
+pow(10,(1/x))
+x
+pow(10,(-x))
+x
+log(10)/log(x)
+log(pow(10,x))/log(10)
+log(1/x)/log(10)
+log(Abs(log(x))/log(10))/log(10)
+log(10)/log(pow(10,(pow(10,x))))
+log(10)/log(pow(10,(1/x)))
+log(10)/log(x)
+log(10)/log(pow(10,(-x)))
+log(10)/log(x)
+log(10)/log(log(10)/Abs(log(x)))
+log(10)/log(Abs(log(pow(10,x)))/log(10))
+log(10)/log(Abs(log(1/x))/log(10))
+log(10)/log(Abs(log(Abs(log(x))/log(10)))/log(10))
+log(pow(10,(pow(10,(pow(10,x))))))/log(10)
+log(pow(10,(pow(10,(1/x)))))/log(10)
+log(pow(10,x))/log(10)
+log(pow(10,(pow(10,(-x)))))/log(10)
+log(pow(10,x))/log(10)
+log(pow(10,(log(10)/log(x))))/log(10)
+log(pow(10,x))/log(10)
+log(1/x)/log(10)
+log(Abs(Abs(log(x)))/log(10))/log(10)
+log(pow(10,(-pow(10,x))))/log(10)
+log(pow(10,(-1/x)))/log(10)
+log(1/x)/log(10)
+log(pow(10,x))/log(10)
+log(1/x)/log(10)
+log(Abs(log(x))/log(10))/log(10)
+log(log(10)/Abs(log(pow(10,x))))/log(10)
+log(log(10)/Abs(log(1/x)))/log(10)
+log(log(10)/Abs(log(Abs(log(x))/log(10))))/log(10)
+log(Abs(log(pow(10,(pow(10,x)))))/log(10))/log(10)
+log(Abs(log(pow(10,(1/x))))/log(10))/log(10)
+log(Abs(log(x))/log(10))/log(10)
+log(Abs(log(pow(10,(-x))))/log(10))/log(10)
+log(Abs(log(x))/log(10))/log(10)
+log(Abs(log(log(10)/Abs(log(x))))/log(10))/log(10)
+log(Abs(log(Abs(log(pow(10,x)))/log(10)))/log(10))/log(10)
+log(Abs(log(Abs(log(1/x))/log(10)))/log(10))/log(10)
+log(Abs(log(Abs(log(Abs(log(x))/log(10)))/log(10)))/log(10))/log(10)
+pow(10,(pow(10,(pow(10,(pow(10,a0)))))))
+pow(10,(pow(10,(pow(10,(1/a0))))))
+pow(10,(pow(10,Abs(a0))))
+pow(10,(pow(10,(pow(10,(-a0))))))
+pow(10,(pow(10,a0)))
+pow(10,(pow(10,(log(10)/log(Abs(a0))))))
+pow(10,(pow(10,a0)))
+pow(10,(1/Abs(a0)))
+exp(Abs(log(Abs(a0))))
+pow(10,(pow(10,(-pow(10,a0)))))
+pow(10,(pow(10,(-1/a0))))
+pow(10,(1/Abs(a0)))
+pow(10,(pow(10,a0)))
+pow(10,(1/a0))
+Abs(a0)
+pow(10,(log(10)/log(pow(10,a0))))
+pow(10,(log(10)/log(1/Abs(a0))))
+pow(10,(log(10)/log(Abs(log(Abs(a0)))/log(10))))
+pow(10,(pow(10,a0)))
+pow(10,(1/a0))
+Abs(a0)
+pow(10,(-a0))
+Abs(a0)
+log(10)/Abs(log(Abs(a0)))
+Abs(log(pow(10,a0)))/log(10)
+Abs(log(1/Abs(a0)))/log(10)
+Abs(log(Abs(log(Abs(a0)))/log(10)))/log(10)
+pow(10,(-pow(10,(pow(10,a0)))))
+pow(10,(-pow(10,(1/a0))))
+pow(10,(-Abs(a0)))
+pow(10,(-1/pow(10,a0)))
+pow(10,(-a0))
+pow(10,(-log(10)/log(Abs(a0))))
+pow(10,(-a0))
+Abs(a0)
+log(10)/Abs(log(Abs(a0)))
+pow(10,(pow(10,a0)))
+pow(10,(1/a0))
+Abs(a0)
+pow(10,(-a0))
+a0
+log(10)/log(Abs(a0))
+log(pow(10,a0))/log(10)
+log(1/Abs(a0))/log(10)
+log(Abs(log(Abs(a0)))/log(10))/log(10)
+log(10)/log(pow(10,(pow(10,a0))))
+log(10)/log(pow(10,(1/a0)))
+log(10)/log(Abs(a0))
+log(10)/log(pow(10,(-a0)))
+log(10)/log(Abs(a0))
+log(10)/log(log(10)/Abs(log(Abs(a0))))
+log(10)/log(Abs(log(pow(10,a0)))/log(10))
+log(10)/log(Abs(log(1/Abs(a0)))/log(10))
+log(10)/log(Abs(log(Abs(log(Abs(a0)))/log(10)))/log(10))
+log(pow(10,(pow(10,(pow(10,a0))))))/log(10)
+log(pow(10,re(pow(10,(1/a0)))))/log(10)
+log(pow(10,Abs(a0)))/log(10)
+log(pow(10,(pow(10,(-a0)))))/log(10)
+log(pow(10,a0))/log(10)
+log(pow(10,(log(10)/log(Abs(a0)))))/log(10)
+log(pow(10,a0))/log(10)
+log(1/Abs(a0))/log(10)
+log(Abs(Abs(log(Abs(a0))))/log(10))/log(10)
+log(pow(10,(-pow(10,a0))))/log(10)
+log(pow(10,(-1/a0)))/log(10)
+log(1/Abs(a0))/log(10)
+log(pow(10,a0))/log(10)
+log(1/Abs(a0))/log(10)
+log(Abs(log(Abs(a0)))/log(10))/log(10)
+log(log(10)/Abs(log(pow(10,a0))))/log(10)
+log(log(10)/Abs(log(1/Abs(a0))))/log(10)
+log(log(10)/Abs(log(Abs(log(Abs(a0)))/log(10))))/log(10)
+log(Abs(log(pow(10,(pow(10,a0)))))/log(10))/log(10)
+log(Abs(log(pow(10,(1/a0))))/log(10))/log(10)
+log(Abs(log(Abs(a0)))/log(10))/log(10)
+log(Abs(log(pow(10,(-a0))))/log(10))/log(10)
+log(Abs(log(Abs(a0)))/log(10))/log(10)
+log(Abs(log(log(10)/Abs(log(Abs(a0)))))/log(10))/log(10)
+log(Abs(log(Abs(log(pow(10,a0)))/log(10)))/log(10))/log(10)
+log(Abs(log(Abs(log(1/Abs(a0)))/log(10)))/log(10))/log(10)
+log(Abs(log(Abs(log(Abs(log(Abs(a0)))/log(10)))/log(10)))/log(10))/log(10)
+pow(10,(pow(10,(2*x))))
+pow(10,(pow(10,(x**2))))
+10
+10000000000
+pow(10,(pow(10,(pow(x,x)))))
+pow(10,(1/(2*x)))
+pow(10,(x**(-2)))
+nan
+10
+pow(10,(pow(x,(-x))))
+2*x
+x**2
+nan
+1
+pow(x,x)
+pow(10,(-2*x))
+pow(10,(-x**2))
+1
+1/10
+pow(10,(-pow(x,x)))
+2*x
+x**2
+0
+1
+pow(x,x)
+log(10)/log(2*x)
+log(10)/log(x**2)
+0
+zoo
+log(10)/log(pow(x,x))
+log(pow(10,(2*x)))/log(10)
+log(pow(10,(x**2)))/log(10)
+0
+1
+log(pow(10,(pow(x,x))))/log(10)
+log(1/(2*x))/log(10)
+log(x**(-2))/log(10)
+oo
+0
+log(pow(x,(-x)))/log(10)
+log(Abs(log(2*x))/log(10))/log(10)
+log(Abs(log(x**2))/log(10))/log(10)
+oo
+zoo
+log(Abs(log(pow(x,x)))/log(10))/log(10)
+pow(10,(pow(10,(a0 + x))))
+pow(10,(pow(10,(a0*x))))
+pow(10,(pow(10,(-a0 + x))))
+pow(10,(pow(10,(x/a0))))
+pow(10,(pow(10,(pow(x,a0)))))
+pow(10,(1/(a0 + x)))
+pow(10,(1/(a0*x)))
+pow(10,(1/(-a0 + x)))
+pow(10,(a0/x))
+pow(10,(pow(x,(-a0))))
+Abs(a0 + x)
+x*Abs(a0)
+Abs(a0 - x)
+x*Abs(1/a0)
+pow(x,a0)
+pow(10,(-a0 - x))
+pow(10,(-a0*x))
+pow(10,(a0 - x))
+pow(10,(-x/a0))
+pow(10,(-pow(x,a0)))
+a0 + x
+a0*x
+-a0 + x
+x/a0
+pow(x,a0)
+log(10)/log(Abs(a0 + x))
+log(10)/log(x*Abs(a0))
+log(10)/log(Abs(a0 - x))
+log(10)/log(x*Abs(1/a0))
+log(10)/log(pow(x,a0))
+log(pow(10,(a0 + x)))/log(10)
+log(pow(10,(a0*x)))/log(10)
+log(pow(10,(-a0 + x)))/log(10)
+log(pow(10,(x/a0)))/log(10)
+log(pow(10,(pow(x,a0))))/log(10)
+log(1/Abs(a0 + x))/log(10)
+log(1/(x*Abs(a0)))/log(10)
+log(1/Abs(a0 - x))/log(10)
+log(Abs(a0)/x)/log(10)
+log(pow(x,(-a0)))/log(10)
+log(Abs(log(Abs(a0 + x)))/log(10))/log(10)
+log(Abs(log(x*Abs(a0)))/log(10))/log(10)
+log(Abs(log(Abs(a0 - x)))/log(10))/log(10)
+log(Abs(log(x*Abs(1/a0)))/log(10))/log(10)
+log(Abs(log(pow(x,a0)))/log(10))/log(10)
+pow(10,(pow(10,(a0 + x))))
+pow(10,(pow(10,(a0*x))))
+pow(10,(pow(10,(a0 - x))))
+pow(10,(pow(10,(a0/x))))
+pow(10,(pow(10,(pow(Abs(a0),x)))))
+pow(10,(1/(a0 + x)))
+pow(10,(1/(a0*x)))
+pow(10,(1/(a0 - x)))
+pow(10,(x/a0))
+pow(10,(pow(Abs(a0),(-x))))
+Abs(a0 + x)
+x*Abs(a0)
+Abs(a0 - x)
+Abs(a0)/x
+pow(Abs(a0),x)
+pow(10,(-a0 - x))
+pow(10,(-a0*x))
+pow(10,(-a0 + x))
+pow(10,(-a0/x))
+pow(10,(-pow(Abs(a0),x)))
+a0 + x
+a0*x
+a0 - x
+a0/x
+pow(Abs(a0),x)
+log(10)/log(Abs(a0 + x))
+log(10)/log(x*Abs(a0))
+log(10)/log(Abs(a0 - x))
+log(10)/log(Abs(a0)/x)
+log(10)/log(pow(Abs(a0),x))
+log(pow(10,(a0 + x)))/log(10)
+log(pow(10,(a0*x)))/log(10)
+log(pow(10,(a0 - x)))/log(10)
+log(pow(10,(a0/x)))/log(10)
+log(pow(10,(pow(Abs(a0),x))))/log(10)
+log(1/Abs(a0 + x))/log(10)
+log(1/(x*Abs(a0)))/log(10)
+log(1/Abs(a0 - x))/log(10)
+log(x*Abs(1/a0))/log(10)
+log(pow(Abs(a0),(-x)))/log(10)
+log(Abs(log(Abs(a0 + x)))/log(10))/log(10)
+log(Abs(log(x*Abs(a0)))/log(10))/log(10)
+log(Abs(log(Abs(a0 - x)))/log(10))/log(10)
+log(Abs(log(Abs(a0)/x))/log(10))/log(10)
+log(Abs(log(pow(Abs(a0),x)))/log(10))/log(10)
+pow(10,(pow(10,(a0 + a1))))
+pow(10,(pow(10,(a0*a1))))
+pow(10,(pow(10,(a0 - a1))))
+pow(10,(pow(10,(a0/a1))))
+pow(10,(pow(10,(pow(Abs(a0),a1)))))
+pow(10,(1/(a0 + a1)))
+pow(10,(1/(a0*a1)))
+pow(10,(1/(a0 - a1)))
+pow(10,(a1/a0))
+pow(10,(pow(Abs(a0),(-a1))))
+Abs(a0 + a1)
+Abs(a0*a1)
+Abs(a0 - a1)
+Abs(a0/a1)
+pow(Abs(a0),a1)
+pow(10,(-a0 - a1))
+pow(10,(-a0*a1))
+pow(10,(-a0 + a1))
+pow(10,(-a0/a1))
+pow(10,(-pow(Abs(a0),a1)))
+a0 + a1
+a0*a1
+a0 - a1
+a0/a1
+pow(Abs(a0),a1)
+log(10)/log(Abs(a0 + a1))
+log(10)/log(Abs(a0*a1))
+log(10)/log(Abs(a0 - a1))
+log(10)/log(Abs(a0/a1))
+log(10)/log(pow(Abs(a0),a1))
+log(pow(10,(a0 + a1)))/log(10)
+log(pow(10,(a0*a1)))/log(10)
+log(pow(10,(a0 - a1)))/log(10)
+log(pow(10,(a0/a1)))/log(10)
+log(pow(10,re(pow(Abs(a0),a1))))/log(10)
+log(1/Abs(a0 + a1))/log(10)
+log(1/Abs(a0*a1))/log(10)
+log(1/Abs(a0 - a1))/log(10)
+log(Abs(a1/a0))/log(10)
+log(pow(Abs(a0),(-a1)))/log(10)
+log(Abs(log(Abs(a0 + a1)))/log(10))/log(10)
+log(Abs(log(Abs(a0*a1)))/log(10))/log(10)
+log(Abs(log(Abs(a0 - a1)))/log(10))/log(10)
+log(Abs(log(Abs(a0/a1)))/log(10))/log(10)
+log(Abs(log(pow(Abs(a0),a1)))/log(10))/log(10)
+pow(10,(pow(10,x) + x))
+pow(10,(pow(10,x)*x))
+pow(10,(-pow(10,x) + x))
+pow(10,(x/pow(10,x)))
+pow(10,(pow(x,(pow(10,x)))))
+pow(10,(x + 1/x))
+10
+pow(10,(x - 1/x))
+pow(10,(x**2))
+pow(10,(pow(x,(1/x))))
+pow(10,(x + log(x)/log(10)))
+exp(x*log(x))
+pow(10,(x - log(x)/log(10)))
+pow(10,(x*log(10)/log(x)))
+pow(10,(pow(x,(log(x)/log(10)))))
+1/(pow(10,x) + x)
+1/(pow(10,x)*x)
+1/(-pow(10,x) + x)
+pow(10,x)/x
+pow(x,(-pow(10,x)))
+1/(x + 1/x)
+1
+1/(x - 1/x)
+x**(-2)
+pow(x,(-1/x))
+1/(x + log(x)/log(10))
+log(10)/(x*log(x))
+1/(x - log(x)/log(10))
+log(x)/(x*log(10))
+pow(x,(-log(x)/log(10)))
+log(pow(10,x) + x)/log(10)
+log(pow(10,x)*x)/log(10)
+log(Abs(pow(10,x) - x))/log(10)
+log(x/pow(10,x))/log(10)
+log(pow(x,(pow(10,x))))/log(10)
+log(x + 1/x)/log(10)
+0
+log(Abs(x - 1/x))/log(10)
+log(x**2)/log(10)
+log(pow(x,(1/x)))/log(10)
+log(Abs(x + log(x)/log(10)))/log(10)
+log(x*Abs(log(x))/log(10))/log(10)
+log(Abs(x - log(x)/log(10)))/log(10)
+log(x*log(10)*Abs(1/log(x)))/log(10)
+log(pow(x,(log(x)/log(10))))/log(10)
+pow(10,(pow(10,a0) + x))
+pow(10,(pow(10,a0)*x))
+pow(10,(-pow(10,a0) + x))
+pow(10,(x/pow(10,a0)))
+pow(10,(pow(x,(pow(10,a0)))))
+pow(10,(x + 1/a0))
+pow(10,(x/a0))
+pow(10,(x - 1/a0))
+pow(10,(a0*x))
+pow(10,(pow(x,(1/a0))))
+pow(10,(x + log(Abs(a0))/log(10)))
+exp(x*log(Abs(a0)))
+pow(10,(x - log(Abs(a0))/log(10)))
+pow(10,(x*log(10)/log(Abs(a0))))
+pow(10,(pow(x,(log(Abs(a0))/log(10)))))
+1/(pow(10,a0) + x)
+1/(pow(10,a0)*x)
+1/(-pow(10,a0) + x)
+pow(10,a0)/x
+pow(x,(-pow(10,a0)))
+1/(x + 1/a0)
+a0/x
+1/(x - 1/a0)
+1/(a0*x)
+pow(x,(-1/a0))
+1/(x + log(Abs(a0))/log(10))
+log(10)/(x*log(Abs(a0)))
+1/(x - log(Abs(a0))/log(10))
+log(Abs(a0))/(x*log(10))
+pow(x,(-log(Abs(a0))/log(10)))
+log(pow(10,a0) + x)/log(10)
+log(pow(10,a0)*x)/log(10)
+log(Abs(pow(10,a0) - x))/log(10)
+log(x/pow(10,a0))/log(10)
+log(pow(x,(pow(10,a0))))/log(10)
+log(Abs(x + 1/a0))/log(10)
+log(x*Abs(1/a0))/log(10)
+log(Abs(x - 1/a0))/log(10)
+log(x*Abs(a0))/log(10)
+log(pow(x,(1/a0)))/log(10)
+log(Abs(x + log(Abs(a0))/log(10)))/log(10)
+log(x*Abs(log(Abs(a0)))/log(10))/log(10)
+log(Abs(x - log(Abs(a0))/log(10)))/log(10)
+log(x*log(10)*Abs(1/log(Abs(a0))))/log(10)
+log(pow(x,(log(Abs(a0))/log(10))))/log(10)
+pow(10,(pow(10,x) + a0))
+pow(10,(pow(10,x)*a0))
+pow(10,(-pow(10,x) + a0))
+pow(10,(a0/pow(10,x)))
+pow(10,(pow(Abs(a0),(pow(10,x)))))
+pow(10,(a0 + 1/x))
+pow(10,(a0/x))
+pow(10,(a0 - 1/x))
+pow(10,(a0*x))
+pow(10,(pow(Abs(a0),(1/x))))
+pow(10,(a0 + log(x)/log(10)))
+exp(a0*log(x))
+pow(10,(a0 - log(x)/log(10)))
+pow(10,(a0*log(10)/log(x)))
+pow(10,(pow(Abs(a0),(log(x)/log(10)))))
+1/(pow(10,x) + a0)
+1/(pow(10,x)*a0)
+1/(-pow(10,x) + a0)
+pow(10,x)/a0
+pow(Abs(a0),(-pow(10,x)))
+1/(a0 + 1/x)
+x/a0
+1/(a0 - 1/x)
+1/(a0*x)
+pow(Abs(a0),(-1/x))
+1/(a0 + log(x)/log(10))
+log(10)/(a0*log(x))
+1/(a0 - log(x)/log(10))
+log(x)/(a0*log(10))
+pow(Abs(a0),(-log(x)/log(10)))
+log(Abs(pow(10,x) + a0))/log(10)
+log(pow(10,x)*Abs(a0))/log(10)
+log(Abs(pow(10,x) - a0))/log(10)
+log(Abs(a0)/pow(10,x))/log(10)
+log(pow(Abs(a0),(pow(10,x))))/log(10)
+log(Abs(a0 + 1/x))/log(10)
+log(Abs(a0)/x)/log(10)
+log(Abs(a0 - 1/x))/log(10)
+log(x*Abs(a0))/log(10)
+log(pow(Abs(a0),(1/x)))/log(10)
+log(Abs(a0 + log(x)/log(10)))/log(10)
+log(Abs(a0*log(x))/log(10))/log(10)
+log(Abs(a0 - log(x)/log(10)))/log(10)
+log(log(10)*Abs(a0/log(x)))/log(10)
+log(pow(Abs(a0),(log(x)/log(10))))/log(10)
+pow(10,(pow(10,a1) + a0))
+pow(10,(pow(10,a1)*a0))
+pow(10,(-pow(10,a1) + a0))
+pow(10,(a0/pow(10,a1)))
+pow(10,(pow(Abs(a0),(pow(10,a1)))))
+pow(10,(a0 + 1/a1))
+pow(10,(a0/a1))
+pow(10,(a0 - 1/a1))
+pow(10,(a0*a1))
+pow(10,(pow(Abs(a0),(1/a1))))
+pow(10,(a0 + log(Abs(a1))/log(10)))
+exp(a0*log(Abs(a1)))
+pow(10,(a0 - log(Abs(a1))/log(10)))
+pow(10,(a0*log(10)/log(Abs(a1))))
+pow(10,(pow(Abs(a0),(log(Abs(a1))/log(10)))))
+1/(pow(10,a1) + a0)
+1/(pow(10,a1)*a0)
+1/(-pow(10,a1) + a0)
+pow(10,a1)/a0
+pow(Abs(a0),(-pow(10,a1)))
+1/(a0 + 1/a1)
+a1/a0
+1/(a0 - 1/a1)
+1/(a0*a1)
+pow(Abs(a0),(-1/a1))
+1/(a0 + log(Abs(a1))/log(10))
+log(10)/(a0*log(Abs(a1)))
+1/(a0 - log(Abs(a1))/log(10))
+log(Abs(a1))/(a0*log(10))
+pow(Abs(a0),(-log(Abs(a1))/log(10)))
+log(Abs(pow(10,a1) + a0))/log(10)
+log(pow(10,a1)*Abs(a0))/log(10)
+log(Abs(pow(10,a1) - a0))/log(10)
+log(Abs(a0)/pow(10,a1))/log(10)
+log(pow(Abs(a0),(pow(10,a1))))/log(10)
+log(Abs(a0 + 1/a1))/log(10)
+log(Abs(a0/a1))/log(10)
+log(Abs(a0 - 1/a1))/log(10)
+log(Abs(a0*a1))/log(10)
+log(pow(Abs(a0),(1/a1)))/log(10)
+log(Abs(a0 + log(Abs(a1))/log(10)))/log(10)
+log(Abs(a0*log(Abs(a1)))/log(10))/log(10)
+log(Abs(a0 - log(Abs(a1))/log(10)))/log(10)
+log(log(10)*Abs(a0/log(Abs(a1))))/log(10)
+log(pow(Abs(a0),(log(Abs(a1))/log(10))))/log(10)
+pow(10,(pow(10,x) + x))
+pow(10,(pow(10,x)*x))
+pow(10,(pow(10,x) - x))
+pow(10,(pow(10,x)/x))
+pow(10,(pow(10,(x**2))))
+pow(10,(x + 1/x))
+10
+pow(10,(-x + 1/x))
+pow(10,(x**(-2)))
+pow(10,(pow(x,(-x))))
+pow(10,(x + log(x)/log(10)))
+exp(x*log(x))
+pow(10,(-x + log(x)/log(10)))
+pow(10,(log(x)/(x*log(10))))
+pow(10,(pow((Abs(log(x))/log(10)),x)))
+1/(pow(10,x) + x)
+1/(pow(10,x)*x)
+1/(pow(10,x) - x)
+x/pow(10,x)
+pow(10,(-x**2))
+1/(x + 1/x)
+1
+1/(-x + 1/x)
+x**2
+pow(x,x)
+1/(x + log(x)/log(10))
+log(10)/(x*log(x))
+1/(-x + log(x)/log(10))
+x*log(10)/log(x)
+pow((Abs(log(x))/log(10)),(-x))
+log(pow(10,x) + x)/log(10)
+log(pow(10,x)*x)/log(10)
+log(Abs(pow(10,x) - x))/log(10)
+log(pow(10,x)/x)/log(10)
+log(pow(10,(x**2)))/log(10)
+log(x + 1/x)/log(10)
+0
+log(Abs(x - 1/x))/log(10)
+log(x**(-2))/log(10)
+log(pow(x,(-x)))/log(10)
+log(Abs(x + log(x)/log(10)))/log(10)
+log(x*Abs(log(x))/log(10))/log(10)
+log(Abs(x - log(x)/log(10)))/log(10)
+log(Abs(log(x))/(x*log(10)))/log(10)
+log(pow((Abs(log(x))/log(10)),x))/log(10)
+pow(10,(pow(10,x) + a0))
+pow(10,(pow(10,x)*a0))
+pow(10,(pow(10,x) - a0))
+pow(10,(pow(10,x)/a0))
+pow(10,(pow(10,(a0*x))))
+pow(10,(a0 + 1/x))
+pow(10,(a0/x))
+pow(10,(-a0 + 1/x))
+pow(10,(1/(a0*x)))
+pow(10,(pow(x,(-a0))))
+pow(10,(a0 + log(x)/log(10)))
+exp(a0*log(x))
+pow(10,(-a0 + log(x)/log(10)))
+pow(10,(log(x)/(a0*log(10))))
+pow(10,(pow((Abs(log(x))/log(10)),a0)))
+1/(pow(10,x) + a0)
+1/(pow(10,x)*a0)
+1/(pow(10,x) - a0)
+a0/pow(10,x)
+pow(10,(-a0*x))
+1/(a0 + 1/x)
+x/a0
+1/(-a0 + 1/x)
+a0*x
+pow(x,a0)
+1/(a0 + log(x)/log(10))
+log(10)/(a0*log(x))
+1/(-a0 + log(x)/log(10))
+a0*log(10)/log(x)
+pow((Abs(log(x))/log(10)),(-a0))
+log(Abs(pow(10,x) + a0))/log(10)
+log(pow(10,x)*Abs(a0))/log(10)
+log(Abs(pow(10,x) - a0))/log(10)
+log(pow(10,x)*Abs(1/a0))/log(10)
+log(pow(10,(a0*x)))/log(10)
+log(Abs(a0 + 1/x))/log(10)
+log(Abs(a0)/x)/log(10)
+log(Abs(a0 - 1/x))/log(10)
+log(1/(x*Abs(a0)))/log(10)
+log(pow(x,(-a0)))/log(10)
+log(Abs(a0 + log(x)/log(10)))/log(10)
+log(Abs(a0*log(x))/log(10))/log(10)
+log(Abs(a0 - log(x)/log(10)))/log(10)
+log(Abs(log(x)/a0)/log(10))/log(10)
+log(pow((Abs(log(x))/log(10)),a0))/log(10)
+pow(10,(pow(10,a0) + x))
+pow(10,(pow(10,a0)*x))
+pow(10,(pow(10,a0) - x))
+pow(10,(pow(10,a0)/x))
+pow(10,(pow(10,(a0*x))))
+pow(10,(x + 1/a0))
+pow(10,(x/a0))
+pow(10,(-x + 1/a0))
+pow(10,(1/(a0*x)))
+pow(10,(pow(Abs(a0),(-x))))
+pow(10,(x + log(Abs(a0))/log(10)))
+exp(x*log(Abs(a0)))
+pow(10,(-x + log(Abs(a0))/log(10)))
+pow(10,(log(Abs(a0))/(x*log(10))))
+pow(10,(pow((Abs(log(Abs(a0)))/log(10)),x)))
+1/(pow(10,a0) + x)
+1/(pow(10,a0)*x)
+1/(pow(10,a0) - x)
+x/pow(10,a0)
+pow(10,(-a0*x))
+1/(x + 1/a0)
+a0/x
+1/(-x + 1/a0)
+a0*x
+pow(Abs(a0),x)
+1/(x + log(Abs(a0))/log(10))
+log(10)/(x*log(Abs(a0)))
+1/(-x + log(Abs(a0))/log(10))
+x*log(10)/log(Abs(a0))
+pow((Abs(log(Abs(a0)))/log(10)),(-x))
+log(pow(10,a0) + x)/log(10)
+log(pow(10,a0)*x)/log(10)
+log(Abs(pow(10,a0) - x))/log(10)
+log(pow(10,a0)/x)/log(10)
+log(pow(10,(a0*x)))/log(10)
+log(Abs(x + 1/a0))/log(10)
+log(x*Abs(1/a0))/log(10)
+log(Abs(x - 1/a0))/log(10)
+log(1/(x*Abs(a0)))/log(10)
+log(pow(Abs(a0),(-x)))/log(10)
+log(Abs(x + log(Abs(a0))/log(10)))/log(10)
+log(x*Abs(log(Abs(a0)))/log(10))/log(10)
+log(Abs(x - log(Abs(a0))/log(10)))/log(10)
+log(Abs(log(Abs(a0)))/(x*log(10)))/log(10)
+log(pow((Abs(log(Abs(a0)))/log(10)),x))/log(10)
+pow(10,(pow(10,a0) + a1))
+pow(10,(pow(10,a0)*a1))
+pow(10,(pow(10,a0) - a1))
+pow(10,(pow(10,a0)/a1))
+pow(10,(pow(10,(a0*a1))))
+pow(10,(a1 + 1/a0))
+pow(10,(a1/a0))
+pow(10,(-a1 + 1/a0))
+pow(10,(1/(a0*a1)))
+pow(10,(pow(Abs(a0),(-a1))))
+pow(10,(a1 + log(Abs(a0))/log(10)))
+exp(a1*log(Abs(a0)))
+pow(10,(-a1 + log(Abs(a0))/log(10)))
+pow(10,(log(Abs(a0))/(a1*log(10))))
+pow(10,(pow((Abs(log(Abs(a0)))/log(10)),a1)))
+1/(pow(10,a0) + a1)
+1/(pow(10,a0)*a1)
+1/(pow(10,a0) - a1)
+a1/pow(10,a0)
+pow(10,(-a0*a1))
+1/(a1 + 1/a0)
+a0/a1
+1/(-a1 + 1/a0)
+a0*a1
+pow(Abs(a0),a1)
+1/(a1 + log(Abs(a0))/log(10))
+log(10)/(a1*log(Abs(a0)))
+1/(-a1 + log(Abs(a0))/log(10))
+a1*log(10)/log(Abs(a0))
+pow((Abs(log(Abs(a0)))/log(10)),(-a1))
+log(Abs(pow(10,a0) + a1))/log(10)
+log(pow(10,a0)*Abs(a1))/log(10)
+log(Abs(pow(10,a0) - a1))/log(10)
+log(pow(10,a0)*Abs(1/a1))/log(10)
+log(pow(10,(a0*a1)))/log(10)
+log(Abs(a1 + 1/a0))/log(10)
+log(Abs(a1/a0))/log(10)
+log(Abs(a1 - 1/a0))/log(10)
+log(1/Abs(a0*a1))/log(10)
+log(pow(Abs(a0),(-a1)))/log(10)
+log(Abs(a1 + log(Abs(a0))/log(10)))/log(10)
+log(Abs(a1*log(Abs(a0)))/log(10))/log(10)
+log(Abs(a1 - log(Abs(a0))/log(10)))/log(10)
+log(Abs(log(Abs(a0))/a1)/log(10))/log(10)
+log(pow((Abs(log(Abs(a0)))/log(10)),a1))/log(10)
+pow(10,(pow(10,x))) + x
+pow(10,(pow(10,x)))*x
+-pow(10,(pow(10,x))) + x
+x/pow(10,(pow(10,x)))
+pow(x,(pow(10,(pow(10,x)))))
+pow(10,(1/x)) + x
+pow(10,(1/x))*x
+-pow(10,(1/x)) + x
+x/pow(10,(1/x))
+pow(x,(pow(10,(1/x))))
+2*x
+x**2
+0
+1
+pow(x,x)
+x + pow(10,(-x))
+x/pow(10,x)
+x - 1/pow(10,x)
+pow(10,x)*x
+pow(x,(pow(10,(-x))))
+2*x
+x**2
+0
+1
+pow(x,x)
+x + log(10)/log(x)
+x*log(10)/log(x)
+x - log(10)/log(x)
+x*log(x)/log(10)
+10
+x + log(pow(10,x))/log(10)
+x*log(pow(10,x))/log(10)
+x - log(pow(10,x))/log(10)
+x*log(10)/log(pow(10,x))
+pow(x,(log(pow(10,x))/log(10)))
+x + log(1/x)/log(10)
+x*log(1/x)/log(10)
+x - log(1/x)/log(10)
+x*log(10)/log(1/x)
+pow(x,(log(1/x)/log(10)))
+x + log(Abs(log(x))/log(10))/log(10)
+x*log(Abs(log(x))/log(10))/log(10)
+x - log(Abs(log(x))/log(10))/log(10)
+x*log(10)/log(Abs(log(x))/log(10))
+pow(x,(log(Abs(log(x))/log(10))/log(10)))
+pow(10,(pow(10,a0))) + x
+pow(10,(pow(10,a0)))*x
+-pow(10,(pow(10,a0))) + x
+x/pow(10,(pow(10,a0)))
+pow(x,(pow(10,(pow(10,a0)))))
+pow(10,(1/a0)) + x
+pow(10,(1/a0))*x
+-pow(10,(1/a0)) + x
+x/pow(10,(1/a0))
+pow(x,(pow(10,(1/a0))))
+x + Abs(a0)
+x*Abs(a0)
+x - Abs(a0)
+x/Abs(a0)
+pow(x,Abs(a0))
+x + pow(10,(-a0))
+x/pow(10,a0)
+x - 1/pow(10,a0)
+pow(10,a0)*x
+pow(x,(pow(10,(-a0))))
+a0 + x
+a0*x
+-a0 + x
+x/a0
+pow(x,a0)
+x + log(10)/log(Abs(a0))
+x*log(10)/log(Abs(a0))
+x - log(10)/log(Abs(a0))
+x*log(Abs(a0))/log(10)
+pow(x,(log(10)/log(Abs(a0))))
+x + log(pow(10,a0))/log(10)
+x*log(pow(10,a0))/log(10)
+x - log(pow(10,a0))/log(10)
+x*log(10)/log(pow(10,a0))
+pow(x,(log(pow(10,a0))/log(10)))
+x + log(1/Abs(a0))/log(10)
+x*log(1/Abs(a0))/log(10)
+x - log(1/Abs(a0))/log(10)
+x*log(10)/log(1/Abs(a0))
+pow(x,(log(1/Abs(a0))/log(10)))
+x + log(Abs(log(Abs(a0)))/log(10))/log(10)
+x*log(Abs(log(Abs(a0)))/log(10))/log(10)
+x - log(Abs(log(Abs(a0)))/log(10))/log(10)
+x*log(10)/log(Abs(log(Abs(a0)))/log(10))
+pow(x,(log(Abs(log(Abs(a0)))/log(10))/log(10)))
+pow(10,(pow(10,x))) + a0
+pow(10,(pow(10,x)))*a0
+-pow(10,(pow(10,x))) + a0
+a0/pow(10,(pow(10,x)))
+pow(Abs(a0),(pow(10,(pow(10,x)))))
+pow(10,(1/x)) + a0
+pow(10,(1/x))*a0
+-pow(10,(1/x)) + a0
+a0/pow(10,(1/x))
+pow(Abs(a0),(pow(10,(1/x))))
+a0 + x
+a0*x
+a0 - x
+a0/x
+pow(Abs(a0),x)
+a0 + pow(10,(-x))
+a0/pow(10,x)
+a0 - 1/pow(10,x)
+pow(10,x)*a0
+pow(Abs(a0),(pow(10,(-x))))
+a0 + x
+a0*x
+a0 - x
+a0/x
+pow(Abs(a0),x)
+a0 + log(10)/log(x)
+a0*log(10)/log(x)
+a0 - log(10)/log(x)
+a0*log(x)/log(10)
+pow(Abs(a0),(log(10)/log(x)))
+a0 + log(pow(10,x))/log(10)
+a0*log(pow(10,x))/log(10)
+a0 - log(pow(10,x))/log(10)
+a0*log(10)/log(pow(10,x))
+pow(Abs(a0),(log(pow(10,x))/log(10)))
+a0 + log(1/x)/log(10)
+a0*log(1/x)/log(10)
+a0 - log(1/x)/log(10)
+a0*log(10)/log(1/x)
+pow(Abs(a0),(log(1/x)/log(10)))
+a0 + log(Abs(log(x))/log(10))/log(10)
+a0*log(Abs(log(x))/log(10))/log(10)
+a0 - log(Abs(log(x))/log(10))/log(10)
+a0*log(10)/log(Abs(log(x))/log(10))
+pow(Abs(a0),(log(Abs(log(x))/log(10))/log(10)))
+pow(10,(pow(10,a1))) + a0
+pow(10,(pow(10,a1)))*a0
+-pow(10,(pow(10,a1))) + a0
+a0/pow(10,(pow(10,a1)))
+pow(Abs(a0),(pow(10,(pow(10,a1)))))
+pow(10,(1/a1)) + a0
+pow(10,(1/a1))*a0
+-pow(10,(1/a1)) + a0
+a0/pow(10,(1/a1))
+pow(Abs(a0),(pow(10,(1/a1))))
+a0 + Abs(a1)
+a0*Abs(a1)
+a0 - Abs(a1)
+a0/Abs(a1)
+pow(Abs(a0),Abs(a1))
+a0 + pow(10,(-a1))
+a0/pow(10,a1)
+a0 - 1/pow(10,a1)
+pow(10,a1)*a0
+pow(Abs(a0),(pow(10,(-a1))))
+a0 + a1
+a0*a1
+a0 - a1
+a0/a1
+pow(Abs(a0),a1)
+a0 + log(10)/log(Abs(a1))
+a0*log(10)/log(Abs(a1))
+a0 - log(10)/log(Abs(a1))
+a0*log(Abs(a1))/log(10)
+pow(Abs(a0),(log(10)/log(Abs(a1))))
+a0 + log(pow(10,a1))/log(10)
+a0*log(pow(10,a1))/log(10)
+a0 - log(pow(10,a1))/log(10)
+a0*log(10)/log(pow(10,a1))
+pow(Abs(a0),(log(pow(10,a1))/log(10)))
+a0 + log(1/Abs(a1))/log(10)
+a0*log(1/Abs(a1))/log(10)
+a0 - log(1/Abs(a1))/log(10)
+a0*log(10)/log(1/Abs(a1))
+pow(Abs(a0),(log(1/Abs(a1))/log(10)))
+a0 + log(Abs(log(Abs(a1)))/log(10))/log(10)
+a0*log(Abs(log(Abs(a1)))/log(10))/log(10)
+a0 - log(Abs(log(Abs(a1)))/log(10))/log(10)
+a0*log(10)/log(Abs(log(Abs(a1)))/log(10))
+pow(Abs(a0),(log(Abs(log(Abs(a1)))/log(10))/log(10)))
+3*x
+x**2 + x
+x
+x + 1
+x + pow(x,x)
+2*x**2
+x**3
+0
+x
+x*pow(x,x)
+-x
+-x**2 + x
+x
+x - 1
+x - pow(x,x)
+1/2
+1/x
+zoo
+x
+x/pow(x,x)
+pow(x,(2*x))
+pow(x,(x**2))
+1
+x
+pow(x,(pow(x,x)))
+a0 + 2*x
+a0*x + x
+-a0 + 2*x
+x + x/a0
+x + pow(x,a0)
+x*(a0 + x)
+a0*x**2
+x*(-a0 + x)
+x**2/a0
+x*pow(x,a0)
+-a0
+-a0*x + x
+a0
+x - x/a0
+x - pow(x,a0)
+x/(a0 + x)
+1/a0
+x/(-a0 + x)
+a0
+x/pow(x,a0)
+pow(x,(a0 + x))
+pow(x,(a0*x))
+pow(x,(-a0 + x))
+pow(x,(x/a0))
+pow(x,(pow(x,a0)))
+a0 + 2*x
+a0*x + x
+a0
+a0/x + x
+x + pow(Abs(a0),x)
+x*(a0 + x)
+a0*x**2
+x*(a0 - x)
+a0
+x*pow(Abs(a0),x)
+-a0
+-a0*x + x
+-a0 + 2*x
+-a0/x + x
+x - pow(Abs(a0),x)
+x/(a0 + x)
+1/a0
+x/(a0 - x)
+x**2/a0
+x/pow(Abs(a0),x)
+pow(x,(a0 + x))
+pow(x,(a0*x))
+pow(x,(a0 - x))
+pow(x,(a0/x))
+pow(x,(pow(Abs(a0),x)))
+a0 + a1 + x
+a0*a1 + x
+a0 - a1 + x
+a0/a1 + x
+x + pow(Abs(a0),a1)
+x*(a0 + a1)
+a0*a1*x
+x*(a0 - a1)
+a0*x/a1
+x*pow(Abs(a0),a1)
+-a0 - a1 + x
+-a0*a1 + x
+-a0 + a1 + x
+-a0/a1 + x
+x - pow(Abs(a0),a1)
+x/(a0 + a1)
+x/(a0*a1)
+x/(a0 - a1)
+a1*x/a0
+x/pow(Abs(a0),a1)
+pow(x,(a0 + a1))
+pow(x,(a0*a1))
+pow(x,(a0 - a1))
+pow(x,(a0/a1))
+pow(x,(pow(Abs(a0),a1)))
+a0 + 2*x
+a0 + x**2
+a0
+a0 + 1
+a0 + pow(x,x)
+2*a0*x
+a0*x**2
+0
+a0
+a0*pow(x,x)
+a0 - 2*x
+a0 - x**2
+a0
+a0 - 1
+a0 - pow(x,x)
+a0/(2*x)
+a0/x**2
+zoo*a0
+a0
+a0/pow(x,x)
+pow(Abs(a0),(2*x))
+pow(Abs(a0),(x**2))
+1
+Abs(a0)
+pow(Abs(a0),(pow(x,x)))
+a0 + a1 + x
+a0 + a1*x
+a0 - a1 + x
+a0 + x/a1
+a0 + pow(x,a1)
+a0*(a1 + x)
+a0*a1*x
+a0*(-a1 + x)
+a0*x/a1
+a0*pow(x,a1)
+a0 - a1 - x
+a0 - a1*x
+a0 + a1 - x
+a0 - x/a1
+a0 - pow(x,a1)
+a0/(a1 + x)
+a0/(a1*x)
+a0/(-a1 + x)
+a0*a1/x
+a0/pow(x,a1)
+pow(Abs(a0),(a1 + x))
+pow(Abs(a0),(a1*x))
+pow(Abs(a0),(-a1 + x))
+pow(Abs(a0),(x/a1))
+pow(Abs(a0),(pow(x,a1)))
+a0 + a1 + x
+a0 + a1*x
+a0 + a1 - x
+a0 + a1/x
+a0 + pow(Abs(a1),x)
+a0*(a1 + x)
+a0*a1*x
+a0*(a1 - x)
+a0*a1/x
+a0*pow(Abs(a1),x)
+a0 - a1 - x
+a0 - a1*x
+a0 - a1 + x
+a0 - a1/x
+a0 - pow(Abs(a1),x)
+a0/(a1 + x)
+a0/(a1*x)
+a0/(a1 - x)
+a0*x/a1
+a0/pow(Abs(a1),x)
+pow(Abs(a0),(a1 + x))
+pow(Abs(a0),(a1*x))
+pow(Abs(a0),(a1 - x))
+pow(Abs(a0),(a1/x))
+pow(Abs(a0),(pow(Abs(a1),x)))
+a0 + a1 + a2
+a0 + a1*a2
+a0 + a1 - a2
+a0 + a1/a2
+a0 + pow(Abs(a1),a2)
+a0*(a1 + a2)
+a0*a1*a2
+a0*(a1 - a2)
+a0*a1/a2
+a0*pow(Abs(a1),a2)
+a0 - a1 - a2
+a0 - a1*a2
+a0 - a1 + a2
+a0 - a1/a2
+a0 - pow(Abs(a1),a2)
+a0/(a1 + a2)
+a0/(a1*a2)
+a0/(a1 - a2)
+a0*a2/a1
+a0/pow(Abs(a1),a2)
+pow(Abs(a0),(a1 + a2))
+pow(Abs(a0),(a1*a2))
+pow(Abs(a0),(a1 - a2))
+pow(Abs(a0),(a1/a2))
+pow(Abs(a0),(pow(Abs(a1),a2)))
+2*pow(10,x)
+pow(10,(2*x))
+0
+1
+pow(10,(pow(10,x)*x))
+pow(10,x) + 1/x
+pow(10,x)/x
+pow(10,x) - 1/x
+pow(10,x)*x
+10
+pow(10,x) + log(x)/log(10)
+pow(10,x)*log(x)/log(10)
+pow(10,x) - log(x)/log(10)
+pow(10,x)*log(10)/log(x)
+exp(x*log(x))
+pow(10,x) + 1/x
+pow(10,x)/x
+-pow(10,x) + 1/x
+1/(pow(10,x)*x)
+pow(x,(-pow(10,x)))
+2/x
+x**(-2)
+0
+1
+pow(x,(-1/x))
+log(x)/log(10) + 1/x
+log(x)/(x*log(10))
+-log(x)/log(10) + 1/x
+log(10)/(x*log(x))
+pow(x,(-log(x)/log(10)))
+pow(10,x) + log(x)/log(10)
+pow(10,x)*log(x)/log(10)
+-pow(10,x) + log(x)/log(10)
+log(x)/(pow(10,x)*log(10))
+pow((Abs(log(x))/log(10)),(pow(10,x)))
+log(x)/log(10) + 1/x
+log(x)/(x*log(10))
+log(x)/log(10) - 1/x
+x*log(x)/log(10)
+pow((Abs(log(x))/log(10)),(1/x))
+2*log(x)/log(10)
+log(x)**2/log(10)**2
+0
+1
+pow((Abs(log(x))/log(10)),(log(x)/log(10)))
+pow(10,a0) + pow(10,x)
+pow(10,a0)*pow(10,x)
+-pow(10,a0) + pow(10,x)
+pow(10,x)/pow(10,a0)
+pow(10,(pow(10,a0)*x))
+pow(10,x) + 1/a0
+pow(10,x)/a0
+pow(10,x) - 1/a0
+pow(10,x)*a0
+pow(10,(x/a0))
+pow(10,x) + log(Abs(a0))/log(10)
+pow(10,x)*log(Abs(a0))/log(10)
+pow(10,x) - log(Abs(a0))/log(10)
+pow(10,x)*log(10)/log(Abs(a0))
+exp(x*log(Abs(a0)))
+pow(10,a0) + 1/x
+pow(10,a0)/x
+-pow(10,a0) + 1/x
+1/(pow(10,a0)*x)
+pow(x,(-pow(10,a0)))
+1/x + 1/a0
+1/(a0*x)
+1/x - 1/a0
+a0/x
+pow(x,(-1/a0))
+log(Abs(a0))/log(10) + 1/x
+log(Abs(a0))/(x*log(10))
+-log(Abs(a0))/log(10) + 1/x
+log(10)/(x*log(Abs(a0)))
+pow(x,(-log(Abs(a0))/log(10)))
+pow(10,a0) + log(x)/log(10)
+pow(10,a0)*log(x)/log(10)
+-pow(10,a0) + log(x)/log(10)
+log(x)/(pow(10,a0)*log(10))
+pow((Abs(log(x))/log(10)),(pow(10,a0)))
+log(x)/log(10) + 1/a0
+log(x)/(a0*log(10))
+log(x)/log(10) - 1/a0
+a0*log(x)/log(10)
+pow((Abs(log(x))/log(10)),(1/a0))
+log(x)/log(10) + log(Abs(a0))/log(10)
+log(x)*log(Abs(a0))/log(10)**2
+log(x)/log(10) - log(Abs(a0))/log(10)
+log(x)/log(Abs(a0))
+pow((Abs(log(x))/log(10)),(log(Abs(a0))/log(10)))
+pow(10,a0) + pow(10,x)
+pow(10,a0)*pow(10,x)
+pow(10,a0) - pow(10,x)
+pow(10,a0)/pow(10,x)
+pow(10,(pow(10,x)*a0))
+pow(10,a0) + 1/x
+pow(10,a0)/x
+pow(10,a0) - 1/x
+pow(10,a0)*x
+pow(10,(a0/x))
+pow(10,a0) + log(x)/log(10)
+pow(10,a0)*log(x)/log(10)
+pow(10,a0) - log(x)/log(10)
+pow(10,a0)*log(10)/log(x)
+exp(a0*log(x))
+pow(10,x) + 1/a0
+pow(10,x)/a0
+-pow(10,x) + 1/a0
+1/(pow(10,x)*a0)
+pow(Abs(a0),(-pow(10,x)))
+1/x + 1/a0
+1/(a0*x)
+-1/x + 1/a0
+x/a0
+pow(Abs(a0),(-1/x))
+log(x)/log(10) + 1/a0
+log(x)/(a0*log(10))
+-log(x)/log(10) + 1/a0
+log(10)/(a0*log(x))
+pow(Abs(a0),(-log(x)/log(10)))
+pow(10,x) + log(Abs(a0))/log(10)
+pow(10,x)*log(Abs(a0))/log(10)
+-pow(10,x) + log(Abs(a0))/log(10)
+log(Abs(a0))/(pow(10,x)*log(10))
+pow((Abs(log(Abs(a0)))/log(10)),(pow(10,x)))
+log(Abs(a0))/log(10) + 1/x
+log(Abs(a0))/(x*log(10))
+log(Abs(a0))/log(10) - 1/x
+x*log(Abs(a0))/log(10)
+pow((Abs(log(Abs(a0)))/log(10)),(1/x))
+log(x)/log(10) + log(Abs(a0))/log(10)
+log(x)*log(Abs(a0))/log(10)**2
+-log(x)/log(10) + log(Abs(a0))/log(10)
+log(Abs(a0))/log(x)
+pow((Abs(log(Abs(a0)))/log(10)),(log(x)/log(10)))
+pow(10,a0) + pow(10,a1)
+pow(10,a0)*pow(10,a1)
+pow(10,a0) - pow(10,a1)
+pow(10,a0)/pow(10,a1)
+pow(10,(pow(10,a1)*a0))
+pow(10,a0) + 1/a1
+pow(10,a0)/a1
+pow(10,a0) - 1/a1
+pow(10,a0)*a1
+pow(10,(a0/a1))
+pow(10,a0) + log(Abs(a1))/log(10)
+pow(10,a0)*log(Abs(a1))/log(10)
+pow(10,a0) - log(Abs(a1))/log(10)
+pow(10,a0)*log(10)/log(Abs(a1))
+exp(a0*log(Abs(a1)))
+pow(10,a1) + 1/a0
+pow(10,a1)/a0
+-pow(10,a1) + 1/a0
+1/(pow(10,a1)*a0)
+pow(Abs(a0),(-pow(10,a1)))
+1/a1 + 1/a0
+1/(a0*a1)
+-1/a1 + 1/a0
+a1/a0
+pow(Abs(a0),(-1/a1))
+log(Abs(a1))/log(10) + 1/a0
+log(Abs(a1))/(a0*log(10))
+-log(Abs(a1))/log(10) + 1/a0
+log(10)/(a0*log(Abs(a1)))
+pow(Abs(a0),(-log(Abs(a1))/log(10)))
+pow(10,a1) + log(Abs(a0))/log(10)
+pow(10,a1)*log(Abs(a0))/log(10)
+-pow(10,a1) + log(Abs(a0))/log(10)
+log(Abs(a0))/(pow(10,a1)*log(10))
+pow((Abs(log(Abs(a0)))/log(10)),(pow(10,a1)))
+log(Abs(a0))/log(10) + 1/a1
+log(Abs(a0))/(a1*log(10))
+log(Abs(a0))/log(10) - 1/a1
+a1*log(Abs(a0))/log(10)
+pow((Abs(log(Abs(a0)))/log(10)),(1/a1))
+log(Abs(a0))/log(10) + log(Abs(a1))/log(10)
+log(Abs(a0))*log(Abs(a1))/log(10)**2
+log(Abs(a0))/log(10) - log(Abs(a1))/log(10)
+log(Abs(a0))/log(Abs(a1))
+pow((Abs(log(Abs(a0)))/log(10)),(log(Abs(a1))/log(10)))
+pow(10,(pow(10,x))) + x
+pow(10,(pow(10,x)))*x
+pow(10,(pow(10,x))) - x
+pow(10,(pow(10,x)))/x
+pow(10,(pow(10,x)*x))
+pow(10,(1/x)) + x
+pow(10,(1/x))*x
+pow(10,(1/x)) - x
+pow(10,(1/x))/x
+10
+2*x
+x**2
+0
+1
+pow(x,x)
+x + pow(10,(-x))
+x/pow(10,x)
+-x + pow(10,(-x))
+1/(pow(10,x)*x)
+pow(10,(-x**2))
+2*x
+x**2
+0
+1
+pow(x,x)
+x + log(10)/log(x)
+x*log(10)/log(x)
+-x + log(10)/log(x)
+log(10)/(x*log(x))
+pow((log(10)/Abs(log(x))),x)
+x + log(pow(10,x))/log(10)
+x*log(pow(10,x))/log(10)
+-x + log(pow(10,x))/log(10)
+log(pow(10,x))/(x*log(10))
+pow((Abs(log(pow(10,x)))/log(10)),x)
+x + log(1/x)/log(10)
+x*log(1/x)/log(10)
+-x + log(1/x)/log(10)
+log(1/x)/(x*log(10))
+pow((Abs(log(1/x))/log(10)),x)
+x + log(Abs(log(x))/log(10))/log(10)
+x*log(Abs(log(x))/log(10))/log(10)
+-x + log(Abs(log(x))/log(10))/log(10)
+log(Abs(log(x))/log(10))/(x*log(10))
+pow((Abs(log(Abs(log(x))/log(10)))/log(10)),x)
+pow(10,(pow(10,x))) + a0
+pow(10,(pow(10,x)))*a0
+pow(10,(pow(10,x))) - a0
+pow(10,(pow(10,x)))/a0
+pow(10,(pow(10,x)*a0))
+pow(10,(1/x)) + a0
+pow(10,(1/x))*a0
+pow(10,(1/x)) - a0
+pow(10,(1/x))/a0
+pow(10,(a0/x))
+a0 + x
+a0*x
+-a0 + x
+x/a0
+pow(x,a0)
+a0 + pow(10,(-x))
+a0/pow(10,x)
+-a0 + pow(10,(-x))
+1/(pow(10,x)*a0)
+pow(10,(-a0*x))
+a0 + x
+a0*x
+-a0 + x
+x/a0
+pow(x,a0)
+a0 + log(10)/log(x)
+a0*log(10)/log(x)
+-a0 + log(10)/log(x)
+log(10)/(a0*log(x))
+pow((log(10)/Abs(log(x))),a0)
+a0 + log(pow(10,x))/log(10)
+a0*log(pow(10,x))/log(10)
+-a0 + log(pow(10,x))/log(10)
+log(pow(10,x))/(a0*log(10))
+pow((Abs(log(pow(10,x)))/log(10)),a0)
+a0 + log(1/x)/log(10)
+a0*log(1/x)/log(10)
+-a0 + log(1/x)/log(10)
+log(1/x)/(a0*log(10))
+pow((Abs(log(1/x))/log(10)),a0)
+a0 + log(Abs(log(x))/log(10))/log(10)
+a0*log(Abs(log(x))/log(10))/log(10)
+-a0 + log(Abs(log(x))/log(10))/log(10)
+log(Abs(log(x))/log(10))/(a0*log(10))
+pow((Abs(log(Abs(log(x))/log(10)))/log(10)),a0)
+pow(10,(pow(10,a0))) + x
+pow(10,(pow(10,a0)))*x
+pow(10,(pow(10,a0))) - x
+pow(10,(pow(10,a0)))/x
+pow(10,(pow(10,a0)*x))
+pow(10,(1/a0)) + x
+pow(10,(1/a0))*x
+pow(10,(1/a0)) - x
+pow(10,(1/a0))/x
+pow((pow(10,(1/a0))),x)
+x + Abs(a0)
+x*Abs(a0)
+-x + Abs(a0)
+Abs(a0)/x
+pow(Abs(a0),x)
+x + pow(10,(-a0))
+x/pow(10,a0)
+-x + pow(10,(-a0))
+1/(pow(10,a0)*x)
+pow(10,(-a0*x))
+a0 + x
+a0*x
+a0 - x
+a0/x
+pow(Abs(a0),x)
+x + log(10)/log(Abs(a0))
+x*log(10)/log(Abs(a0))
+-x + log(10)/log(Abs(a0))
+log(10)/(x*log(Abs(a0)))
+pow((log(10)/Abs(log(Abs(a0)))),x)
+x + log(pow(10,a0))/log(10)
+x*log(pow(10,a0))/log(10)
+-x + log(pow(10,a0))/log(10)
+log(pow(10,a0))/(x*log(10))
+pow((Abs(log(pow(10,a0)))/log(10)),x)
+x + log(1/Abs(a0))/log(10)
+x*log(1/Abs(a0))/log(10)
+-x + log(1/Abs(a0))/log(10)
+log(1/Abs(a0))/(x*log(10))
+pow((Abs(log(1/Abs(a0)))/log(10)),x)
+x + log(Abs(log(Abs(a0)))/log(10))/log(10)
+x*log(Abs(log(Abs(a0)))/log(10))/log(10)
+-x + log(Abs(log(Abs(a0)))/log(10))/log(10)
+log(Abs(log(Abs(a0)))/log(10))/(x*log(10))
+pow((Abs(log(Abs(log(Abs(a0)))/log(10)))/log(10)),x)
+pow(10,(pow(10,a0))) + a1
+pow(10,(pow(10,a0)))*a1
+pow(10,(pow(10,a0))) - a1
+pow(10,(pow(10,a0)))/a1
+pow(10,(pow(10,a0)*a1))
+pow(10,(1/a0)) + a1
+pow(10,(1/a0))*a1
+pow(10,(1/a0)) - a1
+pow(10,(1/a0))/a1
+pow((pow(10,(1/a0))),a1)
+a1 + Abs(a0)
+a1*Abs(a0)
+-a1 + Abs(a0)
+Abs(a0)/a1
+pow(Abs(a0),a1)
+a1 + pow(10,(-a0))
+a1/pow(10,a0)
+-a1 + pow(10,(-a0))
+1/(pow(10,a0)*a1)
+pow(10,(-a0*a1))
+a0 + a1
+a0*a1
+a0 - a1
+a0/a1
+pow(Abs(a0),a1)
+a1 + log(10)/log(Abs(a0))
+a1*log(10)/log(Abs(a0))
+-a1 + log(10)/log(Abs(a0))
+log(10)/(a1*log(Abs(a0)))
+pow((log(10)/Abs(log(Abs(a0)))),a1)
+a1 + log(pow(10,a0))/log(10)
+a1*log(pow(10,a0))/log(10)
+-a1 + log(pow(10,a0))/log(10)
+log(pow(10,a0))/(a1*log(10))
+pow((Abs(log(pow(10,a0)))/log(10)),a1)
+a1 + log(1/Abs(a0))/log(10)
+a1*log(1/Abs(a0))/log(10)
+-a1 + log(1/Abs(a0))/log(10)
+log(1/Abs(a0))/(a1*log(10))
+pow((Abs(log(1/Abs(a0)))/log(10)),a1)
+a1 + log(Abs(log(Abs(a0)))/log(10))/log(10)
+a1*log(Abs(log(Abs(a0)))/log(10))/log(10)
+-a1 + log(Abs(log(Abs(a0)))/log(10))/log(10)
+log(Abs(log(Abs(a0)))/log(10))/(a1*log(10))
+pow((Abs(log(Abs(log(Abs(a0)))/log(10)))/log(10)),a1)
+3*x
+x**2 + x
+x
+x + 1
+x + pow(x,x)
+2*x**2
+x**3
+0
+x
+x*pow(x,x)
+x
+x**2 - x
+-x
+1 - x
+-x + pow(x,x)
+2
+x
+0
+1/x
+pow(x,x)/x
+pow((2*x),x)
+pow(x,(2*x))
+0
+1
+pow(x,(x**2))
+a0 + 2*x
+a0 + x**2
+a0
+a0 + 1
+a0 + pow(x,x)
+2*a0*x
+a0*x**2
+0
+a0
+a0*pow(x,x)
+-a0 + 2*x
+-a0 + x**2
+-a0
+1 - a0
+-a0 + pow(x,x)
+2*x/a0
+x**2/a0
+0
+1/a0
+pow(x,x)/a0
+pow((2*x),a0)
+pow(x,(2*a0))
+pow(0,a0)
+1
+pow(x,(a0*x))
+a0 + 2*x
+a0*x + x
+-a0 + 2*x
+x + x/a0
+x + pow(x,a0)
+x*(a0 + x)
+a0*x**2
+x*(-a0 + x)
+x**2/a0
+x*pow(x,a0)
+a0
+a0*x - x
+-a0
+-x + x/a0
+-x + pow(x,a0)
+(a0 + x)/x
+a0
+(-a0 + x)/x
+1/a0
+pow(x,a0)/x
+pow(Abs(a0 + x),x)
+pow((x*Abs(a0)),x)
+pow(Abs(a0 - x),x)
+pow((x*Abs(1/a0)),x)
+pow(x,(a0*x))
+a0 + a1 + x
+a0*x + a1
+-a0 + a1 + x
+a1 + x/a0
+a1 + pow(x,a0)
+a1*(a0 + x)
+a0*a1*x
+a1*(-a0 + x)
+a1*x/a0
+a1*pow(x,a0)
+a0 - a1 + x
+a0*x - a1
+-a0 - a1 + x
+-a1 + x/a0
+-a1 + pow(x,a0)
+(a0 + x)/a1
+a0*x/a1
+(-a0 + x)/a1
+x/(a0*a1)
+pow(x,a0)/a1
+pow(Abs(a0 + x),a1)
+pow((x*Abs(a0)),a1)
+pow(Abs(a0 - x),a1)
+pow((x*Abs(1/a0)),a1)
+pow(x,(a0*a1))
+a0 + 2*x
+a0*x + x
+a0
+a0/x + x
+x + pow(Abs(a0),x)
+x*(a0 + x)
+a0*x**2
+x*(a0 - x)
+a0
+x*pow(Abs(a0),x)
+a0
+a0*x - x
+a0 - 2*x
+a0/x - x
+-x + pow(Abs(a0),x)
+(a0 + x)/x
+a0
+(a0 - x)/x
+a0/x**2
+pow(Abs(a0),x)/x
+pow(Abs(a0 + x),x)
+pow((x*Abs(a0)),x)
+pow(Abs(a0 - x),x)
+pow((Abs(a0)/x),x)
+pow(Abs(a0),(x**2))
+a0 + a1 + x
+a0*x + a1
+a0 + a1 - x
+a0/x + a1
+a1 + pow(Abs(a0),x)
+a1*(a0 + x)
+a0*a1*x
+a1*(a0 - x)
+a0*a1/x
+a1*pow(Abs(a0),x)
+a0 - a1 + x
+a0*x - a1
+a0 - a1 - x
+a0/x - a1
+-a1 + pow(Abs(a0),x)
+(a0 + x)/a1
+a0*x/a1
+(a0 - x)/a1
+a0/(a1*x)
+pow(Abs(a0),x)/a1
+pow(Abs(a0 + x),a1)
+pow((x*Abs(a0)),a1)
+pow(Abs(a0 - x),a1)
+pow((Abs(a0)/x),a1)
+pow(Abs(a0),(a1*x))
+a0 + a1 + x
+a0*a1 + x
+a0 - a1 + x
+a0/a1 + x
+x + pow(Abs(a0),a1)
+x*(a0 + a1)
+a0*a1*x
+x*(a0 - a1)
+a0*x/a1
+x*pow(Abs(a0),a1)
+a0 + a1 - x
+a0*a1 - x
+a0 - a1 - x
+a0/a1 - x
+-x + pow(Abs(a0),a1)
+(a0 + a1)/x
+a0*a1/x
+(a0 - a1)/x
+a0/(a1*x)
+pow(Abs(a0),a1)/x
+pow(Abs(a0 + a1),x)
+pow(Abs(a0*a1),x)
+pow(Abs(a0 - a1),x)
+pow(Abs(a0/a1),x)
+pow(Abs(a0),(a1*x))
+a0 + a1 + a2
+a0*a1 + a2
+a0 - a1 + a2
+a0/a1 + a2
+a2 + pow(Abs(a0),a1)
+a2*(a0 + a1)
+a0*a1*a2
+a2*(a0 - a1)
+a0*a2/a1
+a2*pow(Abs(a0),a1)
+a0 + a1 - a2
+a0*a1 - a2
+a0 - a1 - a2
+a0/a1 - a2
+-a2 + pow(Abs(a0),a1)
+(a0 + a1)/a2
+a0*a1/a2
+(a0 - a1)/a2
+a0/(a1*a2)
+pow(Abs(a0),a1)/a2
+pow(Abs(a0 + a1),a2)
+pow(Abs(a0*a1),a2)
+pow(Abs(a0 - a1),a2)
+pow(Abs(a0/a1),a2)
+pow(Abs(a0),(a1*a2))
+pow(10,(pow(10,(2*x))))
+10
+pow(10,(1/(2*x)))
+nan
+2*x
+nan
+pow(10,(-2*x))
+1
+2*x
+0
+log(10)/log(2*x)
+0
+log(pow(10,(2*x)))/log(10)
+0
+log(1/(2*x))/log(10)
+oo
+log(Abs(log(2*x))/log(10))/log(10)
+oo
+3*x
+x
+2*x**2
+0
+-x
+x
+1/2
+zoo
+pow(x,(2*x))
+1
+a0 + 2*x
+a0 + 2*x
+-a0 + 2*x
+-a0 + 2*x
+-a0 + 2*x
+-a0
+a0
+a0 + 2*x
+a0 + 2*x
+a0
+-a0
+-a0 + 2*x
+-a0 + 2*x
+-a0 + 2*x
+a0 + 2*x
+a0 + 2*x
+a0
+2*a0*x
+0
+a0 - 2*x
+a0 - 2*x
+a0
+a0/(2*x)
+zoo*a0
+pow(Abs(a0),(2*x))
+1
+2*pow(10,x)
+0
+2/x
+0
+2*log(x)/log(10)
+0
+3*x
+x
+2*x**2
+0
+x
+-x
+2
+0
+pow((2*x),x)
+0
+a0 + 2*x
+a0 + 2*x
+a0
+2*a0*x
+0
+-a0 + 2*x
+-a0 + 2*x
+-a0 + 2*x
+-a0
+2*x/a0
+0
+pow((2*x),a0)
+pow(0,a0)
+a0 + 2*x
+a0 + 2*x
+-a0 + 2*x
+-a0 + 2*x
+-a0 + 2*x
+a0
+-a0
+a0 + 2*x
+a0 + 2*x
+a0
+a0
+a0 - 2*x
+a0 - 2*x

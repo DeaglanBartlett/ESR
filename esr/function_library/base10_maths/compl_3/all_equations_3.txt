@@ -1,0 +1,40 @@
+pow(10,(pow(10,x)))
+pow(10,(1/x))
+x
+pow(10,(-x))
+x
+log(10)/log(x)
+log(pow(10,x))/log(10)
+log(1/x)/log(10)
+log(Abs(log(x))/log(10))/log(10)
+pow(10,(pow(10,a0)))
+pow(10,(1/a0))
+Abs(a0)
+pow(10,(-a0))
+a0
+log(10)/log(Abs(a0))
+log(pow(10,a0))/log(10)
+log(1/Abs(a0))/log(10)
+log(Abs(log(Abs(a0)))/log(10))/log(10)
+2*x
+x**2
+0
+1
+pow(x,x)
+a0 + x
+a0*x
+-a0 + x
+x/a0
+pow(x,a0)
+a0 + x
+a0*x
+a0 - x
+a0/x
+pow(Abs(a0),x)
+a0 + a1
+a0*a1
+a0 - a1
+a0/a1
+pow(Abs(a0),a1)
+2*x
+0

@@ -1,0 +1,1738 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: 1/a0}
+
+{a0: -a0}
+
+
+
+
+{a0: exp(a0)}
+
+{a0: 1/a0};{a0: -a0}
+
+
+{a0: 1/a0}
+
+
+
+{a0: exp(a0)};{a0: exp(a0)}
+
+{a0: 1/a0}
+
+{a0: -a0}
+
+{a0: exp(a0)}
+{a0: -a0}
+
+{a0: exp(a0)};{a0: exp(a0)}
+
+{a0: 1/a0}
+
+{a0: -a0}
+{a0: -a0}
+
+{a0: -a0}
+
+{a0: exp(a0)}
+
+{a0: 1/a0}
+
+{a0: -a0}
+
+
+
+
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: -a0}
+
+
+
+
+{a0: exp(a0)}
+
+
+{a0: exp(a0)};{a0: exp(a0)}
+
+{a0: 1/a0}
+{a0: -a0}
+{a0: -a0}
+
+
+
+
+{a0: exp(a0)};{a0: exp(a0)}
+
+{a0: 1/a0};{a0: -a0}
+
+
+
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: -a0}
+
+{a0: exp(a0)};{a0: exp(a0)}
+
+{a0: 1/a0};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: -a0};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+
+{a0: exp(a0)};{a0: exp(a0)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+{a0: 1/a0}
+{a0: -a0}
+
+{a0: -a0}
+{a0: -a0}
+
+
+{a0: -a0}
+
+{a0: -a0}
+{a0: -a0}
+
+{a0: 1/a0};{a0: -a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+{a0: -a0}
+{a0: exp(a0)}
+
+
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+{a0: -a0}
+
+
+{a0: exp(a0)}
+{a0: -a0}
+{a0: -a0}
+{a0: exp(a0)};{a0: -a0}
+
+
+
+
+
+
+
+
+
+{a0: 1/a0}
+
+{a0: 1/a0}
+
+{a0: -a0}
+
+
+
+
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+
+
+
+
+
+
+{a0: -a0}
+{a0: exp(a0)}
+
+{a0: exp(a0)}
+
+
+
+
+
+
+{a0: -a0}
+
+
+
+
+{a0: -a0}
+{a0: exp(a0)};{a0: -a0}
+
+{a0: exp(a0)}
+
+nan
+nan
+nan
+nan
+nan
+nan;{a0: 1/a0}
+{a0: 1/a0};{a1: 1/a1};nan
+nan;{a0: 1/a0}
+nan
+{a1: -a1};nan
+nan
+nan
+nan
+nan
+nan
+{a0: -a0};{a1: -a1};nan
+nan;{a0: -a0}
+nan
+nan;{a0: -a0}
+nan
+nan
+nan
+nan
+nan
+nan
+nan;{a0: exp(a0)};{a0: 1/a0}
+nan;{a0: exp(a0)};{a0: 1/a0}
+nan;{a0: exp(a0)};{a0: 1/a0}
+nan;{a0: exp(a0)};{a0: 1/a0}
+nan;{a0: exp(a0)};{a0: 1/a0}
+nan
+nan
+nan
+nan
+nan;{a0: -a0}
+nan
+nan
+nan
+nan;{a0: exp(a0)}
+{a1: -a1};nan;{a0: exp(a0)}
+nan;{a0: exp(a0)};{a0: exp(a0)}
+nan;{a0: exp(a0)};{a0: exp(a0)}
+nan;{a0: exp(a0)};{a0: exp(a0)}
+nan;{a0: exp(a0)};{a0: exp(a0)}
+nan;{a0: exp(a0)};{a0: exp(a0)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: -a0}
+
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0};{a0: -a0}
+
+{a0: 1/a0}
+{a0: exp(a0)};{a0: log(Abs(a0))}
+{a0: exp(a0)}
+{a0: exp(a0)};{a0: -a0};{a0: log(Abs(a0))}
+
+{a0: exp(a0)}
+
+{a0: -a0}
+
+
+
+{a0: 1/a0}
+
+{a0: 1/a0};{a0: -a0}
+{a0: 1/a0}
+{a0: 1/a0};{a0: -a0}
+{a0: exp(a0)}
+
+{a0: exp(a0)};{a0: -a0}
+{a0: exp(a0)}
+{a0: exp(a0)};{a0: -a0}
+
+
+
+{a0: -a0}
+
+{a0: 1/a0};{a0: -a0}
+
+{a0: 1/a0}
+{a0: exp(a0)}
+{a0: 1/a0}
+{a0: exp(a0)};{a0: -a0}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: 1/a0}
+
+{a0: 1/a0}
+
+
+{a0: 1/a0}
+
+{a0: 1/a0}
+
+
+{a0: 1/a0}
+
+{a0: 1/a0}
+
+
+{a0: exp(a0)}
+{a0: -a0}
+{a0: exp(a0)}
+
+{a0: -a0}
+{a0: exp(a0)}
+
+{a0: exp(a0)}
+
+{a0: -a0}
+
+
+
+
+{a1: a0, a0: a1}
+{a1: a0, a0: a1}
+
+{a1: -a1};{a1: a0, a0: a1}
+
+{a1: 1/a1};nan
+nan
+{a1: 1/a1};nan
+nan
+{a1: 1/a1};nan
+{a1: exp(a1)};{a1: log(Abs(a1))}
+{a1: exp(a1)};nan;{a0: log(Abs(a0))}
+{a1: exp(a1)};{a1: -a1};{a1: log(Abs(a1))}
+{a1: exp(a1)};nan
+{a1: exp(a1)}
+{a1: a0, a0: a1}
+{a0: 1/a0};{a1: -a1}
+
+{a0: 1/a0}
+
+{a1: 1/a1};{a1: -a1};nan;{a0: 1/a0}
+nan
+{a1: 1/a1};nan;{a0: 1/a0}
+{a0: 1/a0};{a1: 1/a1};nan
+{a1: 1/a1};{a1: -a1};nan
+{a1: exp(a1)};{a1: a0, a0: a1}
+{a0: 1/a0};{a1: exp(a1)};nan
+{a1: exp(a1)};{a1: -a1};{a1: a0, a0: a1}
+{a0: 1/a0};{a1: exp(a1)};nan
+{a1: exp(a1)};{a1: -a1}
+{a1: a0, a0: a1}
+{a1: a0, a0: a1};{a1: exp(a1)}
+{a0: -a0};{a1: a0, a0: a1}
+{a1: -a1};{a1: a0, a0: a1};{a1: exp(a1)}
+
+{a1: 1/a1};{a0: -a0};nan;{a0: exp(a0)}
+nan;{a0: exp(a0)}
+{a1: 1/a1};nan;{a0: exp(a0)}
+nan;{a0: exp(a0)}
+{a1: 1/a1};nan;{a0: exp(a0)}
+{a1: exp(a1)};{a0: -a0};{a1: -a1};{a1: a0, a0: a1}
+{a1: exp(a1)};nan;{a0: exp(a0)}
+{a1: exp(a1)};{a1: -a1};{a1: a0, a0: a1}
+{a1: exp(a1)};nan;{a0: exp(a0)}
+{a1: exp(a1)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+{a0: -a0}
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+{a0: 1/a0}
+{a0: -a0}
+
+{a0: -a0}
+
+{a0: 1/a0}
+{a0: -a0}
+
+
+
+{a0: 1/a0}
+{a0: -a0}
+
+{a0: -a0}
+
+{a0: exp(a0)}
+{a0: -a0}
+{a0: -a0}
+
+{a0: -a0}
+{a0: exp(a0)}
+
+
+{a0: -a0}
+{a0: -a0}
+
+
+{a0: 1/a0}
+
+
+
+
+
+
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+
+{a0: exp(a0)};{a0: log(Abs(a0))}
+{a0: exp(a0)}
+{a0: exp(a0)};{a0: log(Abs(a0))}
+{a0: exp(a0)}
+{a0: exp(a0)}
+
+{a0: -a0}
+
+{a0: -a0}
+{a0: -a0}
+{a0: 1/a0}
+
+{a0: 1/a0}
+
+
+{a0: exp(a0)}
+
+{a0: exp(a0)}
+
+{a0: exp(a0)}
+
+
+
+
+
+{a0: 1/a0};{a0: -a0}
+
+{a0: 1/a0}
+
+
+{a0: exp(a0)};{a0: -a0}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)}
+
+
+{a1: -a1}
+{a1: 1/a1}
+nan
+{a0: 1/a0};nan
+nan
+{a0: 1/a0};{a1: -a1};nan
+{a0: 1/a0};{a1: 1/a1};nan
+{a1: -a1};nan
+{a0: exp(a0)};{a1: a0, a0: a1};{a1: log(Abs(a1))}
+{a0: exp(a0)};nan;{a0: log(Abs(a0))}
+{a0: exp(a0)};{a1: -a1};{a1: a0, a0: a1};{a1: log(Abs(a1))}
+{a0: exp(a0)};{a1: 1/a1};nan;{a0: log(Abs(a0))}
+{a0: exp(a0)}
+
+{a0: -a0};{a1: 1/a1};{a1: a0, a0: a1}
+{a1: -a1}
+{a0: -a0};{a1: a0, a0: a1}
+nan;{a0: -a0}
+{a0: 1/a0};nan;{a0: 1/a0}
+nan
+{a0: 1/a0};{a1: -a1};nan;{a0: 1/a0}
+nan
+nan
+{a0: exp(a0)}
+{a0: exp(a0)};{a1: 1/a1};nan
+{a0: exp(a0)};{a1: -a1}
+{a0: exp(a0)};nan
+{a0: exp(a0)};{a1: -a1}
+
+{a1: exp(a1)}
+{a1: -a1}
+
+nan
+{a0: 1/a0};nan;{a0: exp(a0)}
+nan;{a0: exp(a0)}
+{a0: 1/a0};{a1: -a1};nan;{a0: exp(a0)}
+nan
+{a1: -a1};nan;{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)};nan;{a0: exp(a0)}
+{a0: exp(a0)};{a1: -a1}
+{a0: exp(a0)};{a1: 1/a1};nan;{a0: exp(a0)}
+{a0: exp(a0)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0};{a0: -a0}
+{a0: 1/a0}
+
+
+
+
+
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+
+{a0: -a0}
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+
+{a0: exp(a0)}
+
+
+
+{a0: -a0}
+
+
+
+
+
+
+
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)};{a0: -a0}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: -a0}
+
+{a0: -a0}
+
+
+
+
+
+
+{a1: a0, a0: a1}
+{a1: a0, a0: a1}
+
+
+
+{a1: 1/a1};{a1: a0, a0: a1}
+{a1: 1/a1}
+{a1: 1/a1}
+{a1: 1/a1};{a1: -a1}
+{a1: 1/a1}
+nan
+nan
+nan
+nan
+nan
+{a1: -a1};{a1: a0, a0: a1}
+{a1: -a1}
+{a1: -a1}
+
+{a1: -a1}
+nan
+nan
+nan
+nan
+nan
+
+{a1: exp(a1)};nan
+
+{a1: exp(a1)};nan
+
+{a1: a0, a0: a1};nan
+{a1: a0, a0: a1};nan
+nan
+nan
+nan
+{a1: a0, a0: a1}
+{a1: a0, a0: a1}
+
+
+
+{a1: exp(a1)};{a1: a0, a0: a1};{a0: exp(a0)}
+{a1: exp(a1)};{a1: a0, a0: a1};{a0: exp(a0)}
+{a1: exp(a1)};{a1: exp(a1)};{a1: -a1}
+{a1: exp(a1)};{a1: exp(a1)}
+{a1: exp(a1)};{a1: exp(a1)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+{a0: -a0}
+{a0: -a0}
+
+{a0: 1/a0};{a0: -a0}
+
+
+{a0: 1/a0}
+{a0: -a0}
+
+{a0: -a0}
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+
+
+
+
+
+
+
+
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+
+
+{a0: 1/a0}
+
+{a0: 1/a0}
+
+
+
+
+
+
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+{a0: -a0};{a1: -a1};nan
+nan;{a0: -a0}
+nan
+nan;{a0: -a0}
+nan
+nan;{a0: 1/a0}
+{a0: 1/a0};{a1: 1/a1};nan
+nan;{a0: 1/a0}
+nan
+{a1: -a1};nan
+nan
+nan
+nan
+nan
+nan
+
+
+
+{a0: -a0}
+
+{a0: a0/2}
+
+
+
+
+
+
+
+
+
+{a0: 2*a0}
+
+
+
+
+
+
+
+
+
+nan
+
+nan
+{a1: 1/a1}
+{a1: a0, a0: a1}
+{a1: a0, a0: a1}
+nan
+{a1: -a1};{a1: a0, a0: a1}
+nan
+{a1: a0, a0: a1}
+nan
+{a1: -a1}
+nan
+{a1: 1/a1};{a1: -a1}
+
+
+nan
+{a1: -a1}
+nan
+{a1: -a1};{a1: a0, a0: a1}
+
+
+{a1: -a1}
+{a1: 1/a1}
+
+nan
+
+nan
+{a1: a0, a0: a1}
+{a1: a0, a0: a1}
+{a1: a0, a0: a1}
+nan
+{a1: a0, a0: a1}
+nan
+{a1: a0, a0: a1}
+nan
+{a1: -a1}
+nan
+{a1: -a1};{a1: a0, a0: a1}
+
+
+nan
+
+nan
+
+
+
+
+
+
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+{a2: -a2};nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+nan;nan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: -a0}
+
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0};{a0: -a0}
+
+{a0: 1/a0}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)};{a0: -a0}
+
+{a0: exp(a0)}
+
+
+
+{a0: -a0}
+
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0};{a0: -a0}
+
+{a0: 1/a0};{a0: -a0}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)};{a0: -a0}
+
+{a0: exp(a0)};{a0: -a0}
+
+
+
+{a0: -a0}
+
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0};{a0: -a0}
+
+{a0: 1/a0}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)};{a0: -a0}
+
+{a0: exp(a0)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)}
+
+
+
+{a1: -a1}
+{a1: a0, a0: a1}
+{a1: 1/a1}
+{a1: 1/a1};{a1: a0, a0: a1}
+{a1: 1/a1};{a1: -a1}
+{a1: a0, a0: a1}
+nan
+{a1: exp(a1)}
+{a1: exp(a1)};{a1: a0, a0: a1}
+{a1: exp(a1)};{a1: -a1}
+
+{a1: exp(a1)};nan;{a0: log(Abs(a0))}
+{a0: 1/a0};{a1: a0, a0: a1}
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0};{a1: -a1}
+
+{a0: 1/a0};{a1: 1/a1};{a1: -a1};nan
+{a0: 1/a0};{a1: 1/a1};nan
+{a0: 1/a0};{a1: 1/a1};nan
+nan
+{a1: 1/a1};{a1: -a1};nan
+{a0: 1/a0};{a1: exp(a1)};{a1: a0, a0: a1}
+{a0: 1/a0};{a1: exp(a1)};nan
+{a0: 1/a0};{a1: exp(a1)};{a1: -a1};{a1: a0, a0: a1}
+{a0: 1/a0};{a1: exp(a1)};nan
+{a1: exp(a1)};{a1: -a1}
+{a0: exp(a0)};{a1: a0, a0: a1}
+{a0: exp(a0)}
+{a0: exp(a0)}
+{a0: exp(a0)};{a1: -a1}
+{a0: exp(a0)}
+{a0: exp(a0)};{a1: 1/a1}
+{a0: exp(a0)};{a1: 1/a1};nan
+{a0: exp(a0)};{a1: 1/a1};{a1: -a1}
+{a0: exp(a0)};nan
+{a0: exp(a0)};{a1: 1/a1}
+{a0: exp(a0)};{a1: exp(a1)}
+{a0: exp(a0)};{a1: exp(a1)};nan
+{a0: exp(a0)};{a1: exp(a1)};{a1: -a1}
+{a0: exp(a0)};{a1: exp(a1)};nan
+{a0: exp(a0)};{a1: exp(a1)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+{a0: -a0}
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+{a0: -a0}
+{a0: -a0}
+{a0: 1/a0};{a0: -a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+
+
+
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+{a0: 1/a0}
+
+
+
+
+
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+
+
+
+
+
+
+
+
+
+{a0: exp(a0)}
+
+
+
+
+
+
+
+
+
+
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+
+
+{a1: -a1}
+{a1: 1/a1}
+
+{a0: 1/a0}
+{a0: 1/a0};{a1: a0, a0: a1}
+{a0: 1/a0};{a1: -a1}
+{a0: 1/a0};{a1: 1/a1};{a1: a0, a0: a1}
+{a0: 1/a0};nan
+nan
+nan
+nan
+{a1: 1/a1};nan
+nan
+{a0: -a0}
+{a0: -a0};{a1: a0, a0: a1}
+{a0: -a0};{a1: -a1}
+{a0: -a0};{a1: 1/a1};{a1: a0, a0: a1}
+nan;{a0: -a0}
+nan
+nan
+nan
+nan
+nan
+
+{a0: exp(a0)};nan
+
+{a0: exp(a0)};{a1: 1/a1};nan
+{a0: exp(a0)}
+nan
+nan
+{a1: -a1};nan
+{a1: 1/a1};nan
+nan
+
+
+{a1: -a1}
+{a1: 1/a1}
+
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+{a0: exp(a0)};{a1: -a1};{a0: exp(a0)}
+{a0: exp(a0)};{a1: 1/a1};{a0: exp(a0)}
+{a0: exp(a0)};{a0: exp(a0)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: -a0}
+
+{a0: a0/2}
+
+
+
+
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+
+{a0: -a0}
+{a0: 1/a0};{a0: a0/2}
+{a0: 1/a0}
+
+{a0: 1/a0}
+{a0: 1/a0}
+
+{a0: a0/2}
+
+
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+
+
+{a0: -a0}
+{a0: 1/a0}
+
+{a0: a0}
+
+{a0: -a0};{a0: a0}
+{a0: 1/a0}
+
+
+
+
+
+
+nan
+{a1: a0, a0: a1}
+nan
+{a0: 1/a0};{a1: a0, a0: a1}
+
+
+nan
+{a0: -a0}
+nan
+
+nan
+{a1: -a1};{a1: a0, a0: a1}
+{a0: -a0};{a1: -a1};nan
+{a0: 1/a0};{a1: -a1};{a1: a0, a0: a1}
+{a1: -a1}
+{a1: 1/a1}
+nan
+{a0: -a0};{a1: 1/a1}
+{a0: 1/a0};{a1: 1/a1};nan
+{a1: 1/a1}
+
+
+
+
+nan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: a0}
+
+
+
+
+
+
+
+
+
+nan
+{a1: a0, a0: a1}
+nan
+
+
+
+nan
+
+nan
+
+nan
+{a1: -a1};{a1: a0, a0: a1}
+nan
+{a1: -a1}
+{a1: -a1}
+{a1: 1/a1}
+nan
+{a1: 1/a1}
+nan
+{a1: 1/a1}
+
+
+
+
+
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+nan
+
+nan;nan
+nan;{a0: a0, a2: a1};nan
+nan;nan
+nan;{a0: a0, a2: a1};nan
+nan;{a0: a0, a2: a1};nan
+nan;{a0: a0, a2: a1};nan
+nan;nan
+nan;{a0: a0, a2: a1};nan
+nan;nan
+nan;{a0: a0, a2: a1};nan
+nan;nan
+nan;{a2: -a2};{a0: a0, a2: a1};nan
+nan;nan
+nan;{a2: -a2};{a0: a0, a2: a1};nan
+nan;{a2: -a2};{a0: a0, a2: a1};nan
+nan;{a2: 1/a2};{a0: a0, a2: a1};nan
+nan;nan
+nan;{a2: 1/a2};{a0: a0, a2: a1};nan
+nan;nan
+nan;{a2: 1/a2};{a0: a0, a2: a1};nan
+nan;{a0: a0, a2: a1};nan
+nan;{a0: a0, a2: a1};nan
+nan;{a0: a0, a2: a1};nan
+nan;{a0: a0, a2: a1};nan
+nan;nan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+
+
+
+
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+
+
+
+{a0: a0/2}
+
+
+
+
+{a0: 2*a0}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{a0: a0/2}
+
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+{a0: 1/a0};{a0: a0/2}
+
+
+
+
+
+{a0: -a0}
+{a0: -a0}
+{a0: -a0}
+
+{a0: -a0}
+
+
+
+
+
+

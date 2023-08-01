@@ -338,7 +338,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
         if rank == 0:
             print(rank, i, len(fcn_list_proc), flush=True)
         try:
-            with simplifier.time_limit(100):
+            with simplifier.time_limit(tmax):
                 try:
                     chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], 
                                                     likelihood, 

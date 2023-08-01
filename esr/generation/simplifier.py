@@ -193,15 +193,7 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
         param_list = []
     
     sympy.init_printing(use_unicode=True)
-    locs = {"inv": inv,
-                "square": square,
-                "cube": cube,
-                "pow": pow_abs,
-                "Abs": sympy.Abs,
-                "x":x,
-                "sqrt_abs":sqrt_abs,
-                "log_abs":log_abs
-                }
+    locs = sympy_locs
                 
     if max_param > 0:
         for i in range(len(all_a)):
@@ -1221,14 +1213,8 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
     if max_param == 1:
         all_a = [all_a]
         
-    locs = {"inv": inv,
-            "square": square,
-            "cube": cube,
-            "pow": pow_abs,
-            "Abs": sympy.Abs,
-            "sqrt_abs":sqrt_abs,
-            "log_abs":log_abs
-            }
+    locs = sympy_locs
+    
     if max_param > 0:
         for i in range(len(all_a)):
             locs["a%i"%i] = all_a[i]
@@ -1400,15 +1386,7 @@ def check_results(dirname, compl, tmax=10):
     if max_param == 1:
         all_a = [all_a]
     x = sympy.symbols('x', positive=True)
-    locs = {"inv": inv,
-            "square": square,
-            "cube": cube,
-            "pow": pow_abs,
-            "Abs": sympy.Abs,
-            "sqrt_abs":sqrt_abs,
-            "log_abs":log_abs,
-            "x":x
-            }
+    locs = sympy_locs
     if max_param > 0:
         for i in range(len(all_a)):
             locs["a%i"%i] = all_a[i]
