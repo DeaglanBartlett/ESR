@@ -1,6 +1,0 @@
-['tenexp' 'x']
-['inv' 'x']
-['log10_abs' 'x']
-['tenexp' 'a0']
-['inv' 'a0']
-['log10_abs' 'a0']

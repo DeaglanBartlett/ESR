@@ -1,6 +1,0 @@
-log(x)/log(10)
-1/x
-a0/log(10)
-pow(10,x)
-a0
-pow(10,a0)
