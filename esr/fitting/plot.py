@@ -110,12 +110,15 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
                 continue
 
         if np.isscalar(ypred):
-            ax1.plot(likelihood.xvar-1, [ypred]*len(likelihood.xvar), color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
+            ax1.plot(likelihood.xvar, [ypred]*len(likelihood.xvar), color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
         else:
-            ax1.plot(likelihood.xvar-1, ypred, color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
+            ax1.plot(likelihood.xvar, ypred, color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
         
-    ax1.errorbar(likelihood.xvar-1, likelihood.yvar, yerr=likelihood.yerr, fmt='.', markersize=5, zorder=len(fcn_list)+1, capsize=1, elinewidth=1, color='k', alpha=1)
-    ax1.set_xlabel(r'$z$')
+    if hasattr(likelihood, 'yerr'):
+        ax1.errorbar(likelihood.xvar, likelihood.yvar, yerr=likelihood.yerr, fmt='.', markersize=5, zorder=len(fcn_list)+1, capsize=1, elinewidth=1, color='k', alpha=1)
+    else:
+        ax1.plot(likelihood.xvar, likelihood.yvar, '.', color='k', ms=5, zorder=len(fcn_list)+1, alpha=1)
+    ax1.set_xlabel(r'$x$')
     ax1.set_ylabel(likelihood.ylabel)
     ax1.set_xscale(xscale)
     ax1.set_yscale(yscale)
