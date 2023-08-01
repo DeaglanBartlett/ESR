@@ -43,7 +43,9 @@ where type 0, 1 and 2 functions are nullary, unary, and binary, respectively.
 Fitting to a dataset
 --------------------
 
-Suppose we have already generated the equations required for the ``CCLikelihood`` class. In the following we show the steps that are required to fit the complexity 5 functions to these data. The various ``fitting'' functions run rely on the output of the previous script, so the order cannot change. 
+Suppose we have already generated the equations required for the ``CCLikelihood`` class. 
+In the following we show the steps that are required to fit the complexity 5 functions to these data. 
+The various ``fitting'' functions run rely on the output of the previous script, so the order cannot change. 
 
 
 .. code-block:: python
@@ -137,13 +139,19 @@ For example, a Gaussian likelihood can be defined as
 	import os
 
 	class GaussLikelihood(Likelihood):
+	    """Likelihood class used to fit a function directly using a Gaussian likelihood
+	    
+	    Args:
+		:data_file (str): Name of the file containing the data to use
+		:run_name (str): The name to be associated with this likelihood, e.g. 'my_esr_run'
+		:data_dir (str, default=None): The path containing the data and cov files
+		:fn_set (str, default='core_maths'): The name of the function set to use with the likelihood. Must match one of those defined in ``generation.duplicate_checker``
+	    
+	    """
 
-	    def __init__(self, data_file, run_name, data_dir=None):
-		"""Likelihood class used to fit a function directly using a Gaussian likelihood
+	    def __init__(self, data_file, run_name, data_dir=None, fn_set='core_maths'):
 		
-		"""
-		
-		super().__init__(data_file, data_file, run_name, data_dir=data_dir)
+		super().__init__(data_file, data_file, run_name, data_dir=data_dir, fn_set=fn_set)
 		self.ylabel = r'$y$'    # for plotting
 		self.xvar, self.yvar, self.yerr = np.loadtxt(self.data_file, unpack=True)
 
@@ -164,13 +172,14 @@ For example, a Gaussian likelihood can be defined as
 		ypred = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
 		if not np.all(np.isreal(ypred)):
 		    return np.inf
-		nll = np.sum((ypred - self.yvar) ** 2)
 		nll = np.sum(0.5 * (ypred - self.yvar) ** 2 / self.yerr ** 2 + 0.5 * np.log(2 * np.pi) + np.log(self.yerr))
 		if np.isnan(nll):
 		    return np.inf
 		return nll
-	
+
 although note that this is already included as ``esr.fitting.likelihood.GaussLikelihood``.
+If you want to use a different set of functions than ``core_maths`` then this can be passed using
+the ``fn_set`` argument.
 
 We can then combine the above code with the below to fit a mock dataset
 

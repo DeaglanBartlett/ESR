@@ -9,3 +9,4 @@ pympler
 psutil
 prettytable
 numdifftools
+sphinx-rtd-theme
