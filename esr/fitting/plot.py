@@ -37,6 +37,8 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
 
     if rank != 0:
         return
+    
+    print('\nMaking plots', flush=True)
 
     vmin = 1e-3
     vmax = 1

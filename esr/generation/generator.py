@@ -1507,7 +1507,6 @@ def shape_to_functions(s, basis_functions):
         extra_tree = list(itertools.chain(*extra_tree))
         extra_fun = list(itertools.chain(*extra_fun))
         extra_orig = list(itertools.chain(*extra_orig))
-        print('Number of extra trees for', s, len(extra_fun))
     extra_fun = comm.bcast(extra_fun, root=0)
     extra_orig = comm.bcast(extra_orig, root=0)
     
@@ -1614,8 +1613,7 @@ def generate_equations(compl, basis_functions, dirname):
 
     for i in range(len(shapes)):
         if rank == 0:
-            print('\n%i of %i'%(i+1, len(shapes)))
-            print(shapes[i])
+            print('%i of %i'%(i+1, len(shapes)))
             sys.stdout.flush()
         all_fun[i], all_tree, extra_fun[i], extra_tree, extra_orig[i] = shape_to_functions(shapes[i], basis_functions)
 
@@ -1627,9 +1625,6 @@ def generate_equations(compl, basis_functions, dirname):
         param_list = ['a%i'%j for j in range(max_param)]
 
         if rank == 0:
-
-            print(i, len(all_fun[i]), len(all_tree), len(extra_fun[i]), len(extra_tree), len(extra_orig[i]))
-            print(len(all_fun[i]) == len(all_tree), len(extra_fun[i]) == len(extra_tree))
 
             with open(dirname + '/orig_trees_%i.txt'%compl, 'a') as f:
                 w = 80
@@ -1661,27 +1656,15 @@ def generate_equations(compl, basis_functions, dirname):
 
     if rank == 0:
         s = 'cat %s/orig_trees_%i.txt %s/extra_trees_%i.txt > %s/trees_%i.txt'%(dirname,compl,dirname,compl,dirname,compl)
-        print('\n%s'%s)
         sys.stdout.flush()
         os.system(s)
         s = 'cat %s/orig_aifeyn_%i.txt %s/extra_aifeyn_%i.txt > %s/aifeyn_%i.txt'%(dirname,compl,dirname,compl,dirname,compl)
-        print('\n%s'%s)
         sys.stdout.flush()
         os.system(s)
-
-        print('\nntree:', ntree)
-        print('nextratree:', nextratree)
-        print('sum:', ntree + nextratree)
 
     all_fun = list(itertools.chain(*all_fun))
     extra_fun = list(itertools.chain(*extra_fun))
     extra_orig = list(itertools.chain(*extra_orig))
-
-    if rank == 0:
-        print('\nall_fun', len(all_fun))
-        print('extra_fun', len(extra_fun))
-        print('extra_orig', len(extra_orig))
-        sys.stdout.flush()
 
     all_fun = all_fun + extra_fun
     
