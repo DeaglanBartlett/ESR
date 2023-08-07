@@ -138,48 +138,63 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
                 
     # Must indicate a bad fcn, so just need to make sure it doesn't have a good -log(L)
     if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0):
-        if negloglike<0.:
-            print("ATTENTION, a relatively good function has Fisher element negative, zero or nan: ", fcn_i, negloglike, Fisher_diag, flush=True)
         codelen = np.nan
         return params, negloglike, deriv, codelen
     
     k = nparam
 
-    if np.sum(Nsteps<1)>0:         # Possibly should reevaluate -log(L) with the param(s) set to 0, but doesn't matter unless the fcn is a very good one
-        if negloglike<-1500.:
-            print("ATTENTION, a relatively good function is having a parameter set to 0: ", fcn_i, negloglike, theta_ML, Delta, Nsteps, Fisher_diag, flush=True)
-        
-        theta_ML[Nsteps<1] = 0.         # Set any parameter to 0 that doesn't have at least one precision step, and recompute -log(L).
-        
+    # See whether we can snap any parameters to zero
+    if np.sum(Nsteps<1)>0:
+    
+        theta_ML_orig = np.copy(theta_ML)
         negloglike_orig = np.copy(negloglike)
         
-        # See new value with theta = 0
+        # First try setting any parameter to 0 that doesn't have at least
+        # one precision step, and recompute -log(L).
+        theta_ML[Nsteps<1] = 0.
         negloglike = fop(theta_ML)
-            
-        # Should be exactly the same condition as the above
-        if negloglike_orig<-1500.:
-            print("negloglikes:", negloglike_orig, negloglike, flush=True)
 
         # For the codelen, we effectively don't have the parameter that had Nsteps<1
-        k -= np.sum(Nsteps<1)
+        if np.isfinite(negloglike):
+            k -= np.sum(Nsteps<1)
+            kept_mask = Nsteps>=1
+        else:
+            # Let's see if setting any of the parameters to zero is ok
+            try_idx = np.arange(nparam)[Nsteps < 1]
+            for r in reversed(range(1, len(try_idx))):
+                for idx in itertools.combinations(try_idx, r):
+                    theta_ML = np.copy(theta_ML_orig)
+                    theta_ML[idx] = 0.
+                    negloglike = fop(theta_ML)
+                    if np.isfinite(negloglike):
+                        break
+            kept_mask = np.ones(len(theta_ML), dtype=bool)
+            if np.isfinite(negloglike):
+                k -= len(idx)
+                kept_mask[idx] = 0
+            else:
+                theta_ML = theta_ML_orig
+                negloglike = negloglike_orig
+                k = nparam
             
         if k<0:
             print("This shouldn't have happened", flush=True)
             quit()
-        elif k==0:                  # If we have no parameters left then the parameter codelength is 0 so we can move on
+        elif k==0:
             codelen = 0
             return params, negloglike, deriv, codelen
         
-        Fisher_diag = Fisher_diag[Nsteps>=1]     # Only consider these parameters in the codelen
-        theta_ML = theta_ML[Nsteps>=1]
-    
+        Fisher_diag = Fisher_diag[kept_mask]     # Only consider these parameters in the codelen
+        theta_ML = theta_ML[kept_mask]
+    else:
+        kept_mask = np.ones(len(theta_ML), dtype=bool)
+
     codelen = -k/2.*math.log(3.) + np.sum( 0.5*np.log(Fisher_diag) + np.log(abs(np.array(theta_ML))) )
 
     # New params after the setting to 0, padded to length max_param as always
+    theta_ML = theta_ML_orig
+    theta_ML[~kept_mask] = 0.
     params[:] = np.pad(theta_ML, (0, max_param-len(theta_ML)))
-
-    if (np.isinf(codelen) or codelen>200.) and negloglike<-1500.:
-        print("ATTENTION, a relative good function has a very big codelength:", fcn_i, k, Fisher_diag, theta_ML, Delta, Nsteps, negloglike, codelen, flush=True)
 
     return params, negloglike, deriv, codelen
 
