@@ -11,12 +11,13 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def main(comp, likelihood):
+def main(comp, likelihood, print_frequency=1000):
     """Combine the description lengths of all functions of a given complexity, sort by this and save to file.
     
     Args:
         :comp (int): complexity of functions to consider
         :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
+        :print_frequency (int, default=1000): the status of the fits will be printed every ``print_frequency`` number of iterations
     
     Returns:
         None
@@ -24,6 +25,9 @@ def main(comp, likelihood):
     """
     if likelihood.is_mse:
         raise ValueError('Cannot use MSE with description length')
+    
+    if rank == 0:
+        print('\nComputing description lengths', flush=True)
 
     unifn_file = likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt"%(comp,comp)
     allfn_file = likelihood.fn_dir + "/compl_%i/all_equations_%i.txt"%(comp,comp)
@@ -37,7 +41,6 @@ def main(comp, likelihood):
     with open(allfn_file, "r") as f:         # All
         fcn_list_all = f.read().splitlines()
 
-#    negloglike, codelen, index, param1, param2, param3, param4 = np.genfromtxt(likelihood.out_dir + "/codelen_matches_comp"+str(comp)+".dat", unpack=True)        # All
     data = np.genfromtxt(likelihood.out_dir + "/codelen_matches_comp"+str(comp)+".dat") # All
     negloglike = data[:,0]
     codelen = data[:,1]
@@ -62,8 +65,8 @@ def main(comp, likelihood):
     xarr_proc = xarr[data_start:data_end]        # Which unique function indices this proc will look at
 
     for i in range(len(fcn_list_proc)):          # Loop over all unique fcns to find variant with min codelength
-        if rank==0 and i%1000==0:
-            print(i)
+        if rank==0 and i%print_frequency==0:
+            print(f'{i+1} of {len(fcn_list_proc)}', flush=True)
             
         negloglike_i, codelen_i, aifeyn_i = negloglike[index==xarr_proc[i]], codelen[index==xarr_proc[i]], aifeyn[index==xarr_proc[i]]           # Arrays of all variants for this unique fcn
         
@@ -109,7 +112,6 @@ def main(comp, likelihood):
         data = np.genfromtxt(likelihood.out_dir + '/'+prefix+'comp'+str(comp)+'.dat')            # This is the combined results from all procs, and the rest should be as before
         DL_min = data[:,0]
         params_min = data[:,1:1+params.shape[1]]
-        print(data.shape)
         negloglike_min = data[:,-3]
         codelen_min = data[:,-2]
         aifeyn_min = data[:,-1]

@@ -129,7 +129,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
             Nsteps_tmp = abs(np.array(theta_ML))/Delta_tmp
 
             if (np.sum(Fisher_diag_tmp <= 0.) <= 0) and (np.sum(np.isnan(Fisher_diag_tmp)) <= 0) and (np.sum(np.isinf(Fisher_diag)) <= 0) and (np.sum(Nsteps_tmp<1)<=0):
-                print("Succeeded at rectifying Fisher:", fcn_i, d2, meth, Fisher_diag_tmp, theta_ML, Delta_tmp, Nsteps_tmp, flush=True)
+                print("\tSucceeded at rectifying Fisher:", fcn_i, d2, meth, Fisher_diag_tmp, theta_ML, Delta_tmp, Nsteps_tmp, flush=True)
                 Fisher_diag = Fisher_diag_tmp
                 Delta, Nsteps = Delta_tmp, Nsteps_tmp
                 start = int(i * max_param - (i - 1) * i / 2)
@@ -198,13 +198,14 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     return params, negloglike, deriv, codelen
 
     
-def main(comp, likelihood, tmax=5, try_integration=False):
+def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False):
     """Compute Fisher, correct MLP and find parametric contirbution to description length for all functions and save to file
     
     Args:
         :comp (int): complexity of functions to consider
         :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
         :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :print_frequency (int, default=50): the status of the fits will be printed every ``print_frequency`` number of iterations
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         
     Returns:
@@ -214,6 +215,9 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     
     if likelihood.is_mse:
         raise ValueError('Cannot use MSE with description length')
+        
+    if rank == 0:
+        print('\nComputing Fisher', flush=True)
 
     if comp>=8:
         sys.setrecursionlimit(2000 + 500 * (comp - 8))
@@ -227,8 +231,8 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     deriv = np.zeros([len(fcn_list_proc), int(max_param * (max_param+1) / 2)])
 
     for i in range(len(fcn_list_proc)):           # Consider all possible complexities
-        if rank == 0:
-            print(i, len(fcn_list_proc), flush=True)
+        if rank == 0 and ((i == 0) or ((i+1) % print_frequency == 0)):
+            print(f'{i+1} of {len(fcn_list_proc)}', flush=True)
 
         if np.isnan(negloglike[i]) or np.isinf(negloglike[i]):
             codelen[i]=np.nan

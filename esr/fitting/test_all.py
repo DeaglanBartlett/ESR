@@ -269,7 +269,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                 # Params put in linear space and sign added back in
                 params = np.pad(10.**np.array(best.x), (0, max_param-len(best.x))) * mult_arr_best
         elif not np.isfinite(chi2_min):
-            print('Failed to find parameters for function:', fcn_i)
+            print('\tFailed to find parameters for function:', fcn_i)
                  
         # This is after all the iterations, so it's the best we have; reduced chi2
         chi2_i = chi2_min
@@ -302,7 +302,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
     return chi2_i, params
     
     
-def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_opt=False, Niter_params=[40,60], Nconv_params=[-5,20]):
+def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=[40,60], Nconv_params=[-5,20]):
     """Optimise all functions for a given complexity and save results to file.
     
     This can optimise in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
@@ -318,6 +318,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
         :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
         :pmin (float, default=0.): minimum value for each parameter to considered when generating initial guess
         :pmax (float, default=3.): maximum value for each parameter to considered when generating initial guess
+        :print_frequency (int, default=50): the status of the fits will be printed every ``print_frequency`` number of iterations
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
         :Niter_params (list, default=[40, 60]): Parameters determining maximum number of parameter optimisation iterations to attempt.
@@ -327,6 +328,9 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
         None
     
     """
+    
+    if rank == 0:
+        print('\nRunning fits', flush=True)
 
     fcn_list_proc, _, _ = get_functions(comp, likelihood)
     
@@ -336,8 +340,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, try_integration=False, log_op
     chi2 = np.zeros(len(fcn_list_proc))     # This is now only for this proc
     params = np.zeros([len(fcn_list_proc), max_param])
     for i in range(len(fcn_list_proc)):           # Consider all possible complexities
-        if rank == 0:
-            print(rank, i, len(fcn_list_proc), flush=True)
+        if rank == 0 and ((i == 0) or ((i+1) % print_frequency == 0)):
+            print(f'{i+1} of {len(fcn_list_proc)}', flush=True)
         try:
             with simplifier.time_limit(tmax):
                 try:

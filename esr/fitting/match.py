@@ -19,13 +19,14 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def main(comp, likelihood, tmax=5, try_integration=False):
+def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
     """Apply results of fitting the unique functions to all functions and save to file
     
     Args:
         :comp (int): complexity of functions to consider
         :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
         :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :print_frequency (int, default=1000): the status of the fits will be printed every ``print_frequency`` number of iterations
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         
     Returns:
@@ -41,6 +42,9 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     def f1(x):
         return likelihood.negloglike([x],eq_numpy, integrated=integrated)
         
+    if rank == 0:
+        print('\nMatching', flush=True)
+    
     invsubs_file = likelihood.fn_dir + "/compl_%i/inv_subs_%i.txt"%(comp,comp)
     match_file = likelihood.fn_dir + "/compl_%i/matches_%i.txt"%(comp,comp)
     
@@ -60,7 +64,7 @@ def main(comp, likelihood, tmax=5, try_integration=False):
     params = np.zeros([len(fcn_list_proc), max_param])
 
     for i in range(len(fcn_list_proc)):                 # The part of all eqs analysed by this proc
-        if i%1000==0 and rank==0:
+        if i%print_frequency==0 and rank==0:
             print(i, len(fcn_list_proc))
 
         fcn_i = fcn_list_proc[i].replace('\'', '')
