@@ -99,14 +99,19 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
             codelen[i] = np.inf
             continue
         
-        Delta = np.zeros(fish.shape)
-        m = (fish != 0)
-        Delta[m] = np.atleast_1d(np.sqrt(12./fish[m]))
-        Delta[~m] = np.inf
-        Nsteps = np.atleast_1d(np.abs(np.array(p)))
-        m = (Delta != 0)
-        Nsteps[m] /= Delta[m]
-        Nsteps[~m] = np.nan
+        try:
+            Delta = np.zeros(fish.shape)
+            m = (fish != 0)
+            Delta[m] = np.atleast_1d(np.sqrt(12./fish[m]))
+            Delta[~m] = np.inf
+            Nsteps = np.atleast_1d(np.abs(np.array(p)))
+            m = (Delta != 0)
+            Nsteps[m] /= Delta[m]
+            Nsteps[~m] = np.nan
+        except:
+            print('Error with function:', fcn_i)
+            codelen[i] = np.inf
+            continue
         
         if np.sum(Nsteps<1)>0:         # should reevaluate -log(L) with the param(s) set to 0, but doesn't matter unless the fcn is a very good one
             
