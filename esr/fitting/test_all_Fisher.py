@@ -142,12 +142,11 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         return params, negloglike, deriv, codelen
     
     k = nparam
+    theta_ML_orig = np.copy(theta_ML)
+    negloglike_orig = np.copy(negloglike)
 
     # See whether we can snap any parameters to zero
     if np.sum(Nsteps<1)>0:
-    
-        theta_ML_orig = np.copy(theta_ML)
-        negloglike_orig = np.copy(negloglike)
         
         # First try setting any parameter to 0 that doesn't have at least
         # one precision step, and recompute -log(L).
