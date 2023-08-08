@@ -102,7 +102,7 @@ def get_functions(comp, likelihood, unique=True):
     return fcn_list[data_start:data_end], data_start, data_end
     
     
-def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log_opt=False, max_param=4, Niter_params=[40,60], Nconv_params=[-5,20]):
+def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log_opt=False, max_param=4, Niter_params=[40,60], Nconv_params=[-5,20], test_success=False):
     """Optimise the parameters of a function to fit data
     
     The list of parameters, P, passed as Niter_params and Nconv_params compute these values, N, to be
@@ -121,6 +121,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
         :max_param (int, default=4): The maximum number of parameters considered. This sets the shapes of arrays used.
         :Niter_params (list, default=[40, 60]): Parameters determining maximum number of parameter optimisation iterations to attempt.
         :Nconv_params (list, default=[-5, 20]): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters. These parameters determine Nconv.
+        :test_sucess (bool, default=False): Whether to test whether the optimisation was successful using scipy's criteria
         
     Returns:
         :chi2_i (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
@@ -233,7 +234,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
                     inpt = np.random.uniform(pmin,pmax)
                     res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 5000})
                     
-            if not res.success:
+            if test_success and (not res.success):
                 continue
 
             if np.isinf(res['fun']):
