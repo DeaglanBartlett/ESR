@@ -152,7 +152,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
            Nsteps = abs(np.array(theta_ML))/Delta
            for i in range(nparam):
                start = int(i * max_param - (i - 1) * i / 2)
-               deriv[start:start+nparam-i] = Hmat[mode_ind][i,i:]
+               deriv[start:start+nparam-i] = Hmat_array_f[mode_ind][i,i:]
        
        else: # try again with less precision
            Delta_array_round = [[format(num, ".1e") for num in row] for row in Delta_array]
@@ -169,7 +169,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
                Nsteps = abs(np.array(theta_ML))/Delta               
                for i in range(nparam):
                    start = int(i * max_param - (i - 1) * i / 2)
-                   deriv[start:start+nparam-i] = Hmat[mode_ind][i,i:]
+                   deriv[start:start+nparam-i] = Hmat_array_f[mode_ind][i,i:]
                 
     # Must indicate a bad fcn, so just need to make sure it doesn't have a good -log(L)
     if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0):
