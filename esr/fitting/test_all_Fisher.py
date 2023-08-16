@@ -134,7 +134,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
            
        Hmat_array_f = [] # filter array
        for matrix in Hmat_array:
-           if not np.any(np.isnan(matrix)) and not np.any(np.isinf(matrix)) and np.all(matrix > 0):
+           if not np.any(np.isnan(matrix)) and not np.any(np.isinf(matrix)) and np.all(np.diagonal(matrix) > 0):
                Hmat_array_f.append(matrix)
        Hmat_array_f = np.array(Hmat_array_f)
        Fisher_array = np.array([np.array([mat[i,i] for i in range(nparam)]) for mat in Hmat_array_f])
