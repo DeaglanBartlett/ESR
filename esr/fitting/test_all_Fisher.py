@@ -8,6 +8,7 @@ import os
 import sys
 import itertools
 import numdifftools as nd
+from scipy.stats import mode
 
 import esr.fitting.test_all as test_all
 from esr.fitting.sympy_symbols import *
