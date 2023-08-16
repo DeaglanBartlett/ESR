@@ -8,6 +8,7 @@ import os
 import sys
 import itertools
 import numdifftools as nd
+from scipy.stats import mode
 
 import esr.fitting.test_all as test_all
 from esr.fitting.sympy_symbols import *
@@ -117,24 +118,58 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         start = int(i * max_param - (i - 1) * i / 2)
         deriv[start:start+nparam-i] = Hmat[i,i:]
     
-    if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0) or (np.sum(np.isinf(Fisher_diag)) > 0) or (np.sum(Nsteps<1) > 0):
-        for d2, meth in itertools.product(d_list, method_list):
-            if use_relative_dx:
-                Hfun = nd.Hessian(fop, step=np.abs(d2*theta_ML)+1.e-15, method=meth)
-            else:
-                Hfun = nd.Hessian(fop, step = d2, method=meth)
-            Hmat = Hfun(theta_ML)
-            Fisher_diag_tmp = np.array([Hmat[i,i] for i in range(nparam)])
-            Delta_tmp = np.sqrt(12./Fisher_diag_tmp)
-            Nsteps_tmp = abs(np.array(theta_ML))/Delta_tmp
-
-            if (np.sum(Fisher_diag_tmp <= 0.) <= 0) and (np.sum(np.isnan(Fisher_diag_tmp)) <= 0) and (np.sum(np.isinf(Fisher_diag)) <= 0) and (np.sum(Nsteps_tmp<1)<=0):
-                print("\tSucceeded at rectifying Fisher:", fcn_i, d2, meth, Fisher_diag_tmp, theta_ML, Delta_tmp, Nsteps_tmp, flush=True)
-                Fisher_diag = Fisher_diag_tmp
-                Delta, Nsteps = Delta_tmp, Nsteps_tmp
-                start = int(i * max_param - (i - 1) * i / 2)
-                deriv[start:start+nparam-i] = Hmat[i,i:]
-                break
+    n_iter = len(d_list)*len(method_list)
+    if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0) or (np.sum(np.isinf(Fisher_diag)) > 0):#  or (np.sum(Nsteps<1) > 0):
+       Fisher_array = np.empty((n_iter, nparam))
+       Hmat_array = np.empty((n_iter, nparam, nparam))
+       e = 0
+       for d2, meth in itertools.product(d_list, method_list):
+           if use_relative_dx:
+               Hfun = nd.Hessian(fop, step = np.abs(d2*theta_ML)+1.e-15, method=meth)
+           else:
+               Hfun = nd.Hessian(fop, step = d2, method=meth)
+           Hmat = Hfun(theta_ML)
+           Hmat_array[e] = Hmat
+           e += 1
+           
+       Hmat_array_f = [] # filter array
+       for matrix in Hmat_array:
+           if not np.any(np.isnan(matrix)) and not np.any(np.isinf(matrix)) and np.all(np.diagonal(matrix) > 0):
+               Hmat_array_f.append(matrix)
+       Hmat_array_f = np.array(Hmat_array_f)
+       Fisher_array = np.array([np.array([mat[i,i] for i in range(nparam)]) for mat in Hmat_array_f])
+       Delta_array = np.sqrt(12./Fisher_array)
+       Delta_array_round = [[format(num, ".3e") for num in row] for row in Delta_array]
+       Delta_array_round = np.array(Delta_array_round, dtype=float)
+       repeated_elements_exist = len(Delta_array_round[:,0]) != len(set(Delta_array_round[:,0]))
+       
+       if repeated_elements_exist:
+           Delta_mode = mode(Delta_array_round)[0][0]
+           mode_ind = np.where(Delta_array_round == Delta_mode)[0][0]
+           Fisher_diag = np.atleast_1d(Fisher_array[mode_ind])
+           # Delta, Nsteps = np.atleast_1d(Delta_array[mode_ind]), np.atleast_1d(Nsteps_array[mode_ind])
+           Delta = np.sqrt(12./Fisher_diag)
+           Nsteps = abs(np.array(theta_ML))/Delta
+           for i in range(nparam):
+               start = int(i * max_param - (i - 1) * i / 2)
+               deriv[start:start+nparam-i] = Hmat[mode_ind][i,i:]
+       
+       else: # try again with less precision
+           Delta_array_round = [[format(num, ".1e") for num in row] for row in Delta_array]
+           Delta_array_round = np.array(Delta_array_round, dtype=float)
+           repeated_elements_exist = len(Delta_array_round[:,0]) != len(set(Delta_array_round[:,0]))
+           if not repeated_elements_exist:
+               codelen = np.nan
+               return params, negloglike, deriv, codelen
+           else:
+               Delta_mode = mode(Delta_array_round)[0][0]
+               mode_ind = np.where(Delta_array_round == Delta_mode)[0][0]
+               Fisher_diag = np.atleast_1d(Fisher_array[mode_ind])
+               Delta = np.sqrt(12./Fisher_diag)
+               Nsteps = abs(np.array(theta_ML))/Delta               
+               for i in range(nparam):
+                   start = int(i * max_param - (i - 1) * i / 2)
+                   deriv[start:start+nparam-i] = Hmat[mode_ind][i,i:]
                 
     # Must indicate a bad fcn, so just need to make sure it doesn't have a good -log(L)
     if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0):
