@@ -66,50 +66,81 @@ class Node:
             self.val = int(v)
         elif v.lstrip("-").lstrip("/").isnumeric():
             self.val = float(v)
+        else:
+            self.val = v
             
 class DecoratedNode:
 
     def __init__(self, fun, basis_functions, parent_op=None, parent=None):
+    
+        if fun is not None:
         
-        self.expr = fun
-        self.type = type(fun)
-        self.constant = fun.is_number
-        self.degree = len(fun.args)
-        self.op = fun.__class__.__name__
+            self.expr = fun
+            self.type = type(fun)
+            self.constant = fun.is_number
+            self.degree = len(fun.args)
+            self.op = fun.__class__.__name__
+            self.parent_op = parent_op
+            self.parent = parent
+            self.tree = None
+            
+            if self.constant:
+                self.val = str(fun)
+            elif fun.is_symbol:
+                self.val = fun.name
+            else:
+                self.val = None
+                
+            if self.op == 'Pow' and fun.args[1] == 2.0 and 'square' in basis_functions[1]:
+                self.op = 'Square'
+                self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
+            elif self.op == 'Pow' and fun.args[1] == 3.0 and 'cube' in basis_functions[1]:
+                self.op = 'Cube'
+                self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
+            elif self.op == 'Pow' and fun.args[1] == 1/2 and ('sqrt' in basis_functions[1]) or ('sqrt_abs' in basis_functions[1]):
+                self.op = 'Sqrt'
+                self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
+            elif self.op == 'Mul' and len(fun.args) == 2 and fun.args[1].__class__.__name__ == 'Pow' and fun.args[1].args[1] == -1:
+                self.op = 'Div'
+                self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self),
+                                DecoratedNode(fun.args[1].args[0], basis_functions, parent_op=self.op, parent=self)]
+            elif self.op == 'Pow' and fun.args[1] == -1 and 'inv' in basis_functions[1]:
+                self.op = 'Inv'
+                self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
+            else:
+                if (len(fun.args) > 2):
+                    f = fun.as_two_terms()
+                    self.children = [DecoratedNode(f[0], basis_functions, parent_op=self.op, parent=self),
+                                    DecoratedNode(f[1], basis_functions, parent_op=self.op, parent=self)]
+                else:
+                    self.children = [DecoratedNode(a, basis_functions, parent_op=self.op, parent=self) for a in fun.args]
+                
+    def from_node_list(self, idx, nodes, basis_functions, parent_op=None, parent=None):
+        
+        self.expr = nodes[idx].op
+        self.type = nodes[idx].type
+        self.constant = is_float(nodes[idx].val)
+        self.degree = nodes[idx].type
+        self.op = nodes[idx].op
         self.parent_op = parent_op
         self.parent = parent
         self.tree = None
         
         if self.constant:
-            self.val = str(fun)
-        elif fun.is_symbol:
-            self.val = fun.name
+            self.val = str(nodes[idx].val)
         else:
-            self.val = None
-            
-        if self.op == 'Pow' and fun.args[1] == 2.0 and 'square' in basis_functions[1]:
-            self.op = 'Square'
-            self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
-        elif self.op == 'Pow' and fun.args[1] == 3.0 and 'cube' in basis_functions[1]:
-            self.op = 'Cube'
-            self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
-        elif self.op == 'Pow' and fun.args[1] == 1/2 and ('sqrt' in basis_functions[1]) or ('sqrt_abs' in basis_functions[1]):
-            self.op = 'Sqrt'
-            self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
-        elif self.op == 'Mul' and len(fun.args) == 2 and fun.args[1].__class__.__name__ == 'Pow' and fun.args[1].args[1] == -1:
-            self.op = 'Div'
-            self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self),
-                            DecoratedNode(fun.args[1].args[0], basis_functions, parent_op=self.op, parent=self)]
-        elif self.op == 'Pow' and fun.args[1] == -1 and 'inv' in basis_functions[1]:
-            self.op = 'Inv'
-            self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
+            self.val = nodes[idx].val
+        
+        if nodes[idx].right is not None:
+            self.children = [DecoratedNode(None, basis_functions), DecoratedNode(None, basis_functions)]
+            self.children[0].from_node_list(nodes[idx].left, nodes, basis_functions, parent_op=nodes[idx].op, parent=self)
+            self.children[1].from_node_list(nodes[idx].right, nodes, basis_functions, parent_op=nodes[idx].op, parent=self)
+        elif nodes[idx].left is not None:
+            self.children = [DecoratedNode(None, basis_functions)]
+            self.children[0].from_node_list(nodes[idx].left, nodes, basis_functions, parent_op=nodes[idx].op, parent=self)
         else:
-            if (len(fun.args) > 2):
-                f = fun.as_two_terms()
-                self.children = [DecoratedNode(f[0], basis_functions, parent_op=self.op, parent=self),
-                                DecoratedNode(f[1], basis_functions, parent_op=self.op, parent=self)]
-            else:
-                self.children = [DecoratedNode(a, basis_functions, parent_op=self.op, parent=self) for a in fun.args]
+            self.children = []
+        
                 
     def is_unity(self):
         try:
