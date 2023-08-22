@@ -16,6 +16,22 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
+def is_float(string):
+    """Determine whether a string is a float or not
+    
+    Args:
+        :string (str): The string to check
+        
+    Returns:
+        bool: Whether the string is a float (True) or not (False).
+    
+    """
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
+
 class Node:
     def __init__(self, t):
         self.type = t
@@ -1537,7 +1553,7 @@ def labels_to_shape(labels, basis_functions):
         try:
             s[i] = basis_dict[t]
         except:
-            if (t.startswith('a') and t[1:].isdigit()) or (t.isdigit()):
+            if (t.startswith('a') and t[1:].isdigit()) or (is_float(t)):
                 s[i] = 0
             else:
                 raise ValueError

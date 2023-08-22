@@ -6,22 +6,6 @@ from esr.fitting.test_all_Fisher import convert_params
 import esr.generation.generator as generator
 import esr.generation.simplifier as simplifier
 
-def is_float(string):
-    """Determine whether a string is a float or not
-    
-    Args:
-        :string (str): The string to check
-        
-    Returns:
-        bool: Whether the string is a float (True) or not (False).
-    
-    """
-    try:
-        float(string)
-        return True
-    except ValueError:
-        return False
-
 def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False, Niter=30, Nconv=5, log_opt=False):
     """Run end-to-end fitting of function for a single function
     
@@ -52,7 +36,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
     fstr, fsym = simplifier.initial_sympify([fstr], max_param, parallel=False, verbose=verbose)
     fstr = fstr[0]
     fsym = fsym[fstr]
-
+    print(fstr)
     # (2) Fit this function to the data
     chi2, params = optimise_fun(fstr,
                             likelihood,
@@ -94,7 +78,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
     return negloglike, DL
     
     
-def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False, Niter=30, Nconv=5, maxvar=20, log_opt=False):
+def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, try_integration=False, verbose=False, Niter=30, Nconv=5, maxvar=20, log_opt=False, replace_floats=False):
     """Run end-to-end fitting of function for a single function, given as a string. Note that this is not guaranteed to find the optimimum representation as a tree, so there could be a lower description-length representation of the function
     
     Args:
@@ -110,6 +94,7 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, tr
         :Nconv (int, default=5): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters
         :maxvar (int): The maximum number of variables which could appear in the function
         :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
+        :replace_floats (bool, default=False): whether to replace any numbers found in the function with variables to optimise
     
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
@@ -133,20 +118,21 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, tr
         else:
             new_labels[j] = lab.lower()
             labels[j] = lab.lower()
-    param_idx = [j for j, lab in enumerate(new_labels) if is_float(lab)]
+    param_idx = [j for j, lab in enumerate(new_labels) if generator.is_float(lab) or (lab.startswith('a') and generator.is_float(lab[1:]))]
     assert len(param_idx) <= maxvar
     for k, j in enumerate(param_idx):
         new_labels[j] = f'a{k}'
-
+        
     # Get parent operators
     s = generator.labels_to_shape(new_labels, basis_functions)
     success, _, tree = generator.check_tree(s)
     parents = [None] + [labels[p.parent] for p in tree[1:]]
     
     # Replace floats with symbols (except exponents)
-    param_idx = [j for j, lab in enumerate(labels) if is_float(lab) and not (parents[j].lower() =='pow')]
-    for k, j in enumerate(param_idx):
-        labels[j] = f'a{k}'
+    if replace_floats:
+        param_idx = [j for j, lab in enumerate(labels) if (generator.is_float(lab) and not (parents[j].lower() =='pow')) or (lab.startswith('a') and generator.is_float(lab[1:]))]
+        for k, j in enumerate(param_idx):
+            labels[j] = f'a{k}'
     fstr = generator.node_to_string(0, tree, labels)
     print(labels)
     negloglike, DL = single_function(
