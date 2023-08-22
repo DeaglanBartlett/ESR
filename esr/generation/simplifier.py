@@ -1331,11 +1331,17 @@ def check_results(dirname, compl, tmax=10):
         if all_nparam[i] != uniq_nparam[matches[i]]:
             continue
         s1 = sympy.sympify(all_fun[i], locals=locs)
-        s2 = sympy.sympify(uniq_fun[matches[i]], locals=locs)
+        try:
+            s2 = sympy.sympify(uniq_fun[matches[i]], locals=locs)
+        except:
+            print(f'Could not check {uniq_fun[matches[i]]} so will keep equation')
+            s2 = None
 
         p = sympy.Array(sympy.symbols(" ".join(param_list), real=True))
         
         try:
+            if s2 is None:
+                raise ValueError
             with time_limit(tmax):
                 for j in range(len(inv_subs[i])):
                     inv_subs[i][j] = inv_subs[i][j].replace("{", "{'")
