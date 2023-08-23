@@ -483,7 +483,7 @@ def string_to_expr(s, kern=False, evaluate=False, locs=None):
     return expr
     
     
-def string_to_node(s, basis_functions, locs=None, evalf=False):
+def string_to_node(s, basis_functions, locs=None, evalf=False, kernS_only=False):
     """Convert a string giving function into a tree with labels
     
     Args:
@@ -491,6 +491,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False):
         :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
         :locs (dict): dictionary of string:sympy objects. If None, will create here
         :evalf (bool): whether to run evalf() on function (default=False)
+        :kernS_only (bool, default=False): whether to only run kernS=True rather than both True and False
         
     Returns:
         :tree (list): list of Node objects corresponding to the tree
@@ -500,28 +501,29 @@ def string_to_node(s, basis_functions, locs=None, evalf=False):
     
     expr = [None] * 4
     nodes = [None] * 4
-    c = np.ones(4)
+    c = np.full(4, np.nan)
 
-    i = 0
-    try:
-        expr[i] = string_to_expr(s, kern=False, evaluate=True, locs=locs)
-        if evalf:
-            expr[i] = expr[i].evalf()
-        nodes[i] = DecoratedNode(expr[i], basis_functions)
-        c[i] = nodes[i].count_nodes(basis_functions)
-    except:
-        c[i] = np.nan
+    if not kernS_only:
+        i = 0
+        try:
+            expr[i] = string_to_expr(s, kern=False, evaluate=True, locs=locs)
+            if evalf:
+                expr[i] = expr[i].evalf()
+            nodes[i] = DecoratedNode(expr[i], basis_functions)
+            c[i] = nodes[i].count_nodes(basis_functions)
+        except:
+            c[i] = np.nan
 
-    
-    i = 1
-    try:
-        expr[i] = string_to_expr(s, kern=False, evaluate=False, locs=locs)
-        if evalf:
-            expr[i] = expr[i].evalf()
-        nodes[i] = DecoratedNode(expr[i], basis_functions)
-        c[i] = nodes[i].count_nodes(basis_functions)
-    except:
-        c[i] = np.nan
+        
+        i = 1
+        try:
+            expr[i] = string_to_expr(s, kern=False, evaluate=False, locs=locs)
+            if evalf:
+                expr[i] = expr[i].evalf()
+            nodes[i] = DecoratedNode(expr[i], basis_functions)
+            c[i] = nodes[i].count_nodes(basis_functions)
+        except:
+            c[i] = np.nan
 
     i = 2
     try:
