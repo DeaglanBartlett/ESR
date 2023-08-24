@@ -131,7 +131,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                     eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                     negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                 else:
-                    all_a = ' '.join([f'a{i}' for i in range(nparam)])
+                    all_a = ' '.join([f'a{i}' for i in range(nparams)])
                     all_a = list(sympy.symbols(all_a, real=True))
                     eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
                     negloglike_all[i] = fop(p)
@@ -143,7 +143,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                         eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                         negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                     else:
-                        all_a = ' '.join([f'a{i}' for i in range(nparam)])
+                        all_a = ' '.join([f'a{i}' for i in range(nparams)])
                         all_a = list(sympy.symbols(all_a, real=True))
                         eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
                         negloglike_all[i] = fop(p)
@@ -178,9 +178,9 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                 if np.isfinite(negloglike_all[i]):
                     k -= len(idx)
                     kept_mask[idx] = 0
-                else: # infinite/nan nll
+                elif not np.isfinite(negloglike_all[i]) and not np.isnan(negloglike_all[i]): # infinite nll
                     p = ptrue
-                    fish_special = 12./(p**2) # set uncertainty=parameter in this case
+                    fish[Nsteps<1] = 12./(p[Nsteps<1]**2) # set uncertainty=parameter in this case
                     codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish_special) + np.log(abs(np.array(p))) )
                     negloglike_all[i] = negloglike_orig
                     try:        # If p was an array, we can make a list out of it
