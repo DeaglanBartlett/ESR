@@ -181,7 +181,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                 elif not np.isfinite(negloglike_all[i]) and not np.isnan(negloglike_all[i]): # infinite nll
                     p = ptrue
                     fish[Nsteps<1] = 12./(p[Nsteps<1]**2) # set uncertainty=parameter in this case
-                    codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish_special) + np.log(abs(np.array(p))) )
+                    codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish) + np.log(abs(np.array(p))) )
                     negloglike_all[i] = negloglike_orig
                     try:        # If p was an array, we can make a list out of it
                         list_p = list(p)
