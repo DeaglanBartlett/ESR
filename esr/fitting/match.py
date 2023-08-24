@@ -164,14 +164,9 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                         p = np.copy(ptrue)
                         p[idx] = 0.
                         if k==1:
-                            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                             negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                         else:
-                            all_a = ' '.join([f'a{i}' for i in range(nparams)])
-                            all_a = list(sympy.symbols(all_a, real=True))
-                            eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
                             negloglike_all[i] = fop(p)
-                        # negloglike_all[i] = f1(p)
                         if np.isfinite(negloglike_all[i]):
                             break
                 kept_mask = np.ones(len(p), dtype=bool)
