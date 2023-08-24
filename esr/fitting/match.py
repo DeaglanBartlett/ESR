@@ -6,7 +6,7 @@ import warnings
 import os
 import sys
 import numdifftools as nd
-
+import itertools
 import esr.fitting.test_all as test_all
 import esr.fitting.test_all_Fisher as test_all_Fisher
 from esr.fitting.sympy_symbols import *
@@ -91,6 +91,9 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                 
         try:
             p, fish = simplifier.convert_params(measured, fish_measured, all_inv_subs_proc[i], n=max_param)
+            if isinstance(p, float):
+                p=[p]
+            p = np.atleast_1d(p)
         except Exception as ex:
             codelen[i] = np.inf
             continue
@@ -113,8 +116,10 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
             codelen[i] = np.inf
             continue
         
+        negloglike_orig = np.copy(negloglike_all[i])
+        ptrue=np.copy(p)
+        
         if np.sum(Nsteps<1)>0:         # should reevaluate -log(L) with the param(s) set to 0, but doesn't matter unless the fcn is a very good one
-            
             try:
                 p[Nsteps<1] = 0.         # Set any parameter to 0 that doesn't have at least one precision step, and recompute -log(L).
             except (IndexError, TypeError):
@@ -126,7 +131,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                     eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                     negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                 else:
-                    all_a = ' '.join([f'a{i}' for i in range(nparam)])
+                    all_a = ' '.join([f'a{i}' for i in range(nparams)])
                     all_a = list(sympy.symbols(all_a, real=True))
                     eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
                     negloglike_all[i] = fop(p)
@@ -138,7 +143,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                         eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                         negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                     else:
-                        all_a = ' '.join([f'a{i}' for i in range(nparam)])
+                        all_a = ' '.join([f'a{i}' for i in range(nparams)])
                         all_a = list(sympy.symbols(all_a, real=True))
                         eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
                         negloglike_all[i] = fop(p)
@@ -147,17 +152,65 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
 
             except:
                 negloglike_all[i] = np.nan
-
-            k -= np.sum(Nsteps<1)       # For the codelen, we effectively don't have the parameter that had Nsteps<1
                 
+            if np.isfinite(negloglike_all[i]):
+                k -= np.sum(Nsteps<1)
+                kept_mask = Nsteps>=1
+            else:
+                # Let's see if setting any of the parameters to zero is ok
+                try_idx = np.arange(nparams)[Nsteps < 1]
+                for r in reversed(range(1, len(try_idx))):
+                    for idx in itertools.combinations(try_idx, r):
+                        p = np.copy(ptrue)
+                        p[idx] = 0.
+                        if k==1:
+                            negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
+                        else:
+                            negloglike_all[i] = fop(p)
+                        if np.isfinite(negloglike_all[i]):
+                            break
+                kept_mask = np.ones(len(p), dtype=bool)
+                if np.isfinite(negloglike_all[i]):
+                    k -= len(idx)
+                    kept_mask[idx] = 0
+                elif not np.isfinite(negloglike_all[i]) and not np.isnan(negloglike_all[i]): # infinite nll
+                    p = ptrue
+                    fish[Nsteps<1] = 12./(p[Nsteps<1]**2) # set uncertainty=parameter in this case
+                    codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish) + np.log(abs(np.array(p))) )
+                    negloglike_all[i] = negloglike_orig
+                    try:        # If p was an array, we can make a list out of it
+                        list_p = list(p)
+                        params[i,:] = np.pad(p, (0, max_param-len(p)))
+                    except:     # p is either a number or nothing
+                        if p:   # p is a number
+                            params[i,:] = 0
+                            params[i,0] = p
+                        else:
+                            params[i,:] = np.zeros(max_param)
+                    
+                    assert len(params[i,:])==max_param
+                    continue
+
             if k<0:
                 print("This shouldn't have happened", flush=True)
                 quit()
             elif k==0:                  # If we have no parameters left then the parameter codelength is 0 so we can move on
                 continue
             
-            fish = fish[Nsteps>=1]     # Only consider these parameters in the codelen
-            p = p[Nsteps>=1]
+            fish = fish[kept_mask]      # Only consider these parameters in the codelen
+            p = p[kept_mask]
+            
+        else:
+            kept_mask = np.ones(len(p), dtype=bool)
+        
+        
+        try:
+            codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish) + np.log(abs(np.array(p))) )
+        except:
+            codelen[i] = np.nan
+        
+        p = ptrue
+        p[~kept_mask]=0.
             
         try:        # If p was an array, we can make a list out of it
             list_p = list(p)
@@ -171,10 +224,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
         
         assert len(params[i,:])==max_param
         
-        try:
-            codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish) + np.log(abs(np.array(p))) )
-        except:
-            codelen[i] = np.nan
+
 
     out_arr = np.transpose(np.vstack([negloglike_all, codelen, index_arr] + [params[:,i] for i in range(max_param)]))
 
