@@ -141,7 +141,10 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
        Delta_array = np.sqrt(12./Fisher_array)
        Delta_array_round = [[format(num, ".3e") for num in row] for row in Delta_array]
        Delta_array_round = np.array(Delta_array_round, dtype=float)
-       repeated_elements_exist = len(Delta_array_round[:,0]) != len(set(Delta_array_round[:,0]))
+       if len(Delta_array_round.shape) < 2:
+           repeated_elements_exist = False
+       else:
+           repeated_elements_exist = len(Delta_array_round[:,0]) != len(set(Delta_array_round[:,0]))
        
        if repeated_elements_exist:
            Delta_mode = mode(Delta_array_round)[0][0]
@@ -157,7 +160,10 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
        else: # try again with less precision
            Delta_array_round = [[format(num, ".1e") for num in row] for row in Delta_array]
            Delta_array_round = np.array(Delta_array_round, dtype=float)
-           repeated_elements_exist = len(Delta_array_round[:,0]) != len(set(Delta_array_round[:,0]))
+           if len(Delta_array_round.shape) < 2:
+               repeated_elements_exist = False
+           else:
+               repeated_elements_exist = len(Delta_array_round[:,0]) != len(set(Delta_array_round[:,0]))
            if not repeated_elements_exist:
                codelen = np.nan
                return params, negloglike, deriv, codelen
