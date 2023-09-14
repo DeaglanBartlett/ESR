@@ -102,7 +102,7 @@ def get_functions(comp, likelihood, unique=True):
     return fcn_list[data_start:data_end], data_start, data_end
     
     
-def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log_opt=False, max_param=4, Niter_params=[40,60], Nconv_params=[-5,20], test_success=False):
+def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, previous_fns=[], try_integration=False, log_opt=False, max_param=4, Niter_params=[40,60], Nconv_params=[-5,20], test_success=False):
     """Optimise the parameters of a function to fit data
     
     The list of parameters, P, passed as Niter_params and Nconv_params compute these values, N, to be
@@ -116,6 +116,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
         :tmax (float): maximum time in seconds to run any one part of simplification procedure for a given function
         :pmin (float): minimum value for each parameter to consider when generating initial guess
         :pmax (float): maximum value for each parameter to consider when generating initial guess
+        :previous_fns (list, default=[]): All unique equations up to current complexity to check for duplicates at this complexity
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
         :max_param (int, default=4): The maximum number of parameters considered. This sets the shapes of arrays used.
@@ -133,6 +134,9 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, try_integration=False, log
     
     nparam = simplifier.count_params([fcn_i], max_param)[0]
     params = np.zeros(max_param)
+
+    if fcn_i in previous_fns:
+        return np.inf, params
     
     Niter = int(np.sum(nparam ** np.arange(len(Niter_params)) * np.array(Niter_params)))
     Nconv = int(np.sum(nparam ** np.arange(len(Nconv_params)) * np.array(Nconv_params)))
@@ -333,6 +337,15 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
         print('\nRunning fits', flush=True)
 
     fcn_list_proc, _, _ = get_functions(comp, likelihood)
+
+    
+    previous_unifn_list = []
+    if comp>1: 
+        for compl in range(1,comp):
+            unifn_file_i = likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt"%(compl,compl)
+            with open(unifn_file_i, "r") as f:
+                fcn_list_compl = f.readlines()
+            previous_unifn_list += fcn_list_compl
     
     # Set max param >=4 for backwards compatibility
     max_param = int(max(4, np.floor((comp - 1) / 2)))
@@ -350,6 +363,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
                                                     tmax, 
                                                     pmin, 
                                                     pmax, 
+                                                    previous_fns=previous_unifn_list,
                                                     try_integration=try_integration,
                                                     log_opt=log_opt,
                                                     max_param=max_param,
@@ -362,6 +376,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
                                                     tmax, 
                                                     pmin, 
                                                     pmax, 
+                                                    previous_fns=previous_unifn_list,
                                                     try_integration=False,
                                                     log_opt=log_opt,
                                                     max_param=max_param,
