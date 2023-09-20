@@ -27,9 +27,9 @@ def is_float(string):
     
     """
     try:
-        float(string)
+        float(eval(string))
         return True
-    except ValueError:
+    except:
         return False
 
 class Node:
@@ -90,7 +90,7 @@ class DecoratedNode:
                 self.val = fun.name
             else:
                 self.val = None
-                
+            
             if self.op == 'Pow' and fun.args[1] == 2.0 and 'square' in basis_functions[1]:
                 self.op = 'Square'
                 self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
@@ -153,51 +153,12 @@ class DecoratedNode:
         """
         :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
         """
-        
-        if self.degree == 0:
-            return 1
-        
-        # Sqrt(x) instead of pow(x, 1/2)
-        elif self.op == "Pow" and (self.children[1].type==sympy.core.numbers.Half) and (("sqrt" in basis_functions[1]) or ("sqrt_abs" in basis_functions[1])):
-            v = 0
-
-        # Square(x) instead of pow(x, 2)
-        elif self.op == "Pow" and (self.children[1].val == str(2)) and "square" in basis_functions[1]:
-            v = 0
-            
-        # Cube(x) instead of pow(x, 3)
-        elif self.op == "Pow" and (self.children[1].val == str(3)) and "cube" in basis_functions[1]:
-            v = 0
-
-        # Inv(x) instead of pow(x, -1)
-        elif self.op == "Pow" and (self.children[1].type==sympy.core.numbers.NegativeOne) and ("inv" in basis_functions[1]):
-            if self.parent_op == "Mul":
-                v = 0
-            else:
-                v = 1
-                
-        # Multiply or divide by one doesn't do anything
-        elif self.op == "Mul" and (self.children[0].is_unity() or self.children[1].is_unity()):
-            v = 0
-        elif self.op == "Div" and (self.children[0] == 1 or self.children[1] == 1):
-            v = 0
-
-        # Treat sqrt_abs and pow_abs as a single function
-        elif self.op == "Abs" and self.parent_op == "Pow":
-            v = 0
-                
-        else:
-            v = 1
-            
-        carr = np.array([c.count_nodes(basis_functions) for c in self.children])
-        
-        return v + carr.sum()
+        return len(self.to_list(basis_functions))
         
     def to_list(self, basis_functions):
         """
         
         """
-    
         if self.degree == 0:
             return [str(self.val)]
         elif self.degree == 1:
@@ -240,6 +201,11 @@ class DecoratedNode:
             return self.children[0].to_list(basis_functions)
         elif self.op == "Div" and (self.children[0] == 1 or self.children[1] == 1):
             v = 0
+        elif self.op == "Add" and self.children[1].op == "Mul" and (self.children[1].children[0].op == "NegativeOne" or self.children[1].children[1].op == "NegativeOne"):
+            if self.children[1].children[0].op == "NegativeOne":
+                return ["Sub"] + self.children[0].to_list(basis_functions) + self.children[1].children[1].to_list(basis_functions)
+            else:
+                return ["Sub"] + self.children[0].to_list(basis_functions) + self.children[1].children[0].to_list(basis_functions)
         else:
             r = [self.op]
             for c in self.children:
