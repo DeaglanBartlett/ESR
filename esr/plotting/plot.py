@@ -34,11 +34,20 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
             data = np.array([d[2:7] for d in data], dtype=float)
             
         # Get min DL
-        all_DL[i] = np.nanmin(data[:,0])
-        all_logL[i] = np.nanmin(data[:,2])
+        try:
+            all_DL[i] = np.nanmin(data[:,0])
+            all_logL[i] = np.nanmin(data[:,2])
+        except:
+            all_DL[i] = np.nan
+            all_logL[i] = np.nan
     
     all_DL -= np.nanmin(all_DL)
     all_logL -= np.nanmin(all_logL)
+    
+    m = np.isfinite(all_DL)
+    all_comp = np.array(all_comp, dtype=int)[m]
+    all_DL = all_DL[m]
+    all_logL = all_logL[m]
 
     fig, ax1 = plt.subplots(1, 1, figsize=(5,3.5), sharex=True)
     cm = plt.get_cmap('Set1')
