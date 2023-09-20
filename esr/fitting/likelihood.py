@@ -65,8 +65,10 @@ class Likelihood:
             :y (float or np.array): the predicted y value at x supplied
         
         """
-        return eq_numpy(x, *a)
-        
+        try:
+            return eq_numpy(x, *a)
+        except:
+            return np.inf
 
     def clear_data(self):
         """Clear data used for numerical integration (not required in most cases)"""

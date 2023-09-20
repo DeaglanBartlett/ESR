@@ -115,6 +115,12 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5, tr
         elif lab == 'Add':
             new_labels[j] = '+'
             labels[j] = '+'
+        elif lab == 'Div':
+            new_labels[j] = '/'
+            labels[j] = '/'
+        elif lab == 'Sub':
+            new_labels[j] = '-'
+            labels[j] = '-'
         else:
             new_labels[j] = lab.lower()
             labels[j] = lab.lower()
