@@ -155,20 +155,18 @@ def main(comp, likelihood, print_frequency=1000):
         Nfuncs = 10
 
         Prel_DL = np.zeros(len(negloglike_sort))+np.inf
-        negloglike_previous = np.nan
+        negloglike_list = []                    # Store all unique negloglikes
         for i in range(len(negloglike_sort)):
-            if negloglike_sort[i] == negloglike_previous:       # Never happens for 0th fcn bc negloglike would have to be nan
+            if negloglike_sort[i] in negloglike_list:       # Never happens for 0th fcn bc negloglike would have to be nan
                 continue                                        # Prel_DL stays at inf for this duplicate function, so Prel -> 0
+            negloglike_list += [negloglike_sort[i]]
             Prel_DL[i] = DL_sort[i] - DL_sort[0]                # Always gives 0 for the 0th function, so this gets the highest Prel
-            negloglike_previous = negloglike_sort[i]            # This will then be used for the next fcn
 
         Prel = np.exp(-Prel_DL)             # Don't want to use every fcn here bc they could be inf or nan, but the best 1000 should be fine
         Prel /= np.sum(Prel)                # Relative probability of fcn, normalised over the top 1000 functions just of this complexity
 
         ptab = PrettyTable()
         ptab.field_names = ["Rank", "Function", "L(D)", "Prel", "-logL", "Codelen", "AIFeyn"] + [f"a{i}" for i in range(params.shape[1])]
-
-        negloglike_previous = np.nan
 
         for i in range(len(DL_sort)):
             
@@ -180,8 +178,6 @@ def main(comp, likelihood, print_frequency=1000):
             with open(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat', 'a') as f:
                 writer = csv.writer(f, delimiter=';')
                 writer.writerow([i, fcn_min_sort[i], DL_sort[i], Prel[i], negloglike_sort[i], codelen_sort[i], aifeyn_sort[i]] + [params_sort[i,j] for j in range(params.shape[1])])
-
-            negloglike_previous = negloglike_sort[i]
         
         if len(DL_sort) == 0:
             os.system("touch " + likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat')
