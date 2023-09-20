@@ -305,7 +305,6 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
             params[:] = 0.
 
     except Exception as e:
-        print(e)
         return np.nan, params
 
     return chi2_i, params
