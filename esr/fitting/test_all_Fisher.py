@@ -204,7 +204,8 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
             for r in reversed(range(1, len(try_idx))):
                 for idx in itertools.combinations(try_idx, r):
                     theta_ML = np.copy(theta_ML_orig)
-                    theta_ML[idx] = 0.
+                    for idx_ in idx:
+                        theta_ML[idx_] = 0.
                     negloglike = fop(theta_ML)
                     if np.isfinite(negloglike):
                         break

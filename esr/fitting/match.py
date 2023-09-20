@@ -162,7 +162,8 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                 for r in reversed(range(1, len(try_idx))):
                     for idx in itertools.combinations(try_idx, r):
                         p = np.copy(ptrue)
-                        p[idx] = 0.
+                        for idx_ in idx:
+                            p[idx_] = 0.
                         if k==1:
                             negloglike_all[i] = f1(p)               # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                         else:
