@@ -438,9 +438,8 @@ def string_to_expr(s, kern=False, evaluate=False, locs=None):
     if kern:
         expr = kernS(s)
     else:
-#        expr = sympy.sympify(s, evaluate=evaluate,
-        expr = sympy.sympify(s,
-                            locals=locs)
+        expr = sympy.sympify(s, evaluate=False, locals=locs)
+
         if evaluate:
             expr = expr.powsimp(expr)
             expr = expr.factor()
@@ -449,7 +448,47 @@ def string_to_expr(s, kern=False, evaluate=False, locs=None):
     return expr
     
     
-def string_to_node(s, basis_functions, locs=None, evalf=False, kernS_only=False):
+def check_operators(nodes, basis_functions):
+    """Check whether all operators in the tree are in the basis
+    
+    Args:
+        :nodes (DecoratedNode): Node representation of the function tree
+        :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
+        
+    Returns:
+        :all_in_basis (bool): Whether all functions in tree are in basis
+    """
+
+    sympy_numerics = ['Number', 'Float', 'Rational', 'Integer', 'AlgebraicNumber',
+                'NumberSymbol', 'RealNumber', 'igcd', 'ilcm', 'seterr', 'Zero',
+                'One', 'NegativeOne', 'Half', 'NaN', 'Infinity', 'NegativeInfinity',
+                'ComplexInfinity', 'Exp1', 'ImaginaryUnit', 'Pi', 'EulerGamma',
+                'Catalan', 'GoldenRatio', 'TribonacciConstant', 'mod_inverse']
+    sympy_numerics = [s.lower() for s in sympy_numerics]
+
+    labels = nodes.to_list(basis_functions)
+    
+    for i in range(len(labels)):
+        if labels[i] == 'Add' and '+' in basis_functions[2]:
+            labels[i] = '+'
+        elif labels[i] == 'Sub' and '-' in basis_functions[2]:
+            labels[i] = '-'
+        elif labels[i] == 'Mul' and '*' in basis_functions[2]:
+            labels[i] = '*'
+        elif labels[i] == 'Div' and '/' in basis_functions[2]:
+            labels[i] = '/'
+        elif labels[i].lower() in sympy_numerics or is_float(labels[i]):
+            labels[i] = 'a'
+        else:
+            labels[i] = labels[i].lower()
+            
+    flat_basis = [item for sublist in basis_functions for item in sublist]
+    all_in_basis = all([ll in flat_basis for ll in labels])
+        
+    return all_in_basis
+    
+    
+def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, check_ops=False):
     """Convert a string giving function into a tree with labels
     
     Args:
@@ -457,7 +496,8 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, kernS_only=False)
         :basis_functions (list): list of lists basis functions. basis_functions[0] are nullary, basis_functions[1] are unary and basis_functions[2] are binary operators
         :locs (dict): dictionary of string:sympy objects. If None, will create here
         :evalf (bool): whether to run evalf() on function (default=False)
-        :kernS_only (bool, default=False): whether to only run kernS=True rather than both True and False
+        :allow_eval (bool, default=True): whether to run the (kernS=False and evaluate=True) option
+        :check_ops (bool, default=False): whether to check all operators appear in basis functions
         
     Returns:
         :tree (list): list of Node objects corresponding to the tree
@@ -467,9 +507,13 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, kernS_only=False)
     
     expr = [None] * 4
     nodes = [None] * 4
+    if check_ops:
+        all_in_basis = [False] * 4
     c = np.full(4, np.nan)
+    
+    flat_basis = [item for sublist in basis_functions for item in sublist]
 
-    if not kernS_only:
+    if allow_eval:
         i = 0
         try:
             expr[i] = string_to_expr(s, kern=False, evaluate=True, locs=locs)
@@ -477,19 +521,23 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, kernS_only=False)
                 expr[i] = expr[i].evalf()
             nodes[i] = DecoratedNode(expr[i], basis_functions)
             c[i] = nodes[i].count_nodes(basis_functions)
+            if check_ops:
+                all_in_basis[i] = check_operators(nodes[i], basis_functions)
         except:
             c[i] = np.nan
 
         
-        i = 1
-        try:
-            expr[i] = string_to_expr(s, kern=False, evaluate=False, locs=locs)
-            if evalf:
-                expr[i] = expr[i].evalf()
-            nodes[i] = DecoratedNode(expr[i], basis_functions)
-            c[i] = nodes[i].count_nodes(basis_functions)
-        except:
-            c[i] = np.nan
+    i = 1
+    try:
+        expr[i] = string_to_expr(s, kern=False, evaluate=False, locs=locs)
+        if evalf:
+            expr[i] = expr[i].evalf()
+        nodes[i] = DecoratedNode(expr[i], basis_functions)
+        c[i] = nodes[i].count_nodes(basis_functions)
+        if check_ops:
+            all_in_basis[i] = check_operators(nodes[i], basis_functions)
+    except:
+        c[i] = np.nan
 
     i = 2
     try:
@@ -498,6 +546,8 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, kernS_only=False)
             expr[i] = expr[i].evalf()
         nodes[i] = DecoratedNode(expr[i], basis_functions)
         c[i] = nodes[i].count_nodes(basis_functions)
+        if check_ops:
+            all_in_basis[i] = check_operators(nodes[i], basis_functions)
     except:
         c[i] = np.nan
     
@@ -508,12 +558,16 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, kernS_only=False)
             expr[i] = expr[i].evalf()
         nodes[i] = DecoratedNode(expr[i], basis_functions)
         c[i] = nodes[i].count_nodes(basis_functions)
+        if check_ops:
+            all_in_basis[i] = check_operators(nodes[i], basis_functions)
     except:
         c[i] = np.nan
     
+    if check_ops and any(all_in_basis):
+        for i in range(len(all_in_basis)):
+            if not all_in_basis[i]:
+                c[i] = np.nan
     i = np.nanargmin(c)
-    
-    # FINISH THIS OFF
 
     return expr[i], nodes[i], int(c[i])
     
