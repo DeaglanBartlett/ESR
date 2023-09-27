@@ -479,6 +479,10 @@ def check_operators(nodes, basis_functions):
             labels[i] = '/'
         elif labels[i].lower() in sympy_numerics or is_float(labels[i]):
             labels[i] = 'a'
+        elif labels[i].startswith('a') and labels[i][1:].isdigit():
+            labels[i] = 'a'
+        elif labels[i].startswith('x') and labels[i][1:].isdigit():
+            labels[i] = 'x'
         else:
             labels[i] = labels[i].lower()
             
