@@ -28,13 +28,15 @@ def main():
     max_comp = 6 #10
     
     start = time.time()
-    all_fun = make_trees.make_fun(max_comp, basis_functions, commutative_dict, unary_inv)
+    all_fun, uniq_idx = make_trees.make_fun(max_comp, basis_functions, commutative_dict, unary_inv, locs)
     end = time.time()
     print('\n*******************************************************')
     print(f'Total time to make up to comp {max_comp}: {end-start} s')
     print('*******************************************************\n')
     nfun = [len(f) for f in all_fun]
+    uniq_nfun = [len(set(f)) for f in uniq_idx]
     print(nfun)
+    print(uniq_nfun)
     
     # Find number of unique fun ESR makes
     esr_uniq = [0] * len(nfun)
@@ -51,6 +53,7 @@ def main():
     print(esr_total)
             
     nfun = np.array(nfun)[1:]
+    uniq_nfun = np.array(uniq_nfun)[1:]
     esr_uniq = np.array(esr_uniq)[1:]
     esr_total = np.array(esr_total)[1:]
     all_comp = np.arange(max_comp) + 1
@@ -62,7 +65,7 @@ def main():
     full_ratio = nfun.sum() / esr_total.sum()
     print("Summed: %.2f"%full_ratio)
     
-    ratio_uniq = nfun / esr_uniq
+    ratio_uniq = uniq_nfun / esr_uniq
     print("\nUnique equations")
     for c, r in zip(all_comp, ratio_uniq):
         print("%i: %.2f"%(c,r))
@@ -71,11 +74,12 @@ def main():
     
     
     fig, axs = plt.subplots(2, 1, figsize=(7,6), sharex=True)
-    axs[0].plot(all_comp, esr_uniq, marker='.', label='Unique ESR')
     axs[0].plot(all_comp, esr_total, marker='.', label='Total ESR')
-    axs[0].plot(all_comp, nfun, marker='.', label='New method')
-    axs[1].plot(all_comp, ratio_uniq, marker='.', label='Unique ESR')
-    axs[1].plot(all_comp, ratio_total, marker='.', label='Total ESR')
+    axs[0].plot(all_comp, esr_uniq, marker='.', label='Unique ESR')
+    axs[0].plot(all_comp, nfun, marker='.', label='Total new')
+    axs[0].plot(all_comp, uniq_nfun, marker='.', label='Unique new')
+    axs[1].plot(all_comp, ratio_total, marker='.', label='Total')
+    axs[1].plot(all_comp, ratio_uniq, marker='.', label='Unique')
     axs[1].axhline(y=1, color='k')
     axs[0].legend()
     axs[1].legend()
@@ -86,7 +90,7 @@ def main():
     axs[1].set_yscale('log')
     fig.align_ylabels()
     fig.tight_layout()
-#    plt.show()
+    plt.show()
     fig.clf()
     plt.close(fig)
     
@@ -97,36 +101,14 @@ def main():
         print('\n', comp)
         with open(f"../../../esr_test/ESR/esr/function_library/core_maths/compl_{comp}/unique_equations_{comp}.txt", "r") as f:
             esr_eq = [ff.strip() for ff in f]
-        new_eq = [f.to_string(locs) for f in all_fun[comp]]
-        print(len(set(new_eq)), len(new_eq), len(esr_eq))
-        print(esr_eq)
-        print(new_eq)
-        shared, orig_idx, new_idx = np.intersect1d(esr_eq, new_eq, return_indices=True)
-#        diff = list(set(new_eq) - set(esr_eq))
-#        print(diff)
-#        diff = list(set(esr_eq) - set(new_eq))
-#        print(diff)
-        extra = [f for i,f in enumerate(all_fun[comp]) if i not in new_idx]
-        print(len(extra))
-        print(extra)
         
-#    comm.Barrier()
-#    if rank == 0:
-#        print('starting', max_comp)
-#    comm.Barrier()
-#    start = time.time()
-#    st, end = split_list(len(all_fun[max_comp]))
-#    s = [f.to_sympy(locs).__str__() for f in all_fun[max_comp][st:end]]
-#    s = comm.gather(s, root=0)
-#    end = time.time()
-#    if rank == 0:
-#        print('done')
-#        print(end - start)
-
-#    start = time.time()
-#    s = [f.to_sympy(locs).__str__() for f in all_fun[max_comp]]
-#    end = time.time()
-#    print(end-start)
+        new_eq = [f.to_string(locs) for i,f in enumerate(all_fun[comp]) if i in set(uniq_idx[comp])]
+        print(len(all_fun[comp]), len(set(new_eq)), len(new_eq), len(esr_eq))
+        shared, orig_idx, new_idx = np.intersect1d(esr_eq, new_eq, return_indices=True)
+        diff = list(set(new_eq) - set(esr_eq))
+        print("Only in new:", diff)
+        diff = list(set(esr_eq) - set(new_eq))
+        print("Only in old:", diff)
     
     return
 

@@ -154,7 +154,7 @@ def split_list(Ntotal):
     return div_points[rank], div_points[rank+1]
         
 
-def make_fun(max_comp, basis_functions, commutative_dict, unary_inv):
+def make_fun(max_comp, basis_functions, commutative_dict, unary_inv, locs):
     
     basis_ops = [[Operator(a, 0, None) for a in basis_functions[0]],
                 [Operator(a, 1, None) for a in basis_functions[1]],
@@ -166,6 +166,18 @@ def make_fun(max_comp, basis_functions, commutative_dict, unary_inv):
     all_fun[0] = []
     all_fun[1] = [Function([op]) for op in basis_ops[0]]
     print(1, len(all_fun[1]))
+    
+#    # Paramteter mappings to make non-unique variants
+#    uniq_maps = [None] * (max_comp + 1)
+#    uniq_maps[0] = {}  # complexity 0 does not exist
+#    uniq_maps[1] = {}  # complexity 1 functions are all unique
+    
+    # Index mappings from all_fun -> unique variants
+    uniq_idx = [None] * (max_comp + 1)
+    uniq_idx[0] = []  # complexity 0 does not exist
+    uniq_idx[1] = list(np.arange(len(all_fun[1])))  # complexity 1 functions are all unique
+    
+    print(uniq_idx)
         
     for comp in range(2, max_comp+1):
         
@@ -200,18 +212,17 @@ def make_fun(max_comp, basis_functions, commutative_dict, unary_inv):
             
         # Similarly, if we have a function without any x's, it cannot contain more than one constant
         all_fun[comp] = [f for f in all_fun[comp] if not (f.count_var() == 0 and f.count_par() > 1)]
+        
+        # Now look for unique functions
             
 #        # We don't want functions involving unary operators acting on two parameters
 #        # These will be removed at all complexities if we remove them all at complexity 2
 #        if comp == 2:
 #            all_fun[comp] = [f for f in all_fun[comp] if not (f.ops[1].symbol == "a")]
 
-#        # Now convert to strings with sympy and see if we have any duplicates
-#        new_eq = np.array([f.to_sympy(locs).__str__() for f in all_fun[comp]])
-#        new_eq, index, inverse = np.unique(new_eq, return_index=True, return_inverse=True)
-#
-#        print(comp, len(all_fun[comp]), len(new_eq))
-#        print('\t', len(new_eq), len(index), len(inverse))
+        # Now convert to strings with sympy and see if we have any duplicates
+        new_eq = [f.to_string(locs) for f in all_fun[comp]]
+        new_eq, index, inverse = np.unique(new_eq, return_index=True, return_inverse=True)
+        uniq_idx[comp] = [index[i] for i in inverse]
 
-
-    return all_fun
+    return all_fun, uniq_idx
