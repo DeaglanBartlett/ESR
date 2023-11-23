@@ -85,7 +85,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
             continue
         else:
             k = nparams
-            measured = params_meas[index,:nparams]
+            measured = params_meas[index,:nparams].copy()
         
         fish_measured = all_fish[index,:]               # Access from the unique eqs all_fish array, common to all procs
                 
