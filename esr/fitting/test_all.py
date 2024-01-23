@@ -102,7 +102,7 @@ def get_functions(comp, likelihood, unique=True):
     return fcn_list[data_start:data_end], data_start, data_end
     
     
-def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=[40,60], Nconv_params=[-5,20], test_success=False):
+def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=[40,60], Nconv_params=[-5,20], test_success=False, ignore_previous_eqns=True):
     """Optimise the parameters of a function to fit data
     
     The list of parameters, P, passed as Niter_params and Nconv_params compute these values, N, to be
@@ -123,6 +123,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
         :Niter_params (list, default=[40, 60]): Parameters determining maximum number of parameter optimisation iterations to attempt.
         :Nconv_params (list, default=[-5, 20]): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters. These parameters determine Nconv.
         :test_sucess (bool, default=False): Whether to test whether the optimisation was successful using scipy's criteria
+        :ignore_previous_eqns (bool, default=True): If we have seen an equation at lower complexity, whether to ignore the equation in this routine.
         
     Returns:
         :chi2_i (float): the minimum value of -log(likelihood) (corresponding to the maximum likelihood)
@@ -135,7 +136,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
     nparam = simplifier.count_params([fcn_i], max_param)[0]
     params = np.zeros(max_param)
 
-    if comp>1:
+    if comp>1 and ignore_previous_eqns:
         previous_fns_file = likelihood.fn_dir + "/compl_"+str(comp)+"/previous_eqns_"+str(comp)+".txt"
         with open(previous_fns_file, "r") as f:
             previous_fns = f.readlines()
@@ -310,7 +311,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
     return chi2_i, params
     
     
-def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=[40,60], Nconv_params=[-5,20]):
+def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=[40,60], Nconv_params=[-5,20], ignore_previous_eqns=True):
     """Optimise all functions for a given complexity and save results to file.
     
     This can optimise in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
@@ -331,6 +332,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
         :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
         :Niter_params (list, default=[40, 60]): Parameters determining maximum number of parameter optimisation iterations to attempt.
         :Nconv_params (list, default=[-5, 20]): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters. These parameters determine Nconv.
+        :ignore_previous_eqns (bool, default=True): If we have seen an equation at lower complexity, whether to ignore the equation in this routine.
         
     Returns:
         None
@@ -343,7 +345,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
     fcn_list_proc, _, _ = get_functions(comp, likelihood)
 
     
-    if rank==0:
+    if rank==0 and ignore_previous_eqns:
         previous_unifn_list = []
         if comp>1: 
             for compl in range(1,comp):
@@ -378,7 +380,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
                                                     log_opt=log_opt,
                                                     max_param=max_param,
                                                     Niter_params=Niter_params,
-                                                    Nconv_params=Nconv_params)
+                                                    Nconv_params=Nconv_params,
+                                                    ignore_previous_eqns=ignore_previous_eqns)
                 except NameError:
                     if try_integration:
                         chi2[i], params[i,:] = optimise_fun(fcn_list_proc[i], 
@@ -391,7 +394,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
                                                     log_opt=log_opt,
                                                     max_param=max_param,
                                                     Niter_params=Niter_params,
-                                                    Nconv_params=Nconv_params)
+                                                    Nconv_params=Nconv_params,
+                                                    ignore_previous_eqns=ignore_previous_eqns)
                     else:
                         raise NameError
         except:
