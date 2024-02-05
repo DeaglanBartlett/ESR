@@ -97,7 +97,7 @@ class DecoratedNode:
             elif self.op == 'Pow' and fun.args[1] == 3.0 and 'cube' in basis_functions[1]:
                 self.op = 'Cube'
                 self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
-            elif self.op == 'Pow' and fun.args[1] == 1/2 and ('sqrt' in basis_functions[1]) or ('sqrt_abs' in basis_functions[1]):
+            elif self.op == 'Pow' and fun.args[1] == 1/2 and ('sqrt' in basis_functions[1] or 'sqrt_abs' in basis_functions[1]):
                 self.op = 'Sqrt'
                 self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
             elif self.op == 'Mul' and len(fun.args) == 2 and fun.args[1].__class__.__name__ == 'Pow' and fun.args[1].args[1] == -1:
