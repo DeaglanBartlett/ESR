@@ -56,18 +56,14 @@ def get_max_param(all_fun, verbose=True):
 
     max_param = -1
 
-    if rank == 0:
-        with_ai = all_fun.copy()
-        while len(with_ai) > 0:
-            max_param += 1
-            with_ai = [f for f in with_ai if 'a%i'%max_param in f]
-        if max_param < 0:
-            max_param = 0
-        if verbose:
-            print('\nMax number of parameters:', max_param)
-    else:
-        max_param = None
-    max_param = comm.bcast(max_param, root=0)
+    with_ai = all_fun.copy()
+    while len(with_ai) > 0:
+        max_param += 1
+        with_ai = [f for f in with_ai if 'a%i'%max_param in f]
+    if max_param < 0:
+        max_param = 0
+    if verbose and rank == 0:
+        print('\nMax number of parameters:', max_param)
     sys.stdout.flush()
     
     return max_param
