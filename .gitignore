@@ -55,3 +55,5 @@ docs/build/
 
 examples/fitting/
 examples/data.txt
+esr/function_library
+esr.egg-info/PKG-INFO

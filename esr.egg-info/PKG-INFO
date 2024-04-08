@@ -11,3 +11,18 @@ Classifier: Intended Audience :: Science/Research
 Classifier: License :: MIT License
 Classifier: Operating System :: POSIX :: Linux
 Classifier: Programming Language :: Python :: 3
+Requires-Dist: sympy
+Requires-Dist: myst-parser
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: matplotlib
+Requires-Dist: pandas
+Requires-Dist: sphinx>=5.0
+Requires-Dist: pympler
+Requires-Dist: psutil
+Requires-Dist: prettytable
+Requires-Dist: numdifftools
+Requires-Dist: mpi4py
+Requires-Dist: astropy
+Requires-Dist: treelib
+Requires-Dist: networkx

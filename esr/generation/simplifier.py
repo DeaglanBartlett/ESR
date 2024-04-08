@@ -1250,9 +1250,11 @@ def check_results(dirname, compl, tmax=10):
         print('\tLoading all equations', flush=True)
         with open(dirname + '/all_equations_%i.txt'%compl, 'r') as f:
             all_fun = f.read().splitlines()
+        max_param = get_max_param(all_fun)
     else:
         all_fun = None
-    max_param = get_max_param(all_fun)
+        max_param = None
+    max_param = comm.bcast(max_param, root=0)
 
     if rank == 0:
         print('\tLoading inverse subs')

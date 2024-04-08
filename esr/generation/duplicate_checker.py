@@ -53,12 +53,16 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         basis_functions = [["x", "a"],  # type0
                 ["tenexp", "inv", "log10_abs"],  # type1
                 ["+", "*", "-", "/", "pow"]]  # type2
+    elif runname == 'base_e_maths':
+        basis_functions = [["x", "a"], # type0
+                ["inv","exp","log_abs"], # type1
+                ["+", "*", "-", "/", "pow"]]  # type2
 
     dirname = os.path.abspath(os.path.join(os.path.dirname(generator.__file__), '..', 'function_library'))
-    if not os.path.isdir(dirname):
+    if (not os.path.isdir(dirname)) and (rank == 0):
         os.mkdir(dirname)
     dirname += '/' + runname + '/'
-    if not os.path.isdir(dirname):
+    if (not os.path.isdir(dirname)) and (rank == 0):
         os.mkdir(dirname)
     
     if (rank == 0) and (not os.path.isdir(dirname)):
