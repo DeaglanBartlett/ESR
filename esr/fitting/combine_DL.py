@@ -163,6 +163,7 @@ def main(comp, likelihood, print_frequency=1000):
             Prel_DL[i] = DL_sort[i] - DL_sort[0]                # Always gives 0 for the 0th function, so this gets the highest Prel
 
         Prel = np.exp(-Prel_DL)             # Don't want to use every fcn here bc they could be inf or nan, but the best 1000 should be fine
+        Prel[~np.isfinite(Prel) | np.isnan(Prel)] = 0.0
         Prel /= np.sum(Prel)                # Relative probability of fcn, normalised over the top 1000 functions just of this complexity
 
         ptab = PrettyTable()
