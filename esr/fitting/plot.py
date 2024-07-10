@@ -64,6 +64,9 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     fcn_list = [d[1] for d in data]
     params = np.array([d[-max_param:] for d in data], dtype=float)
     DL = np.array([d[2] for d in data], dtype=float)
+    if not np.any(np.isfinite(DL)):
+        print('Add DL are infinite, so skipping plot')
+        return
     DL_min = np.amin(DL[np.isfinite(DL)])
     alpha = DL_min - DL
     alpha = np.exp(alpha)

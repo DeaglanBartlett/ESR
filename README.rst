@@ -52,8 +52,7 @@ To install ESR and its dependencies in a new virtual environment, run
 	python3 -m venv esr_env
 	source esr_env/bin/activate
 	git clone git@github.com:DeaglanBartlett/ESR.git
-	cd ESR
-	pip install -e .
+	pip install -e ESR
 
 If you are unable to clone the repo with the above, try the https version instead
 
