@@ -68,20 +68,22 @@ for which the following bibtex can be used
 
 .. code:: bibtex
 
-  @ARTICLE{2022arXiv2211.11461,
-       author = {{Bartlett}, D.~J. and {Desmond}, H. and {Ferreira}, P.~G.},
-        title = "{Exhaustive Symbolic Regression}",
-      journal = {arXiv e-prints},
-     keywords = {Astrophysics - Cosmology and Nongalactic Astrophysics},
-         year = 2022,
-        month = nov,
-          eid = {arXiv:2211.11461},
-        pages = {arXiv:2211.11461},
-  archivePrefix = {arXiv},
-       eprint = {2211.11461},
-  primaryClass = {astro-ph.CO},
-	  url = {https://arxiv.org/abs/2211.11461},
-  }
+	@ARTICLE{Bartlett_2022,
+  		author={Bartlett, Deaglan J. and Desmond, Harry and Ferreira, Pedro G.},
+  		journal={IEEE Transactions on Evolutionary Computation}, 
+  		title={Exhaustive Symbolic Regression}, 
+  		year={2024},
+  		volume={28},
+  		number={4},
+  		pages={950-964},
+  		keywords={Mathematical models;Complexity theory;Optimization;Numerical models;Biological system modeling;Standards;Search problems;Cosmology data analysis;minimum description length;model selection;symbolic regression (SR)},
+  		doi={10.1109/TEVC.2023.3280250},
+  		archivePrefix = "arXiv",
+  		eprint = {2211.11461},
+  		primaryClass = "astro-ph.CO",
+  		adsurl = {https://ui.adsabs.harvard.edu/abs/2022arXiv221111461B},
+  		adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+	}
 
 If the user uses the `pre-computed function sets <https://doi.org/10.5281/zenodo.7339113>`_ 
 then they must also cite
@@ -89,9 +91,7 @@ then they must also cite
 .. code:: bibtex
 
 	@dataset{bartlett_deaglan_j_2022_7339113,
-  	author       = {Bartlett, Deaglan J. and
-                  Desmond, Harry and
-                  Ferreira, Pedro G.},
+  	author       = {Bartlett, Deaglan J. and Desmond, Harry and Ferreira, Pedro G.},
   	title        = {Exhaustive Symbolic Regression Function Sets},
   	month        = nov,
   	year         = 2022,
