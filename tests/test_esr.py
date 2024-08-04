@@ -195,4 +195,3 @@ def test_function_making():
             esr.generation.duplicate_checker.main(basis_set, comp)
 
     return
-
