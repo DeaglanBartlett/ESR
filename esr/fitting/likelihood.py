@@ -250,7 +250,11 @@ class PanthLikelihood(Likelihood):
             else:
                 dL = 1 / np.sqrt(eq_numpy(self.data_x, *a))
 
-            dL = scipy.integrate.cumtrapz(dL, x=self.data_x, initial=0)
+            # If prediction is a float, need to make it an array of length = len(self.data_x)
+            if np.isscalar(dL):
+                dL = np.full(len(self.data_x), dL)
+
+            dL = scipy.integrate.cumulative_trapezoid(dL, x=self.data_x, initial=0)
             dL = dL[self.data_mask]
 
         dL *= zp1
