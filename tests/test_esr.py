@@ -24,6 +24,22 @@ def test_cc():
     esr.fitting.combine_DL.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
+    # Test results match Table 1 of arXiv:2211.11461
+    assert os.path.exists(likelihood.out_dir)
+    fname = os.path.join(likelihood.out_dir,f'final_{comp}.dat')
+    with open(fname, 'r') as f:
+        best = f.readline().split(';')
+    assert int(best[0]) == 0  # Rank
+    assert best[1] == 'a0*x**2'  # best function
+    assert np.isclose(float(best[2]), 16.39, atol=2e-2)  # logL
+    assert np.isclose(float(best[4]), 8.36, atol=2e-2)   # Residuals
+    assert np.isclose(float(best[5]), 2.53, atol=2e-2)   # Parameter
+    assert np.isclose(float(best[6]), 5.49, atol=2e-2)   # Function
+    assert np.isclose(float(best[7]), 3883.44, atol=10)  # Best-fit a0
+    assert np.all(np.array(best[8:], dtype=float) == 0)  # Other parameters
+
+    print(likelihood.out_dir)
+
     likelihood = CCLikelihood()
     labels = ["+", "a0", "*", "a1", "pow", "x", "3"]
     basis_functions = [["x", "a"],  # type0
@@ -38,7 +54,7 @@ def test_cc():
     return
 
 
-def test_gaussian(monkeypatch):
+def test_gaussian(monkeypatch): 
 
     monkeypatch.setattr(plt, 'show', lambda: None)
 
@@ -103,7 +119,6 @@ def test_poisson(monkeypatch):
     np.random.seed(123)
     x = np.random.uniform(0.1, 5, 100)
     y = 0.5 * x ** 2
-    yerr = np.full(x.shape, 0.1)
     y = np.random.poisson(y)
     np.savetxt('data.txt', np.array([x, y]).T)
     sys.stdout.flush()
@@ -130,3 +145,5 @@ def test_function_making():
             esr.generation.duplicate_checker.main(basis_set, comp)
 
     return
+
+test_cc()
