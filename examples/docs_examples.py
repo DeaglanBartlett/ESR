@@ -33,18 +33,18 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 # Generate functions needed for examples
-runname = 'core_maths'
-for comp in range(1, 6):
-    esr.generation.duplicate_checker.main(runname, comp)
+# runname = 'core_maths'
+# for comp in range(1, 6):
+#     esr.generation.duplicate_checker.main(runname, comp)
 
 # Fit the CC data with complexity 5 functions
-comp = 5
-likelihood = CCLikelihood()
-esr.fitting.test_all.main(comp, likelihood)
-esr.fitting.test_all_Fisher.main(comp, likelihood)
-esr.fitting.match.main(comp, likelihood)
-esr.fitting.combine_DL.main(comp, likelihood)
-esr.fitting.plot.main(comp, likelihood)
+# comp = 5
+# likelihood = CCLikelihood()
+# esr.fitting.test_all.main(comp, likelihood)
+# esr.fitting.test_all_Fisher.main(comp, likelihood)
+# esr.fitting.match.main(comp, likelihood)
+# esr.fitting.combine_DL.main(comp, likelihood)
+# esr.fitting.plot.main(comp, likelihood)
 
 # Define a custom likelihood class
 class GaussLikelihood(Likelihood):
@@ -79,7 +79,7 @@ class GaussLikelihood(Likelihood):
             return np.inf
         return nll
    
-# Run the Gaussian example
+# # Run the Gaussian example
 np.random.seed(123)
 if rank == 0:
     x = np.random.uniform(0.1, 5, 100)
@@ -91,47 +91,48 @@ sys.stdout.flush()
 comm.Barrier()
 likelihood = GaussLikelihood('data.txt', 'gauss_example', data_dir=os.getcwd())
 comm.Barrier()
-for comp in range(1, 6):
+# for comp in range(1, 6):
+for comp in [1]:
     esr.fitting.test_all.main(comp, likelihood)
     esr.fitting.test_all_Fisher.main(comp, likelihood)
     esr.fitting.match.main(comp, likelihood)
     esr.fitting.combine_DL.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
-# Run the Poisson examples
-np.random.seed(123)
-if rank == 0:
-    x = np.random.uniform(0.1, 5, 100)
-    y = 0.5 * x ** 2
-    yerr = np.full(x.shape, 0.1)
-    y = np.random.poisson(y)
-    np.savetxt('data.txt', np.array([x, y]).T)
-sys.stdout.flush()
-comm.Barrier()
+# # Run the Poisson examples
+# np.random.seed(123)
+# if rank == 0:
+#     x = np.random.uniform(0.1, 5, 100)
+#     y = 0.5 * x ** 2
+#     yerr = np.full(x.shape, 0.1)
+#     y = np.random.poisson(y)
+#     np.savetxt('data.txt', np.array([x, y]).T)
+# sys.stdout.flush()
+# comm.Barrier()
 
-likelihood = PoissonLikelihood('data.txt', 'poisson_example', data_dir=os.getcwd())
-for comp in range(1, 6):
-    esr.fitting.test_all.main(comp, likelihood)
-    esr.fitting.test_all_Fisher.main(comp, likelihood)
-    esr.fitting.match.main(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
-    esr.fitting.plot.main(comp, likelihood)
+# likelihood = PoissonLikelihood('data.txt', 'poisson_example', data_dir=os.getcwd())
+# for comp in range(1, 6):
+#     esr.fitting.test_all.main(comp, likelihood)
+#     esr.fitting.test_all_Fisher.main(comp, likelihood)
+#     esr.fitting.match.main(comp, likelihood)
+#     esr.fitting.combine_DL.main(comp, likelihood)
+#     esr.fitting.plot.main(comp, likelihood)
 
-# Plot the pareto front for the Poisson example
-if rank == 0:
-    print(likelihood.out_dir)
-    esr.plotting.plot.pareto_plot(likelihood.out_dir, 'pareto.png', do_DL=True, do_logL=True)
+# # Plot the pareto front for the Poisson example
+# if rank == 0:
+#     print(likelihood.out_dir)
+#     esr.plotting.plot.pareto_plot(likelihood.out_dir, 'pareto.png', do_DL=True, do_logL=True)
     
 # Fit the CC data with a single function (LCDM)
-if rank == 0:
-    likelihood = CCLikelihood()
-    labels = ["+", "a0", "*", "a1", "pow", "x", "3"]
-    basis_functions = [["x", "a"],  # type0
-                    ["inv"],  # type1
-                    ["+", "*", "-", "/", "pow"]]  # type2
+# if rank == 0:
+#     likelihood = CCLikelihood()
+#     labels = ["+", "a0", "*", "a1", "pow", "x", "3"]
+#     basis_functions = [["x", "a"],  # type0
+#                     ["inv"],  # type1
+#                     ["+", "*", "-", "/", "pow"]]  # type2
 
-    logl_lcdm_cc, dl_lcdm_cc = single_function(labels,
-                                                    basis_functions,
-                                                    likelihood,
-                                                    verbose=True)
+#     logl_lcdm_cc, dl_lcdm_cc = single_function(labels,
+#                                                     basis_functions,
+#                                                     likelihood,
+#                                                     verbose=True)
 

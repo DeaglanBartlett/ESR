@@ -1,7 +1,6 @@
-import math
 import numpy as np
 from mpi4py import MPI
-import os, sys
+import os
 from prettytable import PrettyTable
 import csv
 
@@ -32,8 +31,6 @@ def main(comp, likelihood, print_frequency=1000):
     unifn_file = likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt"%(comp,comp)
     allfn_file = likelihood.fn_dir + "/compl_%i/all_equations_%i.txt"%(comp,comp)
     aifeyn_file = likelihood.fn_dir + "/compl_%i/%s%i.txt"%(comp,likelihood.fnprior_prefix,comp)
-
-    use_deriv = False
 
     with open(unifn_file, "r") as f:         # All
         fcn_list = f.read().splitlines()

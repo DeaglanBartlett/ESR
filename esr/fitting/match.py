@@ -4,12 +4,10 @@ import sympy
 from mpi4py import MPI
 import warnings
 import os
-import sys
-import numdifftools as nd
 import itertools
 import esr.fitting.test_all as test_all
 import esr.fitting.test_all_Fisher as test_all_Fisher
-from esr.fitting.sympy_symbols import *
+from esr.fitting.sympy_symbols import x, a0
 
 import esr.generation.simplifier as simplifier
 
@@ -94,7 +92,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
             if isinstance(p, float):
                 p=[p]
             p = np.atleast_1d(p)
-        except Exception as ex:
+        except Exception:
             codelen[i] = np.inf
             continue
         
@@ -111,8 +109,8 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
             m = (Delta != 0)
             Nsteps[m] /= Delta[m]
             Nsteps[~m] = np.nan
-        except:
-            print('Error with function:', fcn_i)
+        except Exception as e:
+            print('Error with function:', fcn_i, e)
             codelen[i] = np.inf
             continue
         
@@ -150,7 +148,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                 else:
                     negloglike_all[i] = np.nan
 
-            except:
+            except Exception:
                 negloglike_all[i] = np.nan
                 
             if np.isfinite(negloglike_all[i]):
@@ -180,9 +178,8 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                     codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish) + np.log(abs(np.array(p))) )
                     negloglike_all[i] = negloglike_orig
                     try:        # If p was an array, we can make a list out of it
-                        list_p = list(p)
                         params[i,:] = np.pad(p, (0, max_param-len(p)))
-                    except:     # p is either a number or nothing
+                    except Exception:     # p is either a number or nothing
                         if p:   # p is a number
                             params[i,:] = 0
                             params[i,0] = p
@@ -207,16 +204,15 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
         
         try:
             codelen[i] = -k/2.*math.log(3.) + np.sum( 0.5*np.log(fish) + np.log(abs(np.array(p))) )
-        except:
+        except Exception:
             codelen[i] = np.nan
         
         p = ptrue
         p[~kept_mask]=0.
             
         try:        # If p was an array, we can make a list out of it
-            list_p = list(p)
             params[i,:] = np.pad(p, (0, max_param-len(p)))
-        except:     # p is either a number or nothing
+        except Exception:     # p is either a number or nothing
             if p:   # p is a number
                 params[i,:] = 0
                 params[i,0] = p

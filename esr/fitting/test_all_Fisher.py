@@ -1,6 +1,5 @@
 import numpy as np
 import math
-from scipy.optimize import minimize
 import sympy
 from mpi4py import MPI
 import warnings
@@ -11,7 +10,7 @@ import numdifftools as nd
 from scipy.stats import mode
 
 import esr.fitting.test_all as test_all
-from esr.fitting.sympy_symbols import *
+from esr.fitting.sympy_symbols import x, a0
 import esr.generation.simplifier as simplifier
 
 warnings.filterwarnings("ignore")
@@ -299,7 +298,7 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False):
                 deriv[i,:] = 0.
                 codelen[i] = 0
 
-        except:
+        except Exception:
             params[i,:] = 0.
             deriv[i,:] = 0.
             codelen[i] = 0

@@ -37,7 +37,7 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
         try:
             all_DL[i] = np.nanmin(data[:,0])
             all_logL[i] = np.nanmin(data[:,2])
-        except:
+        except Exception:
             all_DL[i] = np.nan
             all_logL[i] = np.nan
     
@@ -94,8 +94,6 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
     fig.tight_layout()
     fig.savefig(dirname + '/' + savename, bbox_inches='tight')
     print(dirname + '/' + savename)
-#    fig.clf()
-#    plt.close(fig)
     plt.show()
         
     return

@@ -62,7 +62,7 @@ for compl in all_compl:
 
         total_count = [str(x) for x in total_count[:nfortab+1]]
         uniq_count = [str(x) for x in uniq_count[:nfortab+1]]
-    except:
+    except Exception:
         total_count = ['XXX' for _ in range(nfortab+1)]
         uniq_count = ['YYY' for _ in range(nfortab+1)]
 

@@ -1,4 +1,4 @@
-import sys
+import numpy as np
 
 from esr.fitting.test_all import optimise_fun
 from esr.fitting.test_all_Fisher import convert_params
@@ -186,7 +186,6 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
         param_idx = [j for j, lab in enumerate(labels) if (generator.is_float(lab) and not (parents[j].lower() =='pow')) or (lab.startswith('a') and generator.is_float(lab[1:]))]
         for k, j in enumerate(param_idx):
             labels[j] = f'a{k}'
-    fstr = generator.node_to_string(0, tree, labels)
     print(labels)
     res = single_function(
             labels,

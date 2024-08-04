@@ -1,5 +1,3 @@
-from typing import Any, Dict as tDict
-
 from sympy.core import S, Rational, Pow, Basic, Mul, Number, Add
 from sympy.core.mul import _keep_coeff
 from sympy.core.relational import Relational
@@ -8,7 +6,6 @@ from sympy.core.sympify import SympifyError
 from sympy.utilities.iterables import sift
 from sympy.printing.precedence import precedence, PRECEDENCE
 from sympy.printing.printer import Printer, print_function
-from sympy.printing.codeprinter import CodePrinter
 
 from mpmath.libmp import prec_to_dps, to_str as mlib_to_str
 
@@ -30,9 +27,9 @@ class ESRPrinter(Printer):
         "perm_cyclic": True,
         "min": None,
         "max": None,
-    }  # type: tDict[str, Any]
+    }
 
-    _relationals = {}  # type: tDict[str, str]
+    _relationals = {}
 
     def parenthesize(self, item, level, strict=False):
         if (precedence(item) < level) or ((not strict) and precedence(item) <= level):
@@ -55,7 +52,7 @@ class ESRPrinter(Printer):
         terms = self._as_ordered_terms(expr, order=order)
 
         PREC = precedence(expr)
-        l = []
+        L = []
         for term in terms:
             t = self._print(term)
             if t.startswith('-'):
@@ -64,13 +61,13 @@ class ESRPrinter(Printer):
             else:
                 sign = "+"
             if precedence(term) < PREC or isinstance(term, Add):
-                l.extend([sign, "(%s)" % t])
+                L.extend([sign, "(%s)" % t])
             else:
-                l.extend([sign, t])
-        sign = l.pop(0)
+                L.extend([sign, t])
+        sign = L.pop(0)
         if sign == '+':
             sign = ""
-        return sign + ' '.join(l)
+        return sign + ' '.join(L)
 
     def _print_BooleanTrue(self, expr):
         return "True"
@@ -100,8 +97,8 @@ class ESRPrinter(Printer):
             self._print(expr.function), self.stringify(expr.arguments, ", "))
 
     def _print_Basic(self, expr):
-        l = [self._print(o) for o in expr.args]
-        return expr.__class__.__name__ + "(%s)" % ", ".join(l)
+        L = [self._print(o) for o in expr.args]
+        return expr.__class__.__name__ + "(%s)" % ", ".join(L)
 
     def _print_BlockMatrix(self, B):
         if B.blocks.shape == (1, 1):
@@ -186,23 +183,23 @@ class ESRPrinter(Printer):
                 return self._print(xab[0])
             else:
                 return self._print((xab[0],) + tuple(xab[1:]))
-        L = ', '.join([_xab_tostr(l) for l in expr.limits])
+        L = ', '.join([_xab_tostr(limit) for limit in expr.limits])
         return 'Integral(%s, %s)' % (self._print(expr.function), L)
 
     def _print_Interval(self, i):
         fin =  'Interval{m}({a}, {b})'
-        a, b, l, r = i.args
+        a, b, L, r = i.args
         if a.is_infinite and b.is_infinite:
             m = ''
         elif a.is_infinite and not r:
             m = ''
-        elif b.is_infinite and not l:
+        elif b.is_infinite and not L:
             m = ''
-        elif not l and not r:
+        elif not L and not r:
             m = ''
-        elif l and r:
+        elif L and r:
             m = '.open'
-        elif l:
+        elif L:
             m = '.Lopen'
         else:
             m = '.Ropen'
@@ -212,8 +209,8 @@ class ESRPrinter(Printer):
         return "AccumBounds(%s, %s)" % (self._print(i.min),
                                         self._print(i.max))
 
-    def _print_Inverse(self, I):
-        return "%s**(-1)" % self.parenthesize(I.arg, PRECEDENCE["Pow"])
+    def _print_Inverse(self, i):
+        return "%s**(-1)" % self.parenthesize(i.arg, PRECEDENCE["Pow"])
 
     def _print_Lambda(self, obj):
         expr = obj.expr
@@ -838,7 +835,7 @@ class ESRPrinter(Printer):
                 return self._print(xab[0])
             else:
                 return self._print((xab[0],) + tuple(xab[1:]))
-        L = ', '.join([_xab_tostr(l) for l in expr.limits])
+        L = ', '.join([_xab_tostr(limit) for limit in expr.limits])
         return 'Sum(%s, %s)' % (self._print(expr.function), L)
 
     def _print_Symbol(self, expr):

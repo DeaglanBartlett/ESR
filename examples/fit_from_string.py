@@ -17,13 +17,9 @@ single_function() function, defining the function as a string.
 import numpy as np
 import sympy
 import esr.generation.generator as generator
-import esr.generation.simplifier as simplifier
 from esr.fitting.fit_single import single_function
 from esr.fitting.likelihood import GaussLikelihood
 import os
-
-from esr.fitting.test_all import optimise_fun
-from esr.fitting.test_all_Fisher import convert_params
 
 def is_float(string):
     try:

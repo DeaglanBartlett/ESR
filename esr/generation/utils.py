@@ -92,7 +92,7 @@ def locals_size(loc):
     for i, x in enumerate(keys):
         try:
             mem[i] = asizeof.asizeof(loc[x])
-        except:
+        except Exception:
             mem[i] = 0
 
     j = np.argsort(-mem)
@@ -108,11 +108,11 @@ def locals_size(loc):
     return
 
 
-def get_unique_indexes(l):
+def get_unique_indexes(L):
     """Find the indices of the unique items in a list
     
     Args:
-        :l (list): list from which we want to find unique indices
+        :L (list): list from which we want to find unique indices
         
     Returns:
         :result (OrderedDict): dictionary which returns index of unique item in l, accessed by unique item
@@ -120,9 +120,9 @@ def get_unique_indexes(l):
     
     """
     result = OrderedDict()
-    for i in range(len(l)):
-        val = l[i]
-        if not val in result:
+    for i in range(len(L)):
+        val = L[i]
+        if val not in result:
             result[val] = i
     match = {v:i for i, v in enumerate(result.keys())}
     return result, match
@@ -142,7 +142,7 @@ def get_match_indexes(a, b):
     result = OrderedDict()
     for i in range(len(a)):
         val = a[i]
-        if (val in bb) and (not val in result):
+        if (val in bb) and (val not in result):
             result[val] = i
     result = [result[f] for f in b]
     return result

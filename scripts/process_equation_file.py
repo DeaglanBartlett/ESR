@@ -6,13 +6,8 @@ import numpy as np
 import pandas as pd
 import itertools
 import sympy
-import os
-import sys
 from mpi4py import MPI
 
-#os.chdir('../ESR/generation')
-#sys.path.insert(1, '.')
-#import generator
 import esr.generation.generator as generator
 
 comm = MPI.COMM_WORLD
@@ -73,8 +68,6 @@ for i, s in enumerate(shuffled_fun):
     eq = sympy.lambdify(generator.x, expr)
     ypred = eq(xtrue)
     shuffled_mse[i] = np.mean((ypred - ytrue) ** 2)
-#    l = nodes.to_list(basis_functions)
-#    print(c, len(l))
 
 
 # RECOMBINE
@@ -140,5 +133,5 @@ print(c)
 
 print(nodes.children)
 
-l = nodes.to_list(basis_functions)
-print(l)
+mylist = nodes.to_list(basis_functions)
+print(mylist)

@@ -4,11 +4,12 @@ import numpy as np
 import pandas as pd
 import scipy.integrate
 import sympy
-import sys
 import os
 import warnings
 
-from esr.fitting.sympy_symbols import *
+from esr.fitting.sympy_symbols import (
+    square, cube, sqrt, log, pow, x, a0, a1, a2, inv
+)
 
 from esr.generation.simplifier import time_limit
 import esr.generation.simplifier
@@ -67,7 +68,7 @@ class Likelihood:
         """
         try:
             return eq_numpy(x, *a)
-        except:
+        except Exception:
             return np.inf
 
     def clear_data(self):
@@ -181,13 +182,11 @@ class PanthLikelihood(Likelihood):
         mu_err = data['MU_SH0ES_ERR_DIAG'][ww]  # for plotting
         
         with open(self.cov_file, 'r') as f:
-            line = f.readline()
+            _ = f.readline()
             n = int(len(zCMB))
             C = np.zeros((n,n))
             ii = -1
             jj = -1
-            mine = 999
-            maxe = -999
             for i in range(origlen):
                 jj = -1
                 if ww[i]:
@@ -318,7 +317,7 @@ class PanthLikelihood(Likelihood):
                         raise ValueError
                     eq = eq2
                     integrated = True
-            except:
+            except Exception:
                 integrated = False
         else:
             integrated = False

@@ -1,17 +1,14 @@
 import numpy as np
 import sys
 from mpi4py import MPI
-import sympy
 import csv
 import os
 import gc
-import time
 import pprint
 
 import esr.generation.generator as generator
 import esr.generation.simplifier as simplifier
 import esr.generation.utils as utils
-from esr.generation.custom_printer import ESRPrinter
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -140,7 +137,8 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
     if nextra > 0:
         all_fun[-nextra:] = [all_fun[f] for f in extra_orig]
 
-    del extra_orig; gc.collect()
+    del extra_orig
+    gc.collect()
 
     if rank == 0 and track_memory:
         utils.using_mem("pre do sympy")
@@ -170,7 +168,8 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         match_idx = [inv[match[f]] for f in all_fun]
 
         ntot = len(all_fun)
-        del all_fun; gc.collect()
+        del all_fun
+        gc.collect()
         
         uniq_nparam = simplifier.count_params(uniq_fun, max_param)
     
@@ -184,7 +183,8 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
                 print('Functions with 1 parameter: %i (%i)'%(np.sum(uniq_nparam == 1), nparam[1]))
             else:
                 print('Functions with %i parameters: %i (%i)'%(i, np.sum(uniq_nparam == i), nparam[i]))
-        del uniq_nparam, nparam; gc.collect()
+        del uniq_nparam, nparam
+        gc.collect()
         print(stars)
 
         print('\nSaving results:')
@@ -199,13 +199,15 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
                     w = 2 * len(s)
                     pp = pprint.PrettyPrinter(width=w, stream=f)
                 pp.pprint(s)
-        del uniq_fun; gc.collect()
+        del uniq_fun
+        gc.collect()
                
         print('\tMatches')
         with open(dirname + '/matches_%i.txt'%compl, "w") as f:
             for i in range(len(match_idx)):
                 print(match_idx[i], file=f)
-        del match_idx; gc.collect() 
+        del match_idx
+        gc.collect() 
 
     # Now combine the inverse subs calculations
     del all_sym, _, uniq, match
@@ -234,7 +236,8 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         if rank == 0:
             for i, j in enumerate(idx):
                 all_inv_subs[j] = all_inv_subs[j] + inv[i]
-            del idx, inv; gc.collect()
+            del idx, inv
+            gc.collect()
 
     if rank == 0:
 
@@ -263,7 +266,8 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
             s = "mv %s/temp_%i.txt %s/%s%i.txt"%(dirname,compl,dirname,fname,compl)
             os.system(s)
 
-        del all_inv_subs; gc.collect()
+        del all_inv_subs
+        gc.collect()
 
 
     if rank == 0:
