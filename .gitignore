@@ -62,4 +62,4 @@ fitting/
 coverage.xml
 .coverage
 data.txt
-esr/data
+esr/data/Pantheon*
