@@ -303,13 +303,14 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
             chi2_i = np.nan
             params[:] = 0.
 
-    except Exception:
+    except Exception as e:
+        print(e)
         return np.nan, params
 
     return chi2_i, params
     
     
-def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=[40,60], Nconv_params=[5,20], ignore_previous_eqns=True):
+def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=[40,60], Nconv_params=[5,20], ignore_previous_eqns=False):
     """Optimise all functions for a given complexity and save results to file.
     
     This can optimise in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
@@ -330,7 +331,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
         :log_opt (bool, default=False): whether to optimise 1 and 2 parameter cases in log space
         :Niter_params (list, default=[40, 60]): Parameters determining maximum number of parameter optimisation iterations to attempt.
         :Nconv_params (list, default=[-5, 20]): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters. These parameters determine Nconv.
-        :ignore_previous_eqns (bool, default=True): If we have seen an equation at lower complexity, whether to ignore the equation in this routine.
+        :ignore_previous_eqns (bool, default=False): If we have seen an equation at lower complexity, whether to ignore the equation in this routine.
         
     Returns:
         None

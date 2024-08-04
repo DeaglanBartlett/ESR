@@ -263,6 +263,9 @@ class ESRPrinter(Printer):
 
     def _print_Mul(self, expr):
 
+        if not isinstance(expr, Mul):
+            return self.emptyPrinter(expr)
+
         prec = precedence(expr)
 
         # Check for unevaluated Mul. In this case we need to make sure the
@@ -270,10 +273,10 @@ class ESRPrinter(Printer):
         # etc so we display in a straight-forward form that fully preserves all
         # args and their order.
         args = expr.args
-        if args[0] is S.One or any(
+        if (len(args) > 0 and args[0] is S.One) or (len(args) > 1 and any(
                 isinstance(a, Number) or
                 a.is_Pow and all(ai.is_Integer for ai in a.args)
-                for a in args[1:]):
+                for a in args[1:])):
             d, n = sift(args, lambda x:
                 isinstance(x, Pow) and bool(x.exp.as_coeff_Mul()[0] < 0),
                 binary=True)
@@ -309,7 +312,9 @@ class ESRPrinter(Printer):
             if len(dfactors) > 1:
                 return '%s/(%s)' % (n, d)
             elif dfactors:
+                print('OK', n, d)
                 return '%s/%s' % (n, d)
+            print(n)
             return n
 
         c, e = expr.as_coeff_Mul()

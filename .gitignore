@@ -6,9 +6,6 @@ final_eqs/
 test_dir/
 outfiles/
 
-ExhaustiveSR/data/DataRelease/
-ExhaustiveSR/plotting/figs/
-esr/data/DataRelease/
 esr/plotting/figs/
 
 esr/plotting/pres_plots/
@@ -28,28 +25,18 @@ memory_test.py
 .bashrc
 .ipynb_checkpoints/
 
-ExhaustiveSR/function_library/core_maths/
-ExhaustiveSR/function_library/ext_maths/
-ExhaustiveSR/function_library/osc_maths/
-ExhaustiveSR/function_library/tests/
 esr/function_library/core_maths/
 esr/function_library/ext_maths/
 esr/function_library/osc_maths/
 esr/function_library/tests/
 esr/function_library/new_osc_maths/
 esr/function_library/base10_maths/
-
-
-ExhaustiveSR/fitting/output
-ExhaustiveSR/fitting/old_panth
-ExhaustiveSR/fitting/test_script.py
 esr/fitting/output
 esr/fitting/old_panth
 esr/fitting/test_script.py
 
 ext_maths
 esr_env
-#ESR
 build/
 docs/build/
 
@@ -57,3 +44,8 @@ examples/fitting/
 examples/data.txt
 esr/function_library
 esr.egg-info/PKG-INFO
+tests/fitting/
+fitting/
+coverage.xml
+.coverage
+data.txt

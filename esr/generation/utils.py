@@ -5,8 +5,6 @@ import psutil
 from psutil._common import bytes2human
 from collections import OrderedDict
 
-from esr.generation.custom_printer import ESRPrinter
-
 def split_idx(Ntotal, r, indices_or_sections):
     """ Returns the rth set indices for numpy.array_split(a,indices_or_sections)
     where len(a) = Ntotal
@@ -146,27 +144,4 @@ def get_match_indexes(a, b):
             result[val] = i
     result = [result[f] for f in b]
     return result
-
-
-def merge_keys(all_fun, all_sym):
-    """Convert all_fun so that different values which give same
-    item in all_sym now have the same value
-    
-    Args:
-        :all_fun (list): list of strings containing all functions
-        :all_sym (OrderedDict): dictionary of sympy objects which can be accessed by their string representations.
-        
-    Returns:
-        None
-    """
-    p = ESRPrinter()
-    for i in range(len(all_fun)):
-        s = p.doprint(all_sym[all_fun[i]])
-        if s != all_fun[i]:
-            if s not in all_sym:
-                all_sym[s] = all_sym[all_fun[i]]
-            all_sym.pop(all_fun[i])
-            all_fun[i] = s
-    return
-
 
