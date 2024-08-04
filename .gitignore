@@ -6,9 +6,6 @@ final_eqs/
 test_dir/
 outfiles/
 
-ExhaustiveSR/data/DataRelease/
-ExhaustiveSR/plotting/figs/
-esr/data/DataRelease/
 esr/plotting/figs/
 
 esr/plotting/pres_plots/
