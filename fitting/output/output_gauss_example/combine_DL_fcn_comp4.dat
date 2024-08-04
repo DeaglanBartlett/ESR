@@ -1,0 +1,24 @@
+1/(a0 + x)
+None
+1/(2*x)
+x**(-2)
+None
+None
+None
+None
+None
+None
+None
+pow(Abs(a0),(1/x))
+1/(a0 - x)
+-x + 1/x
+a0 - 1/x
+x + 1/x
+None
+None
+pow(x,(1/x))
+None
+pow(Abs(a0),(-x))
+pow(x,(-x))
+a0 + 1/x
+x - 1/x

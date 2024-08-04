@@ -1,0 +1,14 @@
+pow(Abs(a0),x)
+None
+None
+a0/x
+pow(Abs(a0),a1)
+2*x
+pow(x,a0)
+a0 + x
+None
+a0*x
+None
+1
+pow(x,x)
+x**2

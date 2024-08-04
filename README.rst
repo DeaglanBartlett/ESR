@@ -17,6 +17,12 @@ ESR
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7339113.svg
    :target: https://doi.org/10.5281/zenodo.7339113
 
+\
+
+.. image:: https://github.com/DeaglanBartlett/ESR/actions/workflows/build.yml/badge.svg
+  :target: https://github.com/DeaglanBartlett/ESR/actions/workflows/build.yml
+  :alt: Build Status
+
 About
 =====
 
