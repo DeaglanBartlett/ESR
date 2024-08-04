@@ -112,7 +112,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     # Precision to know constants
     Delta = np.sqrt(12./Fisher_diag)
     Nsteps = abs(np.array(theta_ML))/Delta
-    
+
     for i in range(nparam):
         start = int(i * max_param - (i - 1) * i / 2)
         deriv[start:start+nparam-i] = Hmat[i,i:]

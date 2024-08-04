@@ -86,13 +86,18 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
             measured = params_meas[index,:nparams].copy()
         
         fish_measured = all_fish[index,:]               # Access from the unique eqs all_fish array, common to all procs
+
+        if len(all_inv_subs_proc[i]) > 0 and not isinstance(all_inv_subs_proc[i], dict):
+            codelen[i] = np.inf
+            continue
                 
         try:
             p, fish = simplifier.convert_params(measured, fish_measured, all_inv_subs_proc[i], n=max_param)
             if isinstance(p, float):
                 p=[p]
             p = np.atleast_1d(p)
-        except Exception:
+        except Exception as e:
+            print('\nError with function:', fcn_i.strip(), e)
             codelen[i] = np.inf
             continue
         

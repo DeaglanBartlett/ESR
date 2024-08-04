@@ -1207,8 +1207,11 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4):
         p = p.subs(inv_subs[i], simultaneous=True)
         
     jac = sympy.Matrix(p).jacobian(all_a)
-    
-    p_lam = sympy.lambdify(all_a[:len(p_meas)], p)
+
+    if max_param == 1:
+         p_lam = sympy.lambdify(all_a[0], str(p))
+    else:
+        p_lam = sympy.lambdify(all_a[:len(p_meas)], p)
     p_new = p_lam(*p_meas)
     
     j_lam = sympy.lambdify(all_a[:len(p_meas)], jac)
