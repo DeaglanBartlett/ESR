@@ -1,5 +1,4 @@
 import sys
-import matplotlib.pyplot as plt
 import csv
 from mpi4py import MPI
 import warnings
@@ -10,7 +9,7 @@ import matplotlib.cm as cm
 import matplotlib as mpl
 import os
 
-from esr.fitting.sympy_symbols import *
+from esr.fitting.sympy_symbols import x, a0
 import esr.generation.simplifier as simplifier
 
 warnings.filterwarnings("ignore")
@@ -101,7 +100,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
             else:
                 eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
             ypred = likelihood.get_pred(likelihood.xvar, measured, eq_numpy, integrated=integrated)
-        except:
+        except Exception:
             if try_integration:
                 fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=False)
                 if k > 0:

@@ -4,13 +4,12 @@ import sys
 from mpi4py import MPI
 import sympy
 from sympy.core.sympify import kernS
-import gc
 import os
 import pprint
 
 import esr.generation.simplifier as simplifier
 import esr.generation.utils as utils
-from esr.fitting.sympy_symbols import *
+from esr.fitting.sympy_symbols import sympy_locs
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -29,7 +28,7 @@ def is_float(string):
     try:
         float(eval(string))
         return True
-    except:
+    except Exception:
         return False
 
 class Node:
@@ -146,7 +145,7 @@ class DecoratedNode:
         try:
             f = float(self.val)
             return f == float(1)
-        except:
+        except Exception:
             return False
             
     def count_nodes(self, basis_functions):
@@ -200,7 +199,7 @@ class DecoratedNode:
         elif self.op == "Abs" and self.parent.op in ["Sqrt", "Pow"]:
             return self.children[0].to_list(basis_functions)
         elif self.op == "Div" and (self.children[0] == 1 or self.children[1] == 1):
-            v = 0
+            pass
         elif self.op == "Add" and self.children[1].op == "Mul" and (self.children[1].children[0].op == "NegativeOne" or self.children[1].children[1].op == "NegativeOne"):
             if self.children[1].children[0].op == "NegativeOne":
                 return ["Sub"] + self.children[0].to_list(basis_functions) + self.children[1].children[1].to_list(basis_functions)
@@ -514,8 +513,6 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
     if check_ops:
         all_in_basis = [False] * 4
     c = np.full(4, np.nan)
-    
-    flat_basis = [item for sublist in basis_functions for item in sublist]
 
     if allow_eval:
         i = 0
@@ -527,7 +524,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
             c[i] = nodes[i].count_nodes(basis_functions)
             if check_ops:
                 all_in_basis[i] = check_operators(nodes[i], basis_functions)
-        except:
+        except Exception:
             c[i] = np.nan
 
         
@@ -540,7 +537,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
         c[i] = nodes[i].count_nodes(basis_functions)
         if check_ops:
             all_in_basis[i] = check_operators(nodes[i], basis_functions)
-    except:
+    except Exception:
         c[i] = np.nan
 
     i = 2
@@ -552,7 +549,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
         c[i] = nodes[i].count_nodes(basis_functions)
         if check_ops:
             all_in_basis[i] = check_operators(nodes[i], basis_functions)
-    except:
+    except Exception:
         c[i] = np.nan
     
     i = 3
@@ -564,7 +561,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
         c[i] = nodes[i].count_nodes(basis_functions)
         if check_ops:
             all_in_basis[i] = check_operators(nodes[i], basis_functions)
-    except:
+    except Exception:
         c[i] = np.nan
     
     if check_ops and any(all_in_basis):
@@ -1137,7 +1134,7 @@ def update_sums(tree, labels, try_idx, basis_functions):
     # Get unique terms in sum
     s = []
     for ss in all_s:
-        if len(ss) > 0 and type(ss[0]) == list:
+        if len(ss) > 0 and isinstance(ss[0], list):
             s.append(tuple(list(**s)))
         else:
             s.append(tuple(list(ss)))
@@ -1150,7 +1147,7 @@ def update_sums(tree, labels, try_idx, basis_functions):
     if (len(s) != len(all_s)) or run_anyway:
         for j in range(len(s)):
                 
-            l = labels[:i]
+            L = labels[:i]
             t = [tt.type for tt in tree[:i]]
 
             rep = [a for a in range(len(all_s)) if all_s[a] == s[j]]
@@ -1167,7 +1164,7 @@ def update_sums(tree, labels, try_idx, basis_functions):
                 len_nrep = len(nrep)
                 nrep = sum(nrep)
                 
-                if (neg_const[a] == True) and (len_nrep == 1):
+                if neg_const[a] and (len_nrep == 1):
                     # If neg_const try to get the version with the - instead of + (or vice versa)
                     left_idx = tree[tree[all_idx[a][0]].parent].left
                     right_idx = tree[tree[all_idx[a][0]].parent].right
@@ -1258,26 +1255,26 @@ def update_sums(tree, labels, try_idx, basis_functions):
                     t_rep.append(tree[labels.index(s[j][a])].type)
 
                 if len(l_uni) == 0:
-                    l = l + l_uni + l_rep
+                    L = L + l_uni + l_rep
                     t = t + t_uni + t_rep
                 else:
-                    l = l + n_uni + l_rep + l_uni
+                    L = L + n_uni + l_rep + l_uni
                     t = t + [2] * len(n_uni) + t_rep + t_uni
                     
             else:
                 
                 # Now remove the +/- 0
                 if len(n_uni) == 0:
-                    l = l + ['0']
+                    L = L + ['0']
                     t = t + [0]
                 elif n_uni[-1] == '+':
-                    l = l + n_uni[:-1] + l_uni
+                    L = L + n_uni[:-1] + l_uni
                     t = t + [2] * (len(n_uni)-1) + t_uni
                 else:
                     if n_uni == ["-"] * len(n_uni):
                         #If all the things added are negative, we can change the top node
                         # and make them all +'s provided they are on the right of that node
-                        l = l + ["*", "-1"] + ["+"] * (len(n_uni)-1) + l_uni
+                        L = L + ["*", "-1"] + ["+"] * (len(n_uni)-1) + l_uni
                         t = t + [2, 0] + [2] * (len(n_uni) - 1) + t_uni
                     else:
                         # Otherwise we can move the right hand side of one of the + nodes
@@ -1291,7 +1288,7 @@ def update_sums(tree, labels, try_idx, basis_functions):
                                 a = uni[k]
                                 nrep = [all_sign[b] for b in range(len(all_sign)) if (all_s[a] == all_s[b])]
                                 nrep = sum(nrep)
-                                if neg_const[a] == True:
+                                if neg_const[a]:
                                     # If neg_const try to get the version with the - instead of + (or vice versa)
                                     left_idx = tree[all_idx[a][0]].left
                                     right_idx = tree[all_idx[a][0]].right
@@ -1375,18 +1372,18 @@ def update_sums(tree, labels, try_idx, basis_functions):
                         nrep = [all_sign[b] for b in range(len(all_sign)) if (all_s[a] == all_s[b])]
                         nrep = sum(nrep)
                         if nrep == 1:
-                            l = l + n_uni + labels[all_idx[a][0]:all_idx[a][1]] + l_uni
+                            L = L + n_uni + labels[all_idx[a][0]:all_idx[a][1]] + l_uni
                             t = t + [2] * len(n_uni) + \
                                 [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
                         else:
-                            l = l + n_uni + ['*', str(nrep)] + \
+                            L = L + n_uni + ['*', str(nrep)] + \
                                 labels[all_idx[a][0]:all_idx[a][1]] + l_uni
                             t = t + [2] * len(n_uni) + [2, 0] + \
                                 [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
             
-            l += labels[end_idx:]
+            L += labels[end_idx:]
             t += [tt.type for tt in tree[end_idx:]]
-            new_labels.append(l)
+            new_labels.append(L)
             new_shape.append(t)
 
             nadded += 1
@@ -1420,23 +1417,23 @@ def find_additional_trees(tree, labels, basis_functions):
     while len(new_tree) != old_len:
         old_len = len(new_tree)
         for i in range(old_len):
-            l, s, n = update_tree(new_tree[i],
+            L, s, n = update_tree(new_tree[i],
                         new_labels[i],
                         try_idx[i],
                         basis_functions)
 
-            if (s is not None) and (l not in new_labels):
+            if (s is not None) and (L not in new_labels):
                 if n == 1:
                     _, _, t = check_tree(s)
                     new_tree.append(t)
-                    new_labels.append(l)
+                    new_labels.append(L)
                     try_idx.append(0)
                 else:
                     for j in range(n):
-                        if (l[j] not in new_labels):
+                        if (L[j] not in new_labels):
                             _, _, t = check_tree(s[j])
                             new_tree.append(t)
-                            new_labels.append(l[j])
+                            new_labels.append(L[j])
                             try_idx.append(0)
             try_idx[i] += 1
         
@@ -1446,33 +1443,33 @@ def find_additional_trees(tree, labels, basis_functions):
     while len(new_tree) != old_len:
         old_len = len(new_tree)
         for i in range(old_len):
-            l, s, n = update_sums(new_tree[i],
+            L, s, n = update_sums(new_tree[i],
                         new_labels[i],
                         try_idx[i],
                         basis_functions)
 
-            if (s is not None) and (l not in new_labels):
+            if (s is not None) and (L not in new_labels):
                 if n == 1:
                     _, _, t = check_tree(s)
                     max_param = max(1, len([a for a in new_labels[i] if a.startswith('a')]))
-                    f = [node_to_string(0, new_tree[i], new_labels[i]), node_to_string(0, t, l)]
+                    f = [node_to_string(0, new_tree[i], new_labels[i]), node_to_string(0, t, L)]
                     try:
                         _, sym = simplifier.initial_sympify(f, max_param, verbose=False, parallel=False)
                         if len(sym) != 1:
                             print('Maybe bad (not keeping):', new_labels[i], '\t', sym[0], '\t', sym[1])
                         else:
                             new_tree.append(t)
-                            new_labels.append(l)
+                            new_labels.append(L)
                             try_idx.append(0)
-                    except:
-                        print('Failed sympy (not keeping):', new_labels[i], '\t', l)
+                    except Exception:
+                        print('Failed sympy (not keeping):', new_labels[i], '\t', L)
                         
                 else:
                     for j in range(n):
-                        if (l[j] not in new_labels):
+                        if (L[j] not in new_labels):
                             _, _, t = check_tree(s[j])
                             max_param = max(1, len([a for a in new_labels[i] if a.startswith('a')]))
-                            f = [node_to_string(0, new_tree[i], new_labels[i]), node_to_string(0, t, l[j])]
+                            f = [node_to_string(0, new_tree[i], new_labels[i]), node_to_string(0, t, L[j])]
                             try:
                                 _, sym = simplifier.initial_sympify(f, max_param, verbose=False, parallel=False)
                                 #if not sym[0].equals(sym[1]):
@@ -1480,10 +1477,10 @@ def find_additional_trees(tree, labels, basis_functions):
                                     print('Maybe bad (not keeping):', new_labels[i], '\t', sym[0], '\t', sym[1])
                                 else:
                                     new_tree.append(t)
-                                    new_labels.append(l[j])
+                                    new_labels.append(L[j])
                                     try_idx.append(0)
-                            except:
-                                print('Failed sympy (not keeping):', new_labels[i], '\t', l[j])
+                            except Exception:
+                                print('Failed sympy (not keeping):', new_labels[i], '\t', L[j])
                                 
             if n <= 1:
                 try_idx[i] += 1
@@ -1609,7 +1606,7 @@ def labels_to_shape(labels, basis_functions):
     for i, t in enumerate(labels):
         try:
             s[i] = basis_dict[t]
-        except:
+        except Exception:
             if (t.startswith('a') and t[1:].isdigit()) or (is_float(t)):
                 s[i] = 0
             else:

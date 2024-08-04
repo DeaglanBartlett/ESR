@@ -33,18 +33,18 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 # Generate functions needed for examples
-runname = 'core_maths'
-for comp in range(1, 6):
-    esr.generation.duplicate_checker.main(runname, comp)
+# runname = 'core_maths'
+# for comp in range(1, 6):
+#     esr.generation.duplicate_checker.main(runname, comp)
 
 # Fit the CC data with complexity 5 functions
-comp = 5
-likelihood = CCLikelihood()
-esr.fitting.test_all.main(comp, likelihood)
-esr.fitting.test_all_Fisher.main(comp, likelihood)
-esr.fitting.match.main(comp, likelihood)
-esr.fitting.combine_DL.main(comp, likelihood)
-esr.fitting.plot.main(comp, likelihood)
+# comp = 5
+# likelihood = CCLikelihood()
+# esr.fitting.test_all.main(comp, likelihood)
+# esr.fitting.test_all_Fisher.main(comp, likelihood)
+# esr.fitting.match.main(comp, likelihood)
+# esr.fitting.combine_DL.main(comp, likelihood)
+# esr.fitting.plot.main(comp, likelihood)
 
 # Define a custom likelihood class
 class GaussLikelihood(Likelihood):

@@ -7,7 +7,7 @@ from mpi4py import MPI
 from scipy.optimize import minimize
 import itertools
 
-from esr.fitting.sympy_symbols import *
+from esr.fitting.sympy_symbols import x, a0
 import esr.generation.simplifier as simplifier
 
 warnings.filterwarnings("ignore")
@@ -35,7 +35,7 @@ def chi2_fcn(x, likelihood, eq_numpy, integrated, signs):
     else:
         p = [None] * len(signs)
         for i in range(len(signs)):
-            if signs[i] == None:
+            if signs[i] is None:
                 p[i] = x[i]
             elif signs[i] == '+':
                 p[i] = 10 ** x[i]
@@ -102,7 +102,7 @@ def get_functions(comp, likelihood, unique=True):
     return fcn_list[data_start:data_end], data_start, data_end
     
     
-def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=[40,60], Nconv_params=[-5,20], test_success=False, ignore_previous_eqns=True):
+def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=[40,60], Nconv_params=[5,20], test_success=False, ignore_previous_eqns=True):
     """Optimise the parameters of a function to fit data
     
     The list of parameters, P, passed as Niter_params and Nconv_params compute these values, N, to be
@@ -131,7 +131,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
     
     """
 
-    xvar, yvar = likelihood.xvar, likelihood.yvar
+    xvar = likelihood.xvar
     
     nparam = simplifier.count_params([fcn_i], max_param)[0]
     params = np.zeros(max_param)
@@ -152,8 +152,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
     try:
         fcn_i, eq, integrated = likelihood.run_sympify(fcn_i, tmax=tmax, try_integration=try_integration)
             
-        if ("a0" in fcn_i)==False:
-            Nparams = 0
+        if "a0" not in fcn_i:
             eq_numpy = sympy.lambdify(x, eq, modules=["numpy"])
             chi2_i = likelihood.negloglike([], eq_numpy, integrated=integrated)
             return chi2_i, params
@@ -163,7 +162,6 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
         mult_arr = np.ones(max_param)
         count_lowest = 0
         inf_count = 0
-        exception_count = 0
              
         if nparam > 1:
             all_a = ' '.join([f'a{i}' for i in range(nparam)])
@@ -301,17 +299,17 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
             else:
                 chi2_i = np.nan
                 params[:] = 0.
-        except:
+        except Exception:
             chi2_i = np.nan
             params[:] = 0.
 
-    except Exception as e:
+    except Exception:
         return np.nan, params
 
     return chi2_i, params
     
     
-def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=[40,60], Nconv_params=[-5,20], ignore_previous_eqns=True):
+def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=[40,60], Nconv_params=[5,20], ignore_previous_eqns=True):
     """Optimise all functions for a given complexity and save results to file.
     
     This can optimise in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
@@ -398,7 +396,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
                                                     ignore_previous_eqns=ignore_previous_eqns)
                     else:
                         raise NameError
-        except:
+        except Exception as e:
+            print(e)
             chi2[i] = np.nan
             params[i,:] = 0.
 
