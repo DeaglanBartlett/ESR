@@ -2,7 +2,6 @@ import numpy as np
 import os
 import sys
 import matplotlib.pyplot as plt
-import shutil
 import unittest
 
 import esr.generation.duplicate_checker
@@ -79,7 +78,8 @@ def test_pantheon(monkeypatch):
     monkeypatch.setattr(plt, 'show', lambda: None)
 
     # Set up the data directory
-    # esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
+    esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
+    print(esr_dir)
     # data_dir = esr_dir + 'data/'
     # if not os.path.exists(data_dir):
     #     os.makedirs(data_dir)
