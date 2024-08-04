@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import unittest
 
 import esr.generation.duplicate_checker
+import esr.generation.generator as generator
 import esr.fitting.test_all
 import esr.fitting.test_all_Fisher
 import esr.fitting.match
@@ -199,4 +200,82 @@ def test_function_making():
         for comp in range(1, 5):
             esr.generation.duplicate_checker.main(basis_set, comp)
 
+    for comp in [5, 6]:
+        esr.generation.duplicate_checker.main('core_maths', comp, track_memory=True)
+
     return
+
+
+def test_node():
+
+    labels = ["-", "+", "/", "+", "+", "a0", "*", "a1", "pow", "x", 
+              "3", "*", "a2", "pow", "x", "2", "*", "a3", "x", "pow", "x", "0.5",
+              "*", "a4", "pow", "x", "-1"]
+    basis_functions = [["x", "a"],  # type0
+                    ["inv"],  # type1
+                    ["+", "*", "-", "/", "pow"]]  # type2
+    sympy_numerics = ['Number', 'Float', 'Rational', 'Integer', 'AlgebraicNumber',
+                    'NumberSymbol', 'RealNumber', 'igcd', 'ilcm', 'seterr', 'Zero',
+                    'One', 'NegativeOne', 'Half', 'NaN', 'Infinity', 'NegativeInfinity',
+                    'ComplexInfinity', 'Exp1', 'ImaginaryUnit', 'Pi', 'EulerGamma',
+                    'Catalan', 'GoldenRatio', 'TribonacciConstant', 'mod_inverse']
+
+    labels_changed = labels.copy()
+    for i, lab in enumerate(labels):
+        if lab.lower() in sympy_numerics or generator.is_float(lab):
+            labels_changed[i] = 'a'
+    
+    # Get parent operators
+    s = generator.labels_to_shape(labels_changed, basis_functions)
+    success, _, tree = generator.check_tree(s)
+    assert success
+    
+    for i, lab in enumerate(labels_changed):
+        tree[i].assign_op(lab)
+
+    nodes = generator.DecoratedNode(None, basis_functions)
+    nodes.from_node_list(0, tree, basis_functions)
+    assert nodes.to_list(basis_functions) == labels_changed
+
+    # Test DecoratedNode __init__
+    basis_functions = [["x", "a"],  # type0
+                    ["inv", "square", "sqrt", "cube"],  # type1
+                    ["+", "*", "-", "/", "pow"]]  # type2
+    s = generator.labels_to_shape(labels, basis_functions)
+    fcn_i = generator.node_to_string(0, tree, labels)
+    likelihood = CCLikelihood()
+    fcn_i, eq, _ = likelihood.run_sympify(fcn_i)
+    nodes = generator.DecoratedNode(eq, basis_functions)
+    
+    # Test unity
+    assert not nodes.is_unity()
+    _, unit_nodes, _ = generator.string_to_node("1", basis_functions, evalf=True)
+    assert unit_nodes.is_unity()
+
+    # Test counting
+    assert nodes.count_nodes(basis_functions) == len(labels)
+    mylist = nodes.to_list(basis_functions)
+    assert len(mylist) == len(labels)
+
+    # Check other functions work
+    nodes.get_lineage()
+    nodes.get_sibling_lineage()
+    nodes.get_siblings()
+
+    assert generator.check_operators(nodes, basis_functions)
+
+    # Check Node functions
+    success, _, tree = generator.check_tree(s)
+    assert success
+    assert all([t.is_used() for t in tree])
+    for i, lab in enumerate(labels):
+        tree[i].assign_op(lab)
+        tree[i] = tree[i].copy()
+    s += [2, 1, 0]
+    success, _, tree = generator.check_tree(s)
+    assert not success
+    check_used = [t.is_used() for t in tree]
+    assert all(check_used[:-3]) and not any(check_used[-3:])
+
+    return
+

@@ -90,10 +90,10 @@ class DecoratedNode:
             else:
                 self.val = None
             
-            if self.op == 'Pow' and fun.args[1] == 2.0 and 'square' in basis_functions[1]:
+            if self.op == 'Pow' and fun.args[1] == 2 and 'square' in basis_functions[1]:
                 self.op = 'Square'
                 self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
-            elif self.op == 'Pow' and fun.args[1] == 3.0 and 'cube' in basis_functions[1]:
+            elif self.op == 'Pow' and fun.args[1] == 3 and 'cube' in basis_functions[1]:
                 self.op = 'Cube'
                 self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self)]
             elif self.op == 'Pow' and fun.args[1] == 1/2 and ('sqrt' in basis_functions[1] or 'sqrt_abs' in basis_functions[1]):

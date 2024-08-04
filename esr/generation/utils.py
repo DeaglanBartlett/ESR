@@ -147,26 +147,3 @@ def get_match_indexes(a, b):
     result = [result[f] for f in b]
     return result
 
-
-def merge_keys(all_fun, all_sym):
-    """Convert all_fun so that different values which give same
-    item in all_sym now have the same value
-    
-    Args:
-        :all_fun (list): list of strings containing all functions
-        :all_sym (OrderedDict): dictionary of sympy objects which can be accessed by their string representations.
-        
-    Returns:
-        None
-    """
-    p = ESRPrinter()
-    for i in range(len(all_fun)):
-        s = p.doprint(all_sym[all_fun[i]])
-        if s != all_fun[i]:
-            if s not in all_sym:
-                all_sym[s] = all_sym[all_fun[i]]
-            all_sym.pop(all_fun[i])
-            all_fun[i] = s
-    return
-
-
