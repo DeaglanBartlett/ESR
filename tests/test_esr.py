@@ -3,6 +3,7 @@ import os
 import sys
 import matplotlib.pyplot as plt
 import shutil
+import unittest
 
 import esr.generation.duplicate_checker
 import esr.fitting.test_all
@@ -10,8 +11,10 @@ import esr.fitting.test_all_Fisher
 import esr.fitting.match
 import esr.fitting.combine_DL
 import esr.fitting.plot
-from esr.fitting.likelihood import CCLikelihood, PanthLikelihood, Likelihood, PoissonLikelihood
-from esr.fitting.fit_single import single_function, fit_from_string
+from esr.fitting.likelihood import (
+    CCLikelihood, PanthLikelihood, GaussLikelihood, 
+    PoissonLikelihood, MockLikelihood, MSE)
+from esr.fitting.fit_single import single_function, fit_from_string, tree_to_aifeyn, string_to_aifeyn
 import esr.plotting.plot
 
 def test_cc():
@@ -39,9 +42,8 @@ def test_cc():
     assert np.isclose(float(best[7]), 3883.44, atol=10)  # Best-fit a0
     assert np.all(np.array(best[8:], dtype=float) == 0)  # Other parameters
 
-    print(likelihood.out_dir)
-
-    likelihood = CCLikelihood()
+    # Test single_function using the mock likelihood
+    likelihood = MockLikelihood(320, 0.2)
     labels = ["+", "a0", "*", "a1", "pow", "x", "3"]
     basis_functions = [["x", "a"],  # type0
                     ["inv"],  # type1
@@ -52,16 +54,20 @@ def test_cc():
                 basis_functions,
                 likelihood,
                 verbose=True)
+    aifeyn_0, comp_0 = tree_to_aifeyn(labels, basis_functions)
     
     # test using string
     fun = "a0 + a1 * x**3"
     nll_1, DL_1, labels_1 = fit_from_string(fun, 
                 basis_functions, 
                 likelihood,)
+    aifeyn_1, comp_1 = string_to_aifeyn(fun, basis_functions)
     
     assert np.isclose(nll_0, nll_1, atol=2e-2)
     assert np.all(np.isclose(DL_0, DL_1, atol=2e-2))
     assert labels_1 == labels
+    assert comp_0 == comp_1
+    assert aifeyn_0 == aifeyn_1
     
     return
 
@@ -110,39 +116,6 @@ def test_pantheon():
 def test_gaussian(monkeypatch): 
 
     monkeypatch.setattr(plt, 'show', lambda: None)
-
-    # Define a custom likelihood class
-    class GaussLikelihood(Likelihood):
-
-        def __init__(self, data_file, run_name, data_dir=None):
-            """Likelihood class used to fit a function directly using a Gaussian likelihood
-    
-            """
-    
-            super().__init__(data_file, data_file, run_name, data_dir=data_dir)
-            self.ylabel = r'$y$'    # for plotting
-            self.xvar, self.yvar, self.yerr = np.loadtxt(self.data_file, unpack=True)
-
-        def negloglike(self, a, eq_numpy, **kwargs):
-            """Negative log-likelihood for a given function.
-    
-            Args:
-                :a (list): parameters to subsitute into equation considered
-                :eq_numpy (numpy function): function to use which gives y
-        
-            Returns:
-                :nll (float): - log(likelihood) for this function and parameters
-    
-    
-            """
-
-            ypred = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
-            if not np.all(np.isreal(ypred)):
-                return np.inf
-            nll = np.sum(0.5 * (ypred - self.yvar) ** 2 / self.yerr ** 2 + 0.5 * np.log(2 * np.pi) + np.log(self.yerr))
-            if np.isnan(nll):
-                return np.inf
-            return nll
     
     # Run the Gaussian example
     np.random.seed(123)
@@ -191,6 +164,30 @@ def test_poisson(monkeypatch):
     return
 
 
+def test_mse():
+
+    # Run the MSE example
+    np.random.seed(123)
+    x = np.random.uniform(0.1, 5, 100)
+    y = 0.5 * x ** 2
+    yerr = np.zeros(x.shape)
+    np.savetxt('data.txt', np.array([x, y, yerr]).T)
+    sys.stdout.flush()
+
+    likelihood = MSE('data.txt', 'mse_example', data_dir=os.getcwd())
+    comp = 5
+    esr.generation.duplicate_checker.main('core_maths', comp)
+    esr.fitting.test_all.main(comp, likelihood)
+    unittest.TestCase().assertRaises(
+        ValueError,
+        esr.fitting.test_all_Fisher.main,
+        comp=comp,
+        likelihood=likelihood
+    )
+
+    return
+
+
 def test_function_making():
 
     for basis_set in ['core_maths', 'ext_maths', 'keep_duplicates', 'osc_maths']:
@@ -198,3 +195,4 @@ def test_function_making():
             esr.generation.duplicate_checker.main(basis_set, comp)
 
     return
+
