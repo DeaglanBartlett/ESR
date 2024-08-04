@@ -10,7 +10,7 @@ import esr.fitting.match
 import esr.fitting.combine_DL
 import esr.fitting.plot
 from esr.fitting.likelihood import CCLikelihood, Likelihood, PoissonLikelihood
-from esr.fitting.fit_single import single_function
+from esr.fitting.fit_single import single_function, fit_from_string
 import esr.plotting.plot
 
 def test_cc():
@@ -46,11 +46,22 @@ def test_cc():
                     ["inv"],  # type1
                     ["+", "*", "-", "/", "pow"]]  # type2
 
-    single_function(labels,
+    # test using labels
+    nll_0, DL_0 = single_function(labels,
                 basis_functions,
                 likelihood,
                 verbose=True)
-
+    
+    # test using string
+    fun = "a0 + a1 * x**3"
+    nll_1, DL_1, labels_1 = fit_from_string(fun, 
+                basis_functions, 
+                likelihood,)
+    
+    assert np.isclose(nll_0, nll_1, atol=2e-2)
+    assert np.all(np.isclose(DL_0, DL_1, atol=2e-2))
+    assert labels_1 == labels
+    
     return
 
 

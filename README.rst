@@ -23,6 +23,10 @@ ESR
   :target: https://github.com/DeaglanBartlett/ESR/actions/workflows/build.yml
   :alt: Build Status
 
+.. image:: https://img.shields.io/codecov/c/github/DeaglanBartlett/ESR
+  :target: https://app.codecov.io/gh/DeaglanBartlett/ESR
+  :alt: Coverage
+
 About
 =====
 
