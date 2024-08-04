@@ -57,3 +57,4 @@ examples/fitting/
 examples/data.txt
 esr/function_library
 esr.egg-info/PKG-INFO
+tests/fitting/
