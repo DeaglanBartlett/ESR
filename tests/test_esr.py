@@ -24,25 +24,27 @@ def test_cc(monkeypatch):
     comp = 5
     likelihood = CCLikelihood()
     esr.generation.duplicate_checker.main('core_maths', comp)
-    esr.fitting.test_all.main(comp, likelihood)
-    esr.fitting.test_all_Fisher.main(comp, likelihood)
-    esr.fitting.match.main(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
-    esr.fitting.plot.main(comp, likelihood)
 
-    # Test results match Table 1 of arXiv:2211.11461
-    assert os.path.exists(likelihood.out_dir)
-    fname = os.path.join(likelihood.out_dir,f'final_{comp}.dat')
-    with open(fname, 'r') as f:
-        best = f.readline().split(';')
-    assert int(best[0]) == 0  # Rank
-    assert best[1] == 'a0*x**2'  # best function
-    assert np.isclose(float(best[2]), 16.39, atol=2e-2)  # logL
-    assert np.isclose(float(best[4]), 8.36, atol=2e-2)   # Residuals
-    assert np.isclose(float(best[5]), 2.53, atol=2e-2)   # Parameter
-    assert np.isclose(float(best[6]), 5.49, atol=2e-2)   # Function
-    assert np.isclose(float(best[7]), 3883.44, atol=10)  # Best-fit a0
-    assert np.all(np.array(best[8:], dtype=float) == 0)  # Other parameters
+    for log_opt in [True, False]:
+        esr.fitting.test_all.main(comp, likelihood, log_opt=log_opt)
+        esr.fitting.test_all_Fisher.main(comp, likelihood)
+        esr.fitting.match.main(comp, likelihood)
+        esr.fitting.combine_DL.main(comp, likelihood)
+        esr.fitting.plot.main(comp, likelihood)
+
+        # Test results match Table 1 of arXiv:2211.11461
+        assert os.path.exists(likelihood.out_dir)
+        fname = os.path.join(likelihood.out_dir,f'final_{comp}.dat')
+        with open(fname, 'r') as f:
+            best = f.readline().split(';')
+        assert int(best[0]) == 0  # Rank
+        assert best[1] == 'a0*x**2'  # best function
+        assert np.isclose(float(best[2]), 16.39, atol=2e-2)  # logL
+        assert np.isclose(float(best[4]), 8.36, atol=2e-2)   # Residuals
+        assert np.isclose(float(best[5]), 2.53, atol=2e-2)   # Parameter
+        assert np.isclose(float(best[6]), 5.49, atol=2e-2)   # Function
+        assert np.isclose(float(best[7]), 3883.44, atol=10)  # Best-fit a0
+        assert np.all(np.array(best[8:], dtype=float) == 0)  # Other parameters
 
     # Test single_function using the mock likelihood
     likelihood = MockLikelihood(320, 0.2)
@@ -86,6 +88,10 @@ def test_pantheon(monkeypatch):
     esr.fitting.match.main(comp, likelihood)
     esr.fitting.combine_DL.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
+
+    assert esr.plotting.plot.pareto_plot(likelihood.out_dir, "no_name", do_DL=False, do_logL=False) is None
+    esr.plotting.plot.pareto_plot(likelihood.out_dir, "no_name", do_DL=True, do_logL=False)
+    esr.plotting.plot.pareto_plot(likelihood.out_dir, "no_name", do_DL=False, do_logL=True)
 
     # Test results match Table 2 of arXiv:2211.11461
     assert os.path.exists(likelihood.out_dir)
@@ -263,4 +269,3 @@ def test_node():
     assert all(check_used[:-3]) and not any(check_used[-3:])
 
     return
-
