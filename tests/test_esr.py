@@ -77,9 +77,9 @@ def test_pantheon():
     # Set up the data directory
     esr_dir = os.path.abspath(os.path.join(os.path.dirname(esr.generation.simplifier.__file__), '..', '')) + '/'
     data_dir = esr_dir + 'data/'
-    if os.path.exists(data_dir):
-        shutil.rmtree(data_dir)
     os.makedirs(data_dir)
+    if os.path.exists(data_dir + 'DataRelease'):
+        shutil.rmtree(data_dir + 'DataRelease')
 
     # Download the Pantheon data
     cwd = os.getcwd()
