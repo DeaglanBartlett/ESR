@@ -131,7 +131,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
     
     """
 
-    xvar = likelihood.xvar
+    xvar = getattr(likelihood, 'xvar', None)
     
     nparam = simplifier.count_params([fcn_i], max_param)[0]
     params = np.zeros(max_param)
@@ -171,10 +171,11 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
             eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
     
         bad_fun = True
-        for p in itertools.product([1, -1], repeat=nparam):
-            if not (np.sum(np.isnan(eq_numpy(xvar,*p)))>0):
-                bad_fun = False
-                break
+        if xvar is not None:
+            for p in itertools.product([1, -1], repeat=nparam):
+                if not (np.sum(np.isnan(eq_numpy(xvar,*p)))>0):
+                    bad_fun = False
+                    break
         
         if bad_fun:
             # Don't bother trying to optimise bc this fcn is clearly really bad
