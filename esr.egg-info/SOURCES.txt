@@ -6,3 +6,5 @@ esr.egg-info/SOURCES.txt
 esr.egg-info/dependency_links.txt
 esr.egg-info/requires.txt
 esr.egg-info/top_level.txt
+tests/test_esr.py
+tests/test_printer.py

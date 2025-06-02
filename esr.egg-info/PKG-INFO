@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: esr
 Version: 0.1.0
 Summary: A Python package to perform Exhaustive Symbolic Regression
@@ -26,3 +26,10 @@ Requires-Dist: mpi4py
 Requires-Dist: astropy
 Requires-Dist: treelib
 Requires-Dist: networkx
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: home-page
+Dynamic: license
+Dynamic: requires-dist
+Dynamic: summary
