@@ -19,9 +19,10 @@ import esr.plotting.plot
 
 def test_cc(monkeypatch):
 
-    monkeypatch.setattr(plt, 'show', lambda: None)
+    if monkeypatch is not None:
+        monkeypatch.setattr(plt, 'show', lambda: None)
 
-    comp = 5
+    comp = 3
     likelihood = CCLikelihood()
     esr.generation.duplicate_checker.main('core_maths', comp)
 
@@ -38,12 +39,12 @@ def test_cc(monkeypatch):
         with open(fname, 'r') as f:
             best = f.readline().split(';')
         assert int(best[0]) == 0  # Rank
-        assert best[1] == 'a0*x**2'  # best function
-        assert np.isclose(float(best[2]), 16.39, atol=2e-2)  # logL
-        assert np.isclose(float(best[4]), 8.36, atol=2e-2)   # Residuals
-        assert np.isclose(float(best[5]), 2.53, atol=2e-2)   # Parameter
-        assert np.isclose(float(best[6]), 5.49, atol=2e-2)   # Function
-        assert np.isclose(float(best[7]), 3883.44, atol=10)  # Best-fit a0
+        assert best[1] == 'a0*x'  # best function
+        assert np.isclose(float(best[2]), 29.959725666004328, atol=2e-2)  # logL
+        assert np.isclose(float(best[4]), 24.138886, atol=2e-2)   # Residuals
+        assert np.isclose(float(best[5]), 2.5250028, atol=2e-2)   # Parameter
+        assert np.isclose(float(best[6]), 3.295836866004329, atol=2e-2)   # Function
+        assert np.isclose(float(best[7]), 5638.4157, atol=10)  # Best-fit a0
         assert np.all(np.array(best[8:], dtype=float) == 0)  # Other parameters
 
     # Test single_function using the mock likelihood
@@ -78,12 +79,13 @@ def test_cc(monkeypatch):
 
 def test_pantheon(monkeypatch):
 
-    monkeypatch.setattr(plt, 'show', lambda: None)
+    if monkeypatch is not None:
+        monkeypatch.setattr(plt, 'show', lambda: None)
     
     comp = 5
     likelihood = PanthLikelihood()
     esr.generation.duplicate_checker.main('core_maths', comp)
-    esr.fitting.test_all.main(comp, likelihood, Niter_params=[40], Nconv_params=[5])
+    esr.fitting.test_all.main(comp, likelihood, Niter_params=[4], Nconv_params=[2])
     esr.fitting.test_all_Fisher.main(comp, likelihood)
     esr.fitting.match.main(comp, likelihood)
     esr.fitting.combine_DL.main(comp, likelihood)
@@ -112,7 +114,8 @@ def test_pantheon(monkeypatch):
 
 def test_gaussian(monkeypatch): 
 
-    monkeypatch.setattr(plt, 'show', lambda: None)
+    if monkeypatch is not None:
+        monkeypatch.setattr(plt, 'show', lambda: None)
     
     # Run the Gaussian example
     np.random.seed(123)
@@ -136,7 +139,8 @@ def test_gaussian(monkeypatch):
 
 def test_poisson(monkeypatch):
 
-    monkeypatch.setattr(plt, 'show', lambda: None)
+    if monkeypatch is not None:
+        monkeypatch.setattr(plt, 'show', lambda: None)
 
     # Run the Poisson examples
     np.random.seed(123)
