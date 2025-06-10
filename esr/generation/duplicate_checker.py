@@ -54,6 +54,15 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         basis_functions = [["x", "a"], # type0
                 ["inv","exp","log_abs"], # type1
                 ["+", "*", "-", "/", "pow"]]  # type2
+    elif runname == 'koza_maths_const':
+        basis_functions = [["x", "a"],  # type0
+                ["sin", "cos", "exp", "log_abs"],  # type1
+                ["+", "*", "-", "/"]]  # type2
+    elif runname == 'koza_maths':
+        basis_functions = [["x"],  # type0
+                ["sin", "cos", "exp", "log_abs"],  # type1
+                ["+", "*", "-", "/"]]  # type2
+
 
     dirname = os.path.abspath(os.path.join(os.path.dirname(generator.__file__), '..', 'function_library'))
     if (not os.path.isdir(dirname)) and (rank == 0):
