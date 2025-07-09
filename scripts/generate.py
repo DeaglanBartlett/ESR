@@ -3,7 +3,7 @@ import esr
 import os
 
 runname = 'koza_maths_const'
-max_comp = 8
+max_comp = 9
 
 fn_lib = os.path.join(os.path.dirname(esr.__file__), 'function_library', runname)
 
