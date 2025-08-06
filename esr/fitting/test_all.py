@@ -79,27 +79,43 @@ def get_functions(comp, likelihood, unique=True):
     if rank==0:
         print("Number of cores:", size, flush=True)
 
-    with open(unifn_file, "r") as f:
-        fcn_list = f.readlines()
+    # First, count total number of lines without loading into memory
+    if rank == 0:
+        with open(unifn_file, "r") as f:
+            total_lines = sum(1 for _ in f)
+    else:
+        total_lines = None
+    total_lines = comm.bcast(total_lines, root=0)  # Broadcast total number of lines to all processes
+    nLs = int(np.ceil(total_lines / float(size)))       # Number of lines per file for given thread
 
-    nLs = int(np.ceil(len(fcn_list) / float(size)))       # Number of lines per file for given thread
-
-    while nLs*(size-1) > len(fcn_list):
+    while nLs*(size-1) > total_lines:
         if rank==0:
             print("Correcting for many cores.", flush=True)
         nLs -= 1
 
     if rank==0:
-        print("Total number of functions: ", len(fcn_list), flush=True)
+        print("Total number of functions: ", nLs, flush=True)
         print("Number of test points per proc: ", nLs, flush=True)
 
     data_start = rank*nLs
     data_end = (rank+1)*nLs
 
     if rank==size-1:
-        data_end = len(fcn_list)
+        data_end = total_lines
+
+    # Load the functions for this rank
+    with open(unifn_file, "r") as f:
+        # Skip lines up to data_start quickly
+        for _ in range(data_start):
+            next(f)
+
+        # Now read only lines from data_start to data_end-1
+        fcn_list = []
+        for i in range(data_end - data_start):
+            line = next(f)
+            fcn_list.append(line.strip())
     
-    return fcn_list[data_start:data_end], data_start, data_end
+    return fcn_list, data_start, data_end
     
     
 def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=[40,60], Nconv_params=[5,20], test_success=False, ignore_previous_eqns=True):
