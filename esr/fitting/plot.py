@@ -42,6 +42,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     vmin = 1e-3
     vmax = 1
     tmax = 5
+    nfun = 50  # Number of functions to plot
 
     if comp>=8:
         sys.setrecursionlimit(2000 + 500 * (comp - 8))
@@ -50,23 +51,47 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
         print('Making:', likelihood.fig_dir)
         os.mkdir(likelihood.fig_dir)
 
+    count = 0
+    fcn_list = []
+    params = []
+    all_DL = []
+    max_param = None 
+
     with open(likelihood.out_dir + '/final_'+str(comp)+'.dat', "r") as f:
         reader = csv.reader(f, delimiter=';')
-        data = [row for row in reader]
+
+        for row in reader:
+            try:
+                DL = float(row[2])
+            except ValueError:
+                continue
+
+            if not np.isfinite(DL):
+                continue
+
+            if max_param is None:
+                max_param = len(row) - 7
+
+            param = np.array([float(x) for x in row[-max_param:]])
+            fcn_list.append(row[1])
+            params.append(param)
+            all_DL.append(DL)
+
+            count += 1
+
+            if count >= nfun:
+                break
     
-    if len(data) == 0:
+    if len(all_DL) == 0:
         print("No functions with finite DL found, so will not make figure")
         return
     
-    max_param = len(data[0]) - 7
-        
-    fcn_list = [d[1] for d in data]
-    params = np.array([d[-max_param:] for d in data], dtype=float)
-    DL = np.array([d[2] for d in data], dtype=float)
+    params = np.array(params, dtype=float)
+    DL = np.array(all_DL, dtype=float)
     if not np.any(np.isfinite(DL)):
         print('Add DL are infinite, so skipping plot')
         return
-    DL_min = np.amin(DL[np.isfinite(DL)])
+    DL_min = np.nanmin(DL)
     alpha = DL_min - DL
     alpha = np.exp(alpha)
     m = (alpha > vmin)
@@ -79,7 +104,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     cmap = cm.hot_r
     norm = mpl.colors.LogNorm(vmin=vmin,vmax=vmax)
 
-    for i in range(min(len(fcn_list),50)):
+    for i in range(min(len(fcn_list), nfun)):
 
         fcn_i = fcn_list[i].replace('\'', '')
         
