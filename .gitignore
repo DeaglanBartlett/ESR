@@ -49,3 +49,6 @@ fitting/
 coverage.xml
 .coverage
 data.txt
+
+esr/generation/old_*
+esr/fitting/old_*

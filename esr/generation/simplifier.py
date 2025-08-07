@@ -1095,6 +1095,37 @@ def simplify_inv_subs(inv_subs, all_dup):
         new_inv = None
 
     return new_inv
+
+
+def count_lines(fname):
+    """
+    Count the number of lines in a file.
+
+    Args:
+        :fname (str): file name to count lines in
+
+    Returns:
+        :int: number of lines in the file
+    """
+    with open(fname, 'r') as f:
+        return sum(1 for _ in f)
+    
+def get_line_range(n_lines):
+    """
+    Return (imin, imax) inclusive range of lines for a given rank.
+
+    Args:
+        :n_lines (int): total number of lines in the file
+
+    Returns:
+        :tuple: (imin, imax) where imin is the first line index for this rank and 
+            imax is the exclusive last line index for this rank
+    """
+    counts = [n_lines // size + (1 if i < n_lines % size else 0) for i in range(size)]
+    offsets = np.cumsum([0] + counts[:-1])
+    imin = offsets[rank]
+    imax = imin + counts[rank]  # exclusive
+    return imin, imax
     
     
 def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
@@ -1107,25 +1138,29 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
         :bcast_res (bool, default=True): whether to allow all ranks to have the substitutions (True) or just the 0th rank (False)
         
     Returns:
-        :all_subs (list): list of substitutions required to convert between all and unique functions. Each item is either a dictionary with sympy objects as keys and values (use_sympy=True) or a string version of this dictionary (use_sympy=False). If bcast_res=True, then all ranks have this list, otherwise only rank 0 has this list and all other ranks return None.
+        :all_subs (dict): dict of substitutions required to convert between all and unique functions. 
+            Each item is either a dictionary with sympy objects as keys and values (use_sympy=True) or 
+            a string version of this dictionary (use_sympy=False). If bcast_res=True, then all ranks have this dict, 
+            otherwise all ranks receive a chunk of the dict corresponding to their rank.
     
     """
 
     if rank == 0:
-        with open(fname, 'r') as f:
-            reader = csv.reader(f, delimiter=';')
-            subs = [r for r in reader]
-        i = np.array_split(np.arange(len(subs)), size)
-        all_subs = [None] * size
-        for r in range(size):
-            ii = np.atleast_1d(i[r])
-            if len(ii) == 0:
-                all_subs[r] = []
-            else:
-                all_subs[r] = subs[ii[0]:ii[-1]+1]
+        n_lines = count_lines(fname)
     else:
-        all_subs = None
-    all_subs = comm.scatter(all_subs, root=0)
+        n_lines = None
+    n_lines = comm.bcast(n_lines, root=0)
+
+    imin, imax = get_line_range(n_lines)
+    all_subs = {}  # Use a dict instead of a list
+    with open(fname, 'r') as f:
+        for i, line in enumerate(f):
+            if i >= imax:
+                break
+            if i >= imin:
+                sub = line.strip().split(';')
+                if sub != ['']:
+                    all_subs[i] = sub
 
     param_list = ['a%i'%i for i in range(max_param)]
     all_a = sympy.symbols(" ".join(param_list), real=True)
@@ -1138,9 +1173,7 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
         for i in range(len(all_a)):
             locs["a%i"%i] = all_a[i]
         
-    for i in range(len(all_subs)):
-        if len(all_subs[i]) == 0:
-            continue
+    for i in all_subs.keys():
         for j in range(len(all_subs[i])):
             all_subs[i][j] = all_subs[i][j].replace("{", "{'")
             all_subs[i][j] = all_subs[i][j].replace("}", "'}")
@@ -1158,16 +1191,20 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
                 if not use_sympy:
                     all_subs[i][j] = str(all_subs[i][j])
     comm.Barrier()
-    
-    all_subs = comm.gather(all_subs, root=0)
-    
-    if rank == 0:
-        all_subs = list(itertools.chain(*all_subs))
+
     if bcast_res:
+
+        gathered = comm.gather(all_subs, root=0)
+        if rank == 0:
+            all_subs = {}
+            for d in gathered:
+                all_subs.update(d) 
+            # [all_subs.get(i, []) for i in range(total_lines)]
+        
         all_subs = comm.bcast(all_subs, root=0)
         # Fix MPI4PY bug for empty lists
-        if isinstance(all_subs, int):
-            all_subs = [[] for _ in range(all_subs)]
+        # if isinstance(all_subs, int):
+        #     all_subs = [[] for _ in range(all_subs)]
 
     return all_subs
     

@@ -36,14 +36,17 @@ def load_loglike(comp, likelihood, data_start, data_end, split=True):
         :params (np.ndarray): list of parameters at maximum likelihood points. Shape = (nfun, nparam).
 
     """
+    fname = likelihood.out_dir + "/negloglike_comp" + str(comp) + ".dat"
     if rank == 0:
-        print(likelihood.out_dir + "/negloglike_comp"+str(comp)+".dat")
-    data = np.genfromtxt(likelihood.out_dir + "/negloglike_comp"+str(comp)+".dat")
+        print(fname, flush=True)
+    if split:
+        with open(fname, 'r') as f:
+            selected_lines = [line for i, line in enumerate(f) if data_start <= i < data_end]
+        data = np.genfromtxt(selected_lines)
+    else:
+        data = np.genfromtxt(fname)
     negloglike = np.atleast_1d(data[:,0])
     params = np.atleast_2d(data[:,1:])
-    if split:
-        negloglike = negloglike[data_start:data_end]               # Assuming same order of fcn and chi2 files
-        params = params[data_start:data_end,:]
     return negloglike, params
 
 
