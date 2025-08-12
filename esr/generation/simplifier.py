@@ -121,67 +121,6 @@ def count_params_dict(all_fun):
     return nparam_dict
 
     
-# def make_changes(all_fun, all_sym, all_inv_subs, str_fun, sym_fun, inv_subs_fun):
-#     """ Update global variables of functions and symbolic expressions by combining rank
-#     calculations
-    
-#     Args:
-#         :all_fun (list): list of strings containing all functions
-#         :all_sym (list): list of sympy objects containing all functions
-#         :all_inv_subs (list): list of dictionaries giving subsitutions to be applied to all functions
-#         :str_fun (list): list of strings containing functions considered by rank
-#         :sym_fun (list): list of sympy objects containing functions considered by rank
-#         :inv_subs_fun (list): list of dictionaries giving subsitutions to be applied to functions considered by rank
-        
-#     Returns:
-#         :all_fun: list of strings containing all (updated) functions
-#         :all_sym (list): list of sympy objects containing all (updated) functions
-#         :all_inv_subs: list of dictionaries giving subsitutions to be applied to all (updated) functions
-#     """
-
-#     i = utils.split_idx(len(all_fun), rank, size)
-#     if len(i) > 0:
-#         imin = i[0]
-#         imax = i[-1] + 1
-#         start_idx = imax - imin
-#     else:
-#         start_idx = 0
-#         imin = len(all_fun)
-
-#     start_idx = comm.gather(start_idx, root=0)
-#     if rank == 0:
-#         start_idx = np.array([0] + start_idx)
-#         start_idx = np.cumsum(start_idx)
-#     start_idx = comm.bcast(start_idx, root=0)
-
-#     chidx = [i for i in range(len(str_fun)) if str_fun[i] != all_fun[imin+i]]
-#     str_changes = [str_fun[c] for c in chidx]
-#     sym_changes = [sym_fun[c] for c in chidx]
-#     inv_changes = [inv_subs_fun[c] for c in chidx]
-    
-#     chidx = comm.gather(chidx, root=0)
-#     str_changes = comm.gather(str_changes, root=0)
-#     sym_changes = comm.gather(sym_changes, root=0)
-#     inv_changes = comm.gather(inv_changes, root=0)
-    
-#     chidx = comm.bcast(chidx, root=0)
-#     str_changes = comm.bcast(str_changes, root=0)
-#     sym_changes = comm.bcast(sym_changes, root=0)
-#     inv_changes = comm.bcast(inv_changes, root=0)
-
-#     for i in range(size):
-#         j = chidx[i] + start_idx[i]
-#         for k in range(len(inv_changes[i])):
-#             all_fun[j[k]] = str_changes[i][k]
-#             all_sym[j[k]] = sym_changes[i][k]
-#             if inv_changes[i][k] is None:
-#                 all_inv_subs[j[k]] = None
-#             else:
-#                 all_inv_subs[j[k]] = inv_changes[i][k].copy()
-
-#     return all_fun, all_sym, all_inv_subs
-
-    
 def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memory=False, save_sympy=True):
     """Convert list of strings of functions into list of sympy objects
     
@@ -289,26 +228,6 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
     #         sym_fun = all_sym
 
     return all_fun, sym_fun
-    
-    
-# def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, tmax=1, check_perm=False):
-#     """Simplify equations and find duplicates.
-    
-#     Args:
-#         :all_fun (list): list of strings containing all functions
-#         :all_sym (list): list of sympy objects containing all functions
-#         :all_inv_subs (list): list of dictionaries giving subsitutions to be applied to all functions
-#         :max_param (int): maximum number of free parameters in any equation in all_fun
-#         :expand_fun (bool, default=True): whether to run the sympy expand options (True) or not (False)
-#         :tmax (float, default=1.): maximum time in seconds to run any one part of simplification procedure for a given function
-#         :check_perm (bool, default=False): whether to check all possible permutations and inverses of constants (True) or not (False)
-        
-#     Returns:
-#         :all_fun: list of strings containing all (updated) functions
-#         :all_sym (list): list of sympy objects containing all (updated) functions
-#         :all_inv_subs: list of dictionaries giving subsitutions to be applied to all (updated) functions
-    
-#     """
 
 
 def update_ranks(rank_uniq, rank_uniq_inv_subs, rank_fun, rank_sym, rank_inv_subs, rank_changes):
@@ -867,43 +786,6 @@ def expand_or_factor(all_sym, tmax=1, method='expand'):
         except TimeoutException:
             print('Terminated expanding:', k, rank, v)
 
-    # vals = list(all_sym.values())
-    # keys = list(all_sym.keys())
-
-    # i = np.atleast_1d(utils.split_idx(len(vals), rank, size))
-
-    # change_vals = []
-    # change_idx = []
-
-    # p = ESRPrinter()
-    # if len(i) > 0:
-    #     for j in range(i[0], i[-1]+1):
-    #         if vals[j] is sympy.core.numbers.NaN:
-    #             continue
-    #         try:
-    #             with time_limit(tmax):
-    #                 if method == 'expand':
-    #                     v = vals[j].expand()
-    #                 elif method == 'factor':
-    #                     v = vals[j].powsimp()
-    #                     v = v.factor()
-    #                 if p.doprint(v) != keys[j]:
-    #                     change_idx.append(j)
-    #                     change_vals.append(v)
-    #         except TimeoutException:
-    #             print('Terminated expanding:', j, rank, vals[j])
-
-    # change_vals = comm.gather(change_vals, root=0)
-    # change_idx = comm.gather(change_idx, root=0)
-    # if rank == 0:
-    #     change_vals = list(itertools.chain(*change_vals))
-    #     change_idx = list(itertools.chain(*change_idx))
-    # change_vals = comm.bcast(change_vals, root=0)
-    # change_idx = comm.bcast(change_idx, root=0)
-
-    # for i in range(len(change_idx)):
-    #     all_sym[keys[change_idx[i]]] = change_vals[i]
-
     return all_sym
    
     
@@ -1365,210 +1247,6 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4):
     return p_new, diag_fish
 
 
-def old_check_results(dirname, compl, tmax=10):
-    """Check that all functions can be recovered by applying the subsitutions to the unique functions.
-    If not, define a new unique function and save results to file.
-    
-    Args:
-        :dirname (str): name of directory containing all the functions to consider
-        :compl (int): complexity of functions to consider
-        :tmax (float, default=10.): maximum time in seconds to run the substitutions
-        
-    Returns:
-        None
-    
-    """
-
-    if rank == 0:
-        print('\tLoading all equations', flush=True)
-        with open(dirname + '/all_equations_%i.txt'%compl, 'r') as f:
-            all_fun = f.read().splitlines()
-        max_param = get_max_param(all_fun)
-    else:
-        all_fun = None
-        max_param = None
-    max_param = comm.bcast(max_param, root=0)
-
-    if rank == 0:
-        print('\tLoading inverse subs')
-        with open(dirname + '/inv_subs_%i.txt'%compl, 'r') as f:
-            reader = csv.reader(f, delimiter=';')
-            inv_subs = [row for row in reader]
-
-        # Only need functions with non-trivial inverse subs
-        shufidx = np.array([i for i in range(len(inv_subs)) if len(inv_subs[i]) != 0])
-        np.random.seed(1234)
-        # Shuffle to make each rank more similar
-        np.random.shuffle(shufidx)
-
-        all_fun = [all_fun[ii] for ii in shufidx]
-        nfun = len(all_fun)
-        inv_subs = [inv_subs[ii] for ii in shufidx]
-    else:
-        nfun = None
-    comm.Barrier()
-    nfun = comm.bcast(nfun, root=0)
-
-    imin, imax = utils.split_idx(nfun, rank, size)
-    imax += 1
-    imin = comm.gather(imin, root=0)
-    imax = comm.gather(imax, root=0)
-
-    if rank == 0:
-        all_fun = [all_fun[imin[i]:imax[i]] for i in range(size)]
-        inv_subs = [inv_subs[imin[i]:imax[i]] for i in range(size)]
-    else:
-        all_fun = None
-        inv_subs = None
-    all_fun = comm.scatter(all_fun, root=0)
-    inv_subs = comm.scatter(inv_subs, root=0)
-
-    all_nparam = count_params(all_fun, max_param)
-
-    if rank == 0:
-        print('\tLoading unique equations', flush=True)
-        with open(dirname + '/unique_equations_%i.txt'%compl, 'r') as f:
-            uniq_fun = f.read().splitlines()
-    else:
-        uniq_fun = None
-    uniq_fun = comm.bcast(uniq_fun, root=0)
-    uniq_nparam = count_params(uniq_fun, max_param)
-
-    if rank == 0:
-        print('\tLoading matches')
-        matches = np.loadtxt(dirname + '/matches_%i.txt'%compl).astype(int)
-        matches = matches[shufidx]
-        matches = np.array_split(matches, size)
-    else:
-        matches = None
-    matches = comm.scatter(matches, root=0)
-
-    param_list = ['a%i'%i for i in range(max_param)]
-    all_a = sympy.symbols(" ".join(param_list), real=True)
-    if max_param == 1:
-        all_a = [all_a]
-    locs = sympy_locs
-    if max_param > 0:
-        for i in range(len(all_a)):
-            locs["a%i"%i] = all_a[i]
-
-    to_change = []
-    imin, imax = utils.split_idx(nfun, rank, size)
-
-    for i in range(len(all_fun)):
-        if rank == 0 and (i % 100) == 0:
-            print(i, len(all_fun))
-        if all_nparam[i] != uniq_nparam[matches[i]]:
-            continue
-        s1 = sympy.sympify(all_fun[i], locals=locs)
-        try:
-            s2 = sympy.sympify(uniq_fun[matches[i]], locals=locs)
-        except Exception:
-            print(f'Could not check {uniq_fun[matches[i]]} so will keep equation')
-            s2 = None
-
-        p = sympy.Array(sympy.symbols(" ".join(param_list), real=True))
-        
-        try:
-            if s2 is None:
-                raise ValueError
-            with time_limit(tmax):
-                for j in range(len(inv_subs[i])):
-                    inv_subs[i][j] = inv_subs[i][j].replace("{", "{'")
-                    inv_subs[i][j] = inv_subs[i][j].replace("}", "'}")
-                    inv_subs[i][j] = inv_subs[i][j].replace(", ", "', '")
-                    inv_subs[i][j] = inv_subs[i][j].replace(": ", "': '")
-                    d = ast.literal_eval(inv_subs[i][j])
-                    k = list(d.keys())
-                    v = list(d.values())
-                    k = [sympy.sympify(kk, locals=locs) for kk in k]
-                    v = [sympy.sympify(vv, locals=locs) for vv in v]
-                    p = p.subs(dict(zip(k, v)), simultaneous=True)
-                sub = {all_a[j]:p[j] for j in range(len(all_a))}
-                s1 = s1.subs(sub, simultaneous=True)
-                if (not str(s1) == str(s2)) and (not s1.equals(s2)): 
-                    raise ValueError
-        except Exception:
-            to_change.append([i+imin, all_fun[i]])
-
-    del inv_subs, all_fun
-    gc.collect()
-
-    to_change = comm.gather(to_change, root=0)
-
-    if rank == 0:
-
-        to_change = list(itertools.chain(*to_change))
-
-        # Change indices to how they were before
-        for r in to_change:
-            r[0] = shufidx[r[0]]
-        del shufidx
-
-        print('\nNeed to change %i functions'%len(to_change))
-        for r in to_change:
-            print(r)
-
-        print('\nLoading all equations', flush=True)
-        with open(dirname + '/all_equations_%i.txt'%compl, 'r') as f:
-            all_fun = f.read().splitlines()
-        for r in to_change:
-            r[1] = all_fun[r[0]]
-        del all_fun
-        gc.collect()
-
-        print('\nAppending new unique equations')
-        with open(dirname + '/unique_equations_%i.txt'%compl, 'r') as f:
-            uniq_fun = f.read().splitlines()
-        nuniq = len(uniq_fun)
-
-        new_fun = [r[1] for r in to_change]
-        new_uniq, new_match = utils.get_unique_indexes(new_fun)
-        new_uniq_fun = list(new_uniq.keys())
-        
-        with open(dirname + '/unique_equations_%i.txt'%compl, 'w') as f:
-            w = 80
-            pp = pprint.PrettyPrinter(width=w, stream=f)
-
-            for s in uniq_fun:
-                if len(s + '\n') > w / 2:
-                    w = 2 * len(s)
-                    pp = pprint.PrettyPrinter(width=w, stream=f)
-                pp.pprint(s)
-
-            for s in new_uniq_fun:
-                if len(s + '\n') > w / 2:
-                    w = 2 * len(s)
-                    pp = pprint.PrettyPrinter(width=w, stream=f)
-                pp.pprint(s)
-        del uniq_fun
-        gc.collect()
-        s = "sed 's/.$//; s/^.//' %s/%s%i.txt > %s/temp_%i.txt"%(dirname,'unique_equations_',compl,dirname,compl)
-        os.system(s)
-        s = "mv %s/temp_%i.txt %s/%s%i.txt"%(dirname,compl,dirname,'unique_equations_',compl)
-        os.system(s)
-
-        print('\nChanging inverse subs')
-        with open (dirname + '/inv_subs_%i.txt'%compl, 'r') as f:
-            reader = csv.reader(f, delimiter=';')
-            inv_subs = [row for row in reader]
-        for r in to_change:
-            inv_subs[r[0]] = ""
-        with open(dirname + '/inv_subs_%i.txt'%compl, 'w') as f:
-            writer = csv.writer(f, delimiter=';')
-            writer.writerows(inv_subs)
-        del inv_subs
-        gc.collect()
-
-        print('\nChanging matches')
-        matches = np.loadtxt(dirname + '/matches_%i.txt'%compl).astype(int)
-        for i in range(len(to_change)):
-            matches[to_change[i][0]] = nuniq + new_match[to_change[i][1]]
-        np.savetxt(dirname + '/matches_%i.txt'%compl, matches)
-
-    return
-
-
 def check_results(dirname, compl, tmax=10):
     """Check that all functions can be recovered by applying the subsitutions to the unique functions.
     If not, define a new unique function and save results to file.
@@ -1645,7 +1323,6 @@ def check_results(dirname, compl, tmax=10):
 
     esrp = ESRPrinter()
     all_nparam = count_params_dict(all_fun.values())
-    # print(all_nparam)
     uniq_nparam = count_params_dict(uniq_fun.values())
             
     for i, idx in enumerate(shufidx):
@@ -1693,7 +1370,9 @@ def check_results(dirname, compl, tmax=10):
             to_change.append([idx, all_fun[idx]])
     
     comm.Barrier()
-    print(f'Rank {rank} found {len(to_change)} functions to change')
+    nchange = comm.gather(len(to_change), root=0)
+    if rank == 0:
+        print(f'Need to change {sum(nchange)} functions', flush=True)
 
     # TO DO: Print the extra equations to file
     

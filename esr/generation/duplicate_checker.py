@@ -97,8 +97,6 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
     # Get maximum number of parameters in any function on any rank
     max_param = simplifier.get_max_param(all_fun.values())
     max_param = comm.allreduce(max_param, op=MPI.MAX)
-    # nparam = simplifier.count_params(all_fun, max_param)
-    # nparam = [np.sum(nparam == i) for i in range(max_param+1)]
     
     if rank == 0 and track_memory:
         utils.using_mem("pre sympify")
@@ -142,11 +140,6 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
     if rank == 0 and track_memory:
         utils.using_mem("post sympify")
         utils.locals_size(locals())
-
-    if rank == 0:
-        print('All fun:', type(all_fun), len(all_fun), type(list(all_fun.keys())[0]), type(list(all_fun.values())[0]))
-        print('All sym:', type(all_sym), len(all_sym), type(list(all_sym.keys())[0]), type(list(all_sym.values())[0]))
-        sys.stdout.flush()
 
     # Save all equations in a rank dependent way. First delete the files
     # if they exist
@@ -192,8 +185,6 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
     if rank == 0 and track_memory:
         utils.using_mem("pre do sympy")
         utils.locals_size(locals())
-        
-    old_all_fun = all_fun.copy()
 
     all_fun, uniq, nround = simplifier.do_sympy(all_fun, 
                                         all_sym, 
@@ -229,15 +220,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
 
     # Get the match index for the unique equations
     uniq = utils.get_dict_index_mpi(uniq)
-    print(f"Rank {rank} has {len(uniq)} unique equations:")
     match = utils.get_match_index_mpi(uniq, all_fun)
-    # quit()
-
-    # if rank == 0:
-    #     for i in old_all_fun.keys():
-    #         if old_all_fun[i] != all_fun[i]:
-    #             print(f"{i}: {old_all_fun[i]} -> {all_fun[i]}")
-    # quit()
 
     # Save the unique equations
     if rank == 0:
@@ -257,9 +240,6 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
             continue
         # Keep to sort the equations by their value
         uniq_sorted = sorted(uniq.keys(), key=uniq.get)
-        if rank == 0:
-            print('uniq sorted', uniq_sorted)
-        # buf = io.StringIO()
         with open(fname_str, "a") as f_str:
             w = 80
             for eq in uniq_sorted:
@@ -308,10 +288,6 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         print('\nCombining Inverse Subs')
         sys.stdout.flush()
 
-    # TO DO: Print the inverse substitutions
-    # TO DO: Combine the duplicate inverse substitutions
-    # TO DO: Reintroduce expand in the search
-
     # Load the inverse substitutions
     all_inv_subs = defaultdict(list)
     for r in range(nround):
@@ -329,11 +305,11 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
             all_inv_subs[k] += v
 
     # Remove the inverse substitutions which are not required
-    # if rank == 0:
-    #     print('\nRemoving unnecessary inv_subs', flush=True)
-    # all_dup = simplifier.get_all_dup(max_param)
-    # for i in all_inv_subs.keys():
-        # all_inv_subs[i] = simplifier.simplify_inv_subs(all_inv_subs[i], all_dup)
+    if rank == 0:
+        print('\nRemoving unnecessary inv_subs', flush=True)
+    all_dup = simplifier.get_all_dup(max_param)
+    for i in all_inv_subs.keys():
+        all_inv_subs[i] = simplifier.simplify_inv_subs(all_inv_subs[i], all_dup)
 
     # Save the inverse substitutions to file
     if rank == 0:
@@ -370,41 +346,9 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
                 out.write(f"{v}\n")
                 next_key += 1
         # Now delete the rank-specific files
-        # for fname in glob.glob(f'{root}_rank_*.txt'):
-            # os.remove(fname)
+        for fname in glob.glob(f'{root}_rank_*.txt'):
+            os.remove(fname)
         print('Inverse substitutions saved to:', f'{root}.txt')
-
-    # quit()
-
-    # if rank == 0:
-
-    #     # Remove subs which are followed by their inverse
-    #     print('\nRemoving unnecessary inv_subs')
-    #     sys.stdout.flush()
-    #     all_dup = simplifier.get_all_dup(max_param)
-    #     sys.stdout.flush()
-
-    #     for i in range(len(all_inv_subs)):
-    #         all_inv_subs[i] = simplifier.simplify_inv_subs(all_inv_subs[i], all_dup)
-
-    #     print('\nSaving Inverse Subs')
-    #     sys.stdout.flush()
-    #     for i in range(len(all_inv_subs)):
-    #         if all_inv_subs[i] is None:
-    #             all_inv_subs[i] = []
-    #     with open(dirname + '/inv_subs_%i.txt'%compl, "w") as f:
-    #         writer = csv.writer(f, delimiter=';')
-    #         writer.writerows(all_inv_subs)
-
-    #     all_fname = ['unique_equations_', 'all_equations_', 'trees_', 'orig_trees_', 'extra_trees_']
-    #     for fname in all_fname:
-    #         s = "sed 's/.$//; s/^.//' %s/%s%i.txt > %s/temp_%i.txt"%(dirname,fname,compl,dirname,compl)
-    #         os.system(s)
-    #         s = "mv %s/temp_%i.txt %s/%s%i.txt"%(dirname,compl,dirname,fname,compl)
-    #         os.system(s)
-
-    #     del all_inv_subs
-    #     gc.collect()
 
     if rank == 0:
         print('\nChecking Results', flush=True)
