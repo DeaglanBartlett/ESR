@@ -1508,23 +1508,19 @@ def shape_to_functions(s, basis_functions):
     n1 = np.sum(s == 1)
     n2 = np.sum(s == 2)
     
-    t0 = [list(t) for t in itertools.product(basis_functions[0], repeat = n0)]
-    t1 = [list(t) for t in itertools.product(basis_functions[1], repeat = n1)]
-    t2 = [list(t) for t in itertools.product(basis_functions[2], repeat = n2)]
-    
-    # Rename parameters so appear in order
-    for i in range(len(t0)):
-        indices = [j for j, x in enumerate(t0[i]) if x == 'a']
-        for j in range(len(indices)):
-            t0[i][indices[j]] = 'a%i'%j
-    
-    success, part_considered, tree = check_tree(s)
-    
-    all_fun = [None] * (len(t0) * len(t1) * len(t2))
-    if rank == 0:
-        all_tree = [None] * (len(t0) * len(t1) * len(t2))
-    else:
-        all_tree = None
+    _, _, tree = check_tree(s)
+
+    len_t0 = len(basis_functions[0]) ** n0
+    len_t1 = len(basis_functions[1]) ** n1
+    len_t2 = len(basis_functions[2]) ** n2
+
+    # all_fun = [None] * (len_t0 * len_t1 * len_t2)
+    # if rank == 0:
+    #     all_tree = [None] * (len_t0 * len_t1 * len_t2)
+    # else:
+    #     all_tree = None
+    all_fun = {}
+    all_tree = {}
     
     pos = 0
     labels = np.empty(len(s), dtype='U100')
@@ -1532,53 +1528,64 @@ def shape_to_functions(s, basis_functions):
     m1 = (s == 1)
     m2 = (s == 2)
     
-    t0 = np.array(t0)
-    t1 = np.array(t1)
-    t2 = np.array(t2)
-    
     extra_tree = []
     extra_fun = []
     extra_orig = []
 
-    i = utils.split_idx(len(t0) * len(t1) * len(t2), rank, size)
+    i = utils.split_idx(len_t0 * len_t1 * len_t2, rank, size)
     if len(i) == 0:
         imin = 0
         imax = 0
     else:
         imin = i[0]
         imax = i[-1] + 1 
+
+    full_iterator = itertools.product(
+        itertools.product(basis_functions[0], repeat=n0),
+        itertools.product(basis_functions[1], repeat=n1),
+        itertools.product(basis_functions[2], repeat=n2)
+    )
     
-    for i in range(len(t0)):
-        for j in range(len(t1)):
-            for k in range(len(t2)):
-            
-                labels[:] = None
-                labels[m0] = t0[i,:]
-                labels[m1] = t1[j,:]
-                labels[m2] = t2[k,:]
+    # Only loop over [imin, imax)
+    for pos, (t0, t1, t2) in enumerate(itertools.islice(full_iterator, imin, imax), start=imin):
 
-                if rank == 0:
-                    all_tree[pos] = labels.copy()
-                all_fun[pos] = node_to_string(0, tree, labels)
+        # Rename parameters so appear in order
+        p0 = list(t0)
+        indices = [j for j, x in enumerate(p0) if x == 'a']
+        for j in range(len(indices)):
+            p0[indices[j]] = 'a%i'%j
 
-                if (pos >= imin) and (pos < imax):
-                    new_tree, new_labels = find_additional_trees(tree, list(labels), basis_functions)
-                    if len(new_tree) > 1:
-                        for n in range(1, len(new_tree)):
-                            extra_tree.append(new_labels[n].copy())
-                            extra_fun.append(node_to_string(0, new_tree[n], new_labels[n]))
-                            extra_orig.append(all_fun[pos])
-                pos += 1
+        labels[:] = None
+        labels[m0] = p0
+        labels[m1] = list(t1)
+        labels[m2] = list(t2)
 
-    extra_tree = comm.gather(extra_tree, root=0)
-    extra_fun = comm.gather(extra_fun, root=0)
-    extra_orig = comm.gather(extra_orig, root=0)
-    if rank == 0:
-        extra_tree = list(itertools.chain(*extra_tree))
-        extra_fun = list(itertools.chain(*extra_fun))
-        extra_orig = list(itertools.chain(*extra_orig))
-    extra_fun = comm.bcast(extra_fun, root=0)
-    extra_orig = comm.bcast(extra_orig, root=0)
+        # if rank == 0:
+        all_tree[pos] = [str(t) for t in labels]
+        all_fun[pos] = node_to_string(0, tree, all_tree[pos])
+
+        # if (pos >= imin) and (pos < imax):
+        new_tree, new_labels = find_additional_trees(tree, all_tree[pos], basis_functions)
+        if len(new_tree) > 1:
+            for n in range(1, len(new_tree)):
+                extra_tree.append([str(t) for t in new_labels[n]])
+                extra_fun.append(node_to_string(0, new_tree[n], new_labels[n]))
+                extra_orig.append(all_fun[pos])
+
+    # if rank == 0:
+    #     utils.using_mem("fun making")
+    #     utils.locals_size(locals())
+
+    # Now need to gather all_fun and all_tree
+    # extra_tree = comm.gather(extra_tree, root=0)
+    # extra_fun = comm.gather(extra_fun, root=0)
+    # extra_orig = comm.gather(extra_orig, root=0)
+    # if rank == 0:
+    #     extra_tree = list(itertools.chain(*extra_tree))
+    #     extra_fun = list(itertools.chain(*extra_fun))
+    #     extra_orig = list(itertools.chain(*extra_orig))
+    # extra_fun = comm.bcast(extra_fun, root=0)
+    # extra_orig = comm.bcast(extra_orig, root=0)
     
     comm.Barrier()
 
@@ -1666,64 +1673,80 @@ def generate_equations(compl, basis_functions, dirname):
         print('\nOriginal number of trees:', int(nfun))
     sys.stdout.flush()
 
-    all_fun = [None] * len(shapes)
-    extra_fun = [None] * len(shapes)
-    extra_orig = [None] * len(shapes)
-    sys.stdout.flush()
-    comm.Barrier()
-
     # Clear the files
     if rank == 0:
         for fname in ['orig_trees', 'extra_trees', 'orig_aifeyn', 'extra_aifeyn']:
             with open(dirname + '/%s_%i.txt'%(fname,compl), 'w') as f:
                 pass
 
-    ntree = 0
-    nextratree = 0
+    extra_orig = [None] * len(shapes)
+    all_fun = [None] * len(shapes)
+    extra_fun = [None] * len(shapes)
 
     for i in range(len(shapes)):
         if rank == 0:
-            print('%i of %i'%(i+1, len(shapes)))
-            sys.stdout.flush()
+            print('%i of %i'%(i+1, len(shapes)), flush=True)
+
         all_fun[i], all_tree, extra_fun[i], extra_tree, extra_orig[i] = shape_to_functions(shapes[i], basis_functions)
 
-        if rank == 0:
-            ntree += len(all_tree)
-            nextratree += len(extra_tree)
-
-        max_param = simplifier.get_max_param(all_fun[i], verbose=False)
+        # Get max number of parameters across ranks
+        if len(all_fun[i]) == 0:
+            max_param = 0
+        else:
+            max_param = simplifier.get_max_param(all_fun[i].values(), verbose=False)
+        # Combine ranks to find max_param
+        max_param = comm.allreduce(max_param, op=MPI.MAX)
         param_list = ['a%i'%j for j in range(max_param)]
 
-        if rank == 0:
+        # Save original trees
+        for r in range(size):
+            if rank == r:
+                if len(all_fun[i]) != 0:
+                    imin = min(all_fun[i].keys())
+                    imax = max(all_fun[i].keys()) + 1
 
-            with open(dirname + '/orig_trees_%i.txt'%compl, 'a') as f:
-                w = 80
-                pp = pprint.PrettyPrinter(width=w, stream=f)
-                for t in all_tree:
-                    s = str(t)
-                    if len(s + '\n') > w / 2:
-                        w = 2 * len(s)
+                    # Save original trees
+                    with open(dirname + '/orig_trees_%i.txt'%compl, 'a') as f:
+                        w = 80
                         pp = pprint.PrettyPrinter(width=w, stream=f)
-                    pp.pprint(s)
+                        for j in range(imin, imax):
+                            t = all_tree[j]
+                            s = str(t)
+                            if len(s + '\n') > w / 2:
+                                w = 2 * len(s)
+                                pp = pprint.PrettyPrinter(width=w, stream=f)
+                            pp.pprint(t)
 
-            with open(dirname + '/extra_trees_%i.txt'%compl, 'a') as f:
-                w = 80
-                pp = pprint.PrettyPrinter(width=w, stream=f)
-                for t in extra_tree:
-                    s = str(t)
-                    if len(s + '\n') > w / 2:
-                        w = 2 * len(s)
+                    # Save original aifeyn complexity
+                    with open(dirname + '/orig_aifeyn_%i.txt'%compl, 'a') as f:
+                        for j in range(imin, imax):
+                            print(aifeyn_complexity(all_tree[j], param_list), file=f)
+            comm.Barrier()
+
+        # Save extra trees
+        for r in range(size):
+            if rank == r:
+                if len(extra_tree) != 0:
+
+                    # Save extra trees
+                    with open(dirname + '/extra_trees_%i.txt'%compl, 'a') as f:
+                        w = 80
                         pp = pprint.PrettyPrinter(width=w, stream=f)
-                    pp.pprint(s)
+                        for t in extra_tree:
+                            s = str(t)
+                            if len(s + '\n') > w / 2:
+                                w = 2 * len(s)
+                                pp = pprint.PrettyPrinter(width=w, stream=f)
+                            pp.pprint(t)
 
-            with open(dirname + '/orig_aifeyn_%i.txt'%compl, 'a') as f:
-                for tree in all_tree:
-                    print(aifeyn_complexity(tree, param_list), file=f)
+                    # Save extra aifeyn complexity
+                    with open(dirname + '/extra_aifeyn_%i.txt'%compl, 'a') as f:
+                        for tree in extra_tree:
+                            print(aifeyn_complexity(tree, param_list), file=f)       
+            comm.Barrier()
 
-            with open(dirname + '/extra_aifeyn_%i.txt'%compl, 'a') as f:
-                for tree in extra_tree:
-                    print(aifeyn_complexity(tree, param_list), file=f)
-
+    # Combine original and extra trees
+    comm.Barrier()
     if rank == 0:
         s = 'cat %s/orig_trees_%i.txt %s/extra_trees_%i.txt > %s/trees_%i.txt'%(dirname,compl,dirname,compl,dirname,compl)
         sys.stdout.flush()
@@ -1731,15 +1754,46 @@ def generate_equations(compl, basis_functions, dirname):
         s = 'cat %s/orig_aifeyn_%i.txt %s/extra_aifeyn_%i.txt > %s/aifeyn_%i.txt'%(dirname,compl,dirname,compl,dirname,compl)
         sys.stdout.flush()
         os.system(s)
-
-    all_fun = list(itertools.chain(*all_fun))
-    extra_fun = list(itertools.chain(*extra_fun))
-    extra_orig = list(itertools.chain(*extra_orig))
-
-    all_fun = all_fun + extra_fun
+    comm.Barrier()
     
+    # Rename the all_fun so that the indices are good
+    offset = 0
+    for i in range(len(all_fun)):
+        for r in range(size):
+            if rank == r:
+                if len(all_fun[i]) == 0:
+                    jmin = 0
+                else:
+                    jmin = min(all_fun[i].keys())
+                all_fun[i] = {offset + j: all_fun[i][j+jmin] for j in range(len(all_fun[i]))}
+                offset += len(all_fun[i])
+            offset = comm.bcast(offset, root=r)
+
+    # Compute indices of the extra fun
+    for i in range(len(shapes)):
+        for r in range(size):
+            if rank == r:
+                extra_fun[i] = {offset + j: extra_fun[i][j] for j in range(len(extra_fun[i]))}
+                extra_orig[i] = {offset + j: extra_orig[i][j] for j in range(len(extra_orig[i]))}
+                offset += len(extra_fun[i])
+            offset = comm.bcast(offset, root=r)
     if rank == 0:
-        print('\nNew number of trees:', len(all_fun))
-    sys.stdout.flush()
+        print('\nNew number of trees:', offset)
+
+    # Merge all entries of all_fun and extra_fun for this rank
+    all_fun = {k:v for d in all_fun for k, v in d.items()}
+    extra_fun = {k:v for d in extra_fun for k, v in d.items()}
+    all_fun.update(extra_fun)
+    extra_orig = {k:v for d in extra_orig for k, v in d.items()}
+
+    # all_fun = list(itertools.chain(*all_fun))
+    # extra_fun = list(itertools.chain(*extra_fun))
+    # extra_orig = list(itertools.chain(*extra_orig))
+
+    # all_fun = all_fun + extra_fun
     
+    # if rank == 0:
+    #     print('\nNew number of trees:', len(all_fun))
+    # sys.stdout.flush()
+
     return all_fun, extra_orig
