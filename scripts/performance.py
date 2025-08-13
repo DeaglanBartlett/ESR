@@ -1,4 +1,4 @@
-import esr.generation.duplicate_checker as duplicate_checker 
+import esr.generation.duplicate_checker as duplicate_checker
 import time
 from mpi4py import MPI
 from memory_profiler import memory_usage
@@ -17,7 +17,7 @@ for _ in range(nrun):
     duplicate_checker.main(runname, compl)
 end = time.time()
 
-# MEMORY USAGE IN MB (https://pypi.org/project/memory-profiler/)
+#  MEMORY USAGE IN MB (https://pypi.org/project/memory-profiler/)
 mem_usage = memory_usage((duplicate_checker.main, (runname, compl),))
 
 comm.Barrier()
@@ -33,5 +33,5 @@ if rank == 0:
     print("NRUN:", nrun)
     print("ALL RUNS:", total)
     print("PER RUN:", per_run)
-    print("MAX MEMORY USAGE: %s MB"%max(mem_usage))
+    print("MAX MEMORY USAGE: %s MB" % max(mem_usage))
     print(stars)

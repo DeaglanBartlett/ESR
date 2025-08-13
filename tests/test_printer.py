@@ -10,6 +10,7 @@ from sympy.logic.boolalg import BooleanTrue, BooleanFalse
 from sympy.combinatorics.permutations import Permutation
 from esr.generation.custom_printer import ESRPrinter, sstr, sstrrepr
 
+
 class TestESRPrinter(unittest.TestCase):
 
     def setUp(self):
@@ -19,7 +20,8 @@ class TestESRPrinter(unittest.TestCase):
         self.assertIsInstance(self.printer, ESRPrinter)
         self.assertEqual(self.printer._default_settings["order"], None)
         self.assertEqual(self.printer._default_settings["full_prec"], "auto")
-        self.assertEqual(self.printer._default_settings["sympy_integers"], False)
+        self.assertEqual(
+            self.printer._default_settings["sympy_integers"], False)
         self.assertEqual(self.printer._default_settings["abbrev"], False)
         self.assertEqual(self.printer._default_settings["perm_cyclic"], True)
         self.assertEqual(self.printer._default_settings["min"], None)
@@ -34,7 +36,8 @@ class TestESRPrinter(unittest.TestCase):
     def test_stringify(self):
         x, y = symbols('x y')
         self.assertEqual(self.printer.stringify([x, y], ", "), "x, y")
-        self.assertEqual(self.printer.stringify([x + y, x * y], ", "), "x + y, x*y")
+        self.assertEqual(self.printer.stringify(
+            [x + y, x * y], ", "), "x + y, x*y")
 
     def test_emptyPrinter(self):
         x = symbols('x')
@@ -54,10 +57,12 @@ class TestESRPrinter(unittest.TestCase):
         self.assertEqual(self.printer._print_Add(expr), "-x - y")
 
     def test_print_BooleanTrue(self):
-        self.assertEqual(self.printer._print_BooleanTrue(BooleanTrue()), "True")
+        self.assertEqual(
+            self.printer._print_BooleanTrue(BooleanTrue()), "True")
 
     def test_print_BooleanFalse(self):
-        self.assertEqual(self.printer._print_BooleanFalse(BooleanFalse()), "False")
+        self.assertEqual(self.printer._print_BooleanFalse(
+            BooleanFalse()), "False")
 
     def test_print_ElementwiseApplyFunction(self):
         class MockExpr:
@@ -211,7 +216,8 @@ class TestESRPrinter(unittest.TestCase):
         self.assertEqual(self.printer._print_EmptySet(None), 'EmptySet')
 
     def test_print_EmptySequence(self):
-        self.assertEqual(self.printer._print_EmptySequence(None), 'EmptySequence')
+        self.assertEqual(
+            self.printer._print_EmptySequence(None), 'EmptySequence')
 
     def test_print_int(self):
         self.assertEqual(self.printer._print_int(5), '5')
@@ -236,9 +242,11 @@ class TestESRPrinter(unittest.TestCase):
         class PythonRational:
             p = 3
             q = 1
-        self.assertEqual(self.printer._print_PythonRational(PythonRational()), '3')
+        self.assertEqual(
+            self.printer._print_PythonRational(PythonRational()), '3')
         PythonRational.q = 2
-        self.assertEqual(self.printer._print_PythonRational(PythonRational()), '3/2')
+        self.assertEqual(self.printer._print_PythonRational(
+            PythonRational()), '3/2')
 
     def test_print_Fraction(self):
         self.assertEqual(self.printer._print_Fraction(Fraction(3, 1)), '3')
@@ -303,10 +311,12 @@ class TestESRPrinter(unittest.TestCase):
         class Expr:
             args = [1, 2, 3, 4]
         self.printer.parenthesize = lambda x, y, strict=False: str(x)
-        self.assertEqual(self.printer._print_Quaternion(Expr()), "1 + 2*i + 3*j + 4*k")
+        self.assertEqual(self.printer._print_Quaternion(
+            Expr()), "1 + 2*i + 3*j + 4*k")
 
     def test_print_Dimension(self):
-        self.assertEqual(self.printer._print_Dimension("dimension"), "dimension")
+        self.assertEqual(self.printer._print_Dimension(
+            "dimension"), "dimension")
 
     def test_print_Wild(self):
         class Expr:
@@ -352,7 +362,8 @@ class TestESRPrinter(unittest.TestCase):
             dom = "dom"
             ring = None
         self.printer._print = lambda x: str(x)
-        self.assertEqual(self.printer._print_DMF(Expr()), "Expr(rep, dom, None)")
+        self.assertEqual(self.printer._print_DMF(
+            Expr()), "Expr(rep, dom, None)")
 
     def test_print_Object(self):
         class Obj:
@@ -362,23 +373,27 @@ class TestESRPrinter(unittest.TestCase):
     def test_print_IdentityMorphism(self):
         class Morphism:
             domain = "domain"
-        self.assertEqual(self.printer._print_IdentityMorphism(Morphism()), 'IdentityMorphism(domain)')
+        self.assertEqual(self.printer._print_IdentityMorphism(
+            Morphism()), 'IdentityMorphism(domain)')
 
     def test_print_NamedMorphism(self):
         class Morphism:
             domain = "domain"
             codomain = "codomain"
             name = "name"
-        self.assertEqual(self.printer._print_NamedMorphism(Morphism()), 'NamedMorphism(domain, codomain, "name")')
+        self.assertEqual(self.printer._print_NamedMorphism(
+            Morphism()), 'NamedMorphism(domain, codomain, "name")')
 
     def test_print_Category(self):
         class Category:
             name = "category"
-        self.assertEqual(self.printer._print_Category(Category()), 'Category("category")')
+        self.assertEqual(self.printer._print_Category(
+            Category()), 'Category("category")')
 
     def test_print_Manifold(self):
         class Name:
             name = "manifold"
+
         class Manifold:
             name = Name()
         self.assertEqual(self.printer._print_Manifold(Manifold()), "manifold")
@@ -386,6 +401,7 @@ class TestESRPrinter(unittest.TestCase):
     def test_print_Patch(self):
         class Name:
             name = "patch"
+
         class Patch:
             name = Name()
         self.assertEqual(self.printer._print_Patch(Patch()), "patch")
@@ -393,15 +409,18 @@ class TestESRPrinter(unittest.TestCase):
     def test_print_CoordSystem(self):
         class Name:
             name = "coords"
+
         class CoordSystem:
             name = Name()
-        self.assertEqual(self.printer._print_CoordSystem(CoordSystem()), "coords")
+        self.assertEqual(self.printer._print_CoordSystem(
+            CoordSystem()), "coords")
 
     def test_print_BaseScalarField(self):
         class CoordSys:
-            symbols = [type('Symbol', (object,), {'name': 'x'})(), 
-                       type('Symbol', (object,), {'name': 'y'})(), 
+            symbols = [type('Symbol', (object,), {'name': 'x'})(),
+                       type('Symbol', (object,), {'name': 'y'})(),
                        type('Symbol', (object,), {'name': 'z'})()]
+
         class Field:
             _coord_sys = CoordSys()
             _index = 1
@@ -409,9 +428,10 @@ class TestESRPrinter(unittest.TestCase):
 
     def test_print_BaseVectorField(self):
         class CoordSys:
-            symbols = [type('Symbol', (object,), {'name': 'x'})(), 
-                       type('Symbol', (object,), {'name': 'y'})(), 
+            symbols = [type('Symbol', (object,), {'name': 'x'})(),
+                       type('Symbol', (object,), {'name': 'y'})(),
                        type('Symbol', (object,), {'name': 'z'})()]
+
         class Field:
             _coord_sys = CoordSys()
             _index = 1
@@ -419,12 +439,14 @@ class TestESRPrinter(unittest.TestCase):
 
     def test_print_Differential(self):
         class CoordSys:
-            symbols = [type('Symbol', (object,), {'name': 'x'})(), 
-                       type('Symbol', (object,), {'name': 'y'})(), 
+            symbols = [type('Symbol', (object,), {'name': 'x'})(),
+                       type('Symbol', (object,), {'name': 'y'})(),
                        type('Symbol', (object,), {'name': 'z'})()]
+
         class Field:
             _coord_sys = CoordSys()
             _index = 1
+
         class Diff:
             _form_field = Field()
         self.assertEqual(self.printer._print_Differential(Diff()), "dy")
@@ -432,10 +454,12 @@ class TestESRPrinter(unittest.TestCase):
         class FieldWithoutCoordSys:
             def __str__(self):
                 return "field"
+
         class DiffWithoutCoordSys:
             _form_field = FieldWithoutCoordSys()
         self.printer._print = lambda x: str(x)
-        self.assertEqual(self.printer._print_Differential(DiffWithoutCoordSys()), "d(field)")
+        self.assertEqual(self.printer._print_Differential(
+            DiffWithoutCoordSys()), "d(field)")
 
     def test_print_Tr(self):
         class Expr:
@@ -453,21 +477,25 @@ class TestESRPrinter(unittest.TestCase):
         class Rel:
             def __str__(self):
                 return "rel"
+
         class Expr:
             lhs = "lhs"
             rhs = "rhs"
             function = Rel()
         self.printer._print = lambda x: str(x)
-        self.assertEqual(self.printer._print_AppliedBinaryRelation(Expr()), "rel(lhs, rhs)")
+        self.assertEqual(self.printer._print_AppliedBinaryRelation(
+            Expr()), "rel(lhs, rhs)")
 
     def test_print_Interval(self):
         class MockInfinite:
             is_infinite = True
+
             def __str__(self):
                 return "a"
 
         class MockFinite:
             is_infinite = False
+
             def __str__(self):
                 return "b"
 
@@ -477,38 +505,46 @@ class TestESRPrinter(unittest.TestCase):
 
         # Test case: both a and b are infinite
         interval = Interval(MockInfinite(), MockInfinite(), False, False)
-        self.assertEqual(self.printer._print_Interval(interval), "Interval(a, a)")
+        self.assertEqual(self.printer._print_Interval(
+            interval), "Interval(a, a)")
 
         # Test case: a is infinite, b is finite, r is False
         interval = Interval(MockInfinite(), MockFinite(), False, False)
-        self.assertEqual(self.printer._print_Interval(interval), "Interval(a, b)")
+        self.assertEqual(self.printer._print_Interval(
+            interval), "Interval(a, b)")
 
         # Test case: a is finite, b is infinite, L is False
         interval = Interval(MockFinite(), MockInfinite(), False, False)
-        self.assertEqual(self.printer._print_Interval(interval), "Interval(b, a)")
+        self.assertEqual(self.printer._print_Interval(
+            interval), "Interval(b, a)")
 
         # Test case: both L and r are False
         interval = Interval(MockFinite(), MockFinite(), False, False)
-        self.assertEqual(self.printer._print_Interval(interval), "Interval(b, b)")
+        self.assertEqual(self.printer._print_Interval(
+            interval), "Interval(b, b)")
 
         # Test case: both L and r are True
         interval = Interval(MockFinite(), MockFinite(), True, True)
-        self.assertEqual(self.printer._print_Interval(interval), "Interval.open(b, b)")
+        self.assertEqual(self.printer._print_Interval(
+            interval), "Interval.open(b, b)")
 
         # Test case: L is True, r is False
         interval = Interval(MockFinite(), MockFinite(), True, False)
-        self.assertEqual(self.printer._print_Interval(interval), "Interval.Lopen(b, b)")
+        self.assertEqual(self.printer._print_Interval(
+            interval), "Interval.Lopen(b, b)")
 
         # Test case: L is False, r is True
         interval = Interval(MockFinite(), MockFinite(), False, True)
-        self.assertEqual(self.printer._print_Interval(interval), "Interval.Ropen(b, b)")
+        self.assertEqual(self.printer._print_Interval(
+            interval), "Interval.Ropen(b, b)")
 
     def test_print_AccumulationBounds(self):
         class AccumBounds:
             min = "min"
             max = "max"
         self.printer._print = lambda x: str(x)
-        self.assertEqual(self.printer._print_AccumulationBounds(AccumBounds()), "AccumBounds(min, max)")
+        self.assertEqual(self.printer._print_AccumulationBounds(
+            AccumBounds()), "AccumBounds(min, max)")
 
     def test_print_Inverse(self):
         class Inverse:
@@ -519,20 +555,24 @@ class TestESRPrinter(unittest.TestCase):
     def test_print_Lambda(self):
         class Lambda:
             expr = "expr"
+
             class Signature:
                 is_symbol = True
+
                 def __str__(self):
                     return "Signature"
             signature = [Signature()]
         self.printer._print = lambda x: str(x)
-        self.assertEqual(self.printer._print_Lambda(Lambda()), "Lambda(Signature, expr)")
+        self.assertEqual(self.printer._print_Lambda(
+            Lambda()), "Lambda(Signature, expr)")
 
     def test_print_LatticeOp(self):
         class LatticeOp:
             args = ["arg1", "arg2"]
             func = type('Func', (object,), {'__name__': 'LatticeOpFunc'})()
         self.printer._print = lambda x: str(x)
-        self.assertEqual(self.printer._print_LatticeOp(LatticeOp()), "LatticeOpFunc(arg1, arg2)")
+        self.assertEqual(self.printer._print_LatticeOp(
+            LatticeOp()), "LatticeOpFunc(arg1, arg2)")
 
     def test_print_Limit(self):
         class Limit:
@@ -542,8 +582,9 @@ class TestESRPrinter(unittest.TestCase):
 
         class LimitWithDir:
             args = ["e", "z", "z0", "-"]
-        self.assertEqual(self.printer._print_Limit(LimitWithDir()), "Limit(e, z, z0, dir='-')")
-    
+        self.assertEqual(self.printer._print_Limit(
+            LimitWithDir()), "Limit(e, z, z0, dir='-')")
+
     def test_print_MatrixSlice(self):
         class MockExpr:
             def __init__(self, parent, rowslice, colslice):
@@ -562,25 +603,29 @@ class TestESRPrinter(unittest.TestCase):
 
         # Test case: rowslice and colslice with default values
         expr = MockExpr(MockParent(10, 10), [0, 10, 1], [0, 10, 1])
-        self.assertEqual(self.printer._print_MatrixSlice(expr), "parenthesized[:, :]")
+        self.assertEqual(self.printer._print_MatrixSlice(
+            expr), "parenthesized[:, :]")
 
         # Test case: rowslice and colslice with custom values
         expr = MockExpr(MockParent(10, 10), [1, 5, 2], [2, 8, 2])
-        self.assertEqual(self.printer._print_MatrixSlice(expr), "parenthesized[1:5:2, 2:8:2]")
+        self.assertEqual(self.printer._print_MatrixSlice(
+            expr), "parenthesized[1:5:2, 2:8:2]")
 
         # Test case: rowslice and colslice with some default values
         expr = MockExpr(MockParent(10, 10), [0, 5, 1], [2, 10, 1])
-        self.assertEqual(self.printer._print_MatrixSlice(expr), "parenthesized[:5, 2:]")
+        self.assertEqual(self.printer._print_MatrixSlice(
+            expr), "parenthesized[:5, 2:]")
 
         # Test case: rowslice and colslice with no step
-        expr = MockExpr(MockParent(10, 10), [1, 5, 1], [2, 8, 1])  # Added default step value
-        self.assertEqual(self.printer._print_MatrixSlice(expr), "parenthesized[1:5, 2:8]")
+        expr = MockExpr(MockParent(10, 10), [1, 5, 1], [
+                        2, 8, 1])  # Added default step value
+        self.assertEqual(self.printer._print_MatrixSlice(
+            expr), "parenthesized[1:5, 2:8]")
 
     def test_simple_mul(self):
         x = Symbol('x')
         expr = Mul(2, x)
         self.assertEqual(self.printer._print_Mul(expr), '2*x')
-
 
     def test_mul_with_negative(self):
         x = Symbol('x')
@@ -696,7 +741,7 @@ class TestESRPrinter(unittest.TestCase):
     def test_print_Mul_unevaluated(self):
         x = Symbol('x')
         y = Symbol('y')
-        expr = Mul(S.One, x, Pow(y,-1), Pow(x,-2*y), evaluate=False)
+        expr = Mul(S.One, x, Pow(y, -1), Pow(x, -2*y), evaluate=False)
         result = self.printer._print_Mul(expr)
         # Assuming the _print method returns a string representation
         self.assertEqual(result, '1*x/(y*pow(x,(2*y)))')
@@ -711,11 +756,13 @@ class TestESRPrinter(unittest.TestCase):
 
         # Test case: definite integral
         expr = Integral(x, (x, 0, 1))
-        self.assertEqual(self.printer._print_Integral(expr), "Integral(x, (x, 0, 1))")
+        self.assertEqual(self.printer._print_Integral(
+            expr), "Integral(x, (x, 0, 1))")
 
         # Test case: multiple integrals
         expr = Integral(x*y, (x, 0, 1), (y, 0, 1))
-        self.assertEqual(self.printer._print_Integral(expr), "Integral(x*y, (x, 0, 1), (y, 0, 1))")
+        self.assertEqual(self.printer._print_Integral(
+            expr), "Integral(x*y, (x, 0, 1), (y, 0, 1))")
 
     def test_print_dict(self):
         # Test case: simple dictionary
@@ -732,7 +779,8 @@ class TestESRPrinter(unittest.TestCase):
 
         # Test case: nested dictionary
         d = {'b': {'y': 2, 'x': 1}, 'a': 'apple'}
-        self.assertEqual(self.printer._print_dict(d), "{a: apple, b: {x: 1, y: 2}}")
+        self.assertEqual(self.printer._print_dict(d),
+                         "{a: apple, b: {x: 1, y: 2}}")
 
         # Test case: empty dictionary
         d = {}
@@ -773,10 +821,10 @@ class TestESRPrinter(unittest.TestCase):
 
         # Create a mock expr object
         expr = MockExpr([1, 2, 3], "Basic")
-        
+
         # Call the _print_Basic method
         result = self.printer._print_Basic(expr)
-        
+
         # Assert the result
         self.assertEqual(result, "Basic(1, 2, 3)")
 
@@ -927,25 +975,29 @@ class TestESRPrinter(unittest.TestCase):
         # Test case 1: Simple And expression
         expr = And(x > 0, y > 0)
         result = self.printer._print_And(expr)
-        expected = "(x > 0) & (y > 0)"  # Adjust based on actual stringify output
+        # Adjust based on actual stringify output
+        expected = "(x > 0) & (y > 0)"
         self.assertEqual(result, expected)
 
         # Test case 2: And expression with NegativeInfinity
         expr = And(Eq(x, S.NegativeInfinity), y > 0)
         result = self.printer._print_And(expr)
-        expected = "Eq(x, -oo) & (y > 0)"  # Adjust based on actual stringify output
+        # Adjust based on actual stringify output
+        expected = "Eq(x, -oo) & (y > 0)"
         self.assertEqual(result, expected)
 
         # Test case 3: And expression with multiple relations
         expr = And(x > 0, y > 0, Eq(x, S.NegativeInfinity))
         result = self.printer._print_And(expr)
-        expected = "Eq(x, -oo) & (x > 0) & (y > 0)"  # Adjust based on actual stringify output
+        # Adjust based on actual stringify output
+        expected = "Eq(x, -oo) & (x > 0) & (y > 0)"
         self.assertEqual(result, expected)
 
         # Test case 4: And expression with no relations
         expr = And(x > 0, y > 0)
         result = self.printer._print_And(expr)
-        expected = "(x > 0) & (y > 0)"  # Adjust based on actual stringify output
+        # Adjust based on actual stringify output
+        expected = "(x > 0) & (y > 0)"
         self.assertEqual(result, expected)
 
 

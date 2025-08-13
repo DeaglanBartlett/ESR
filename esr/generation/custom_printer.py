@@ -76,7 +76,7 @@ class ESRPrinter(Printer):
         return "False"
 
     def _print_Not(self, expr):
-        return '~%s' %(self.parenthesize(expr.args[0],PRECEDENCE["Not"]))
+        return '~%s' % (self.parenthesize(expr.args[0], PRECEDENCE["Not"]))
 
     def _print_And(self, expr):
         args = list(expr.args)
@@ -187,7 +187,7 @@ class ESRPrinter(Printer):
         return 'Integral(%s, %s)' % (self._print(expr.function), L)
 
     def _print_Interval(self, i):
-        fin =  'Interval{m}({a}, {b})'
+        fin = 'Interval{m}({a}, {b})'
         a, b, L, r = i.args
         if a.is_infinite and b.is_infinite:
             m = ''
@@ -229,7 +229,7 @@ class ESRPrinter(Printer):
             return "Limit(%s, %s, %s)" % tuple(map(self._print, (e, z, z0)))
         else:
             return "Limit(%s, %s, %s, dir='%s')" % tuple(map(self._print,
-                                                            (e, z, z0, dir)))
+                                                             (e, z, z0, dir)))
 
     def _print_list(self, expr):
         return "[%s]" % self.stringify(expr, ", ")
@@ -278,8 +278,9 @@ class ESRPrinter(Printer):
                 a.is_Pow and all(ai.is_Integer for ai in a.args)
                 for a in args[1:])):
             d, n = sift(args, lambda x:
-                isinstance(x, Pow) and bool(x.exp.as_coeff_Mul()[0] < 0),
-                binary=True)
+                        isinstance(x, Pow) and bool(
+                            x.exp.as_coeff_Mul()[0] < 0),
+                        binary=True)
             for i, di in enumerate(d):
                 if di.exp.is_Number:
                     e = -di.exp
@@ -295,7 +296,7 @@ class ESRPrinter(Printer):
                 pre = [str(n.pop(0))]
 
             nfactors = pre + [self.parenthesize(a, prec, strict=False)
-                for a in n]
+                              for a in n]
             if not nfactors:
                 nfactors = ['1']
 
@@ -305,7 +306,7 @@ class ESRPrinter(Printer):
             else:
                 pre = []
             dfactors = pre + [self.parenthesize(a, prec, strict=False)
-                for a in d]
+                              for a in d]
 
             n = '*'.join(nfactors)
             d = '*'.join(dfactors)
@@ -463,7 +464,8 @@ class ESRPrinter(Printer):
                 if expr.size < 5:
                     return 'Permutation(%s)' % self._print(expr.array_form)
                 return 'Permutation([], size=%s)' % self._print(expr.size)
-            trim = self._print(expr.array_form[:s[-1] + 1]) + ', size=%s' % self._print(expr.size)
+            trim = self._print(
+                expr.array_form[:s[-1] + 1]) + ', size=%s' % self._print(expr.size)
             use = full = self._print(expr.array_form)
             if len(trim) < len(full):
                 use = trim
@@ -513,12 +515,12 @@ class ESRPrinter(Printer):
     def _print_PolyRing(self, ring):
         return "Polynomial ring in %s over %s with %s order" % \
             (", ".join(map(lambda rs: self._print(rs), ring.symbols)),
-            self._print(ring.domain), self._print(ring.order))
+             self._print(ring.domain), self._print(ring.order))
 
     def _print_FracField(self, field):
         return "Rational function field in %s over %s with %s order" % \
             (", ".join(map(lambda fs: self._print(fs), field.symbols)),
-            self._print(field.domain), self._print(field.order))
+             self._print(field.domain), self._print(field.order))
 
     def _print_FreeGroupElement(self, elm):
         return elm.__str__()
@@ -533,13 +535,15 @@ class ESRPrinter(Printer):
         if frac.denom == 1:
             return self._print(frac.numer)
         else:
-            numer = self.parenthesize(frac.numer, PRECEDENCE["Mul"], strict=True)
-            denom = self.parenthesize(frac.denom, PRECEDENCE["Atom"], strict=True)
+            numer = self.parenthesize(
+                frac.numer, PRECEDENCE["Mul"], strict=True)
+            denom = self.parenthesize(
+                frac.denom, PRECEDENCE["Atom"], strict=True)
             return numer + "/" + denom
 
     def _print_Poly(self, expr):
         ATOM_PREC = PRECEDENCE["Atom"] - 1
-        terms, gens = [], [ self.parenthesize(s, ATOM_PREC) for s in expr.gens ]
+        terms, gens = [], [self.parenthesize(s, ATOM_PREC) for s in expr.gens]
 
         for monom, coeff in expr.terms():
             s_monom = []
@@ -672,7 +676,7 @@ class ESRPrinter(Printer):
     def _print_MatPow(self, expr):
         PREC = precedence(expr)
         return '%s**%s' % (self.parenthesize(expr.base, PREC, strict=False),
-                         self.parenthesize(expr.exp, PREC, strict=False))
+                           self.parenthesize(expr.exp, PREC, strict=False))
 
     def _print_Integer(self, expr):
         if self._settings.get("sympy_integers", False):
@@ -749,7 +753,8 @@ class ESRPrinter(Printer):
             strip = self._print_level > 1
         low = self._settings["min"] if "min" in self._settings else None
         high = self._settings["max"] if "max" in self._settings else None
-        rv = mlib_to_str(expr._mpf_, dps, strip_zeros=strip, min_fixed=low, max_fixed=high)
+        rv = mlib_to_str(expr._mpf_, dps, strip_zeros=strip,
+                         min_fixed=low, max_fixed=high)
         if rv.startswith('-.0'):
             rv = '-0.' + rv[3:]
         elif rv.startswith('.0'):
@@ -777,8 +782,8 @@ class ESRPrinter(Printer):
                                    self._print(expr.rhs))
 
         return '%s %s %s' % (self.parenthesize(expr.lhs, precedence(expr)),
-                           self._relationals.get(expr.rel_op) or expr.rel_op,
-                           self.parenthesize(expr.rhs, precedence(expr)))
+                             self._relationals.get(expr.rel_op) or expr.rel_op,
+                             self.parenthesize(expr.rhs, precedence(expr)))
 
     def _print_ComplexRootOf(self, expr):
         return "CRootOf(%s, %d)" % (self._print_Add(expr.expr,  order='lex'),
@@ -795,10 +800,11 @@ class ESRPrinter(Printer):
     def _print_GroebnerBasis(self, basis):
         cls = basis.__class__.__name__
 
-        exprs = [self._print_Add(arg, order=basis.order) for arg in basis.exprs]
+        exprs = [self._print_Add(arg, order=basis.order)
+                 for arg in basis.exprs]
         exprs = "[%s]" % ", ".join(exprs)
 
-        gens = [ self._print(gen) for gen in basis.gens ]
+        gens = [self._print(gen) for gen in basis.gens]
         domain = "domain='%s'" % self._print(basis.domain)
         order = "order='%s'" % self._print(basis.order)
 
@@ -884,7 +890,8 @@ class ESRPrinter(Printer):
         return "%s" % expr.name
 
     def _print_Quaternion(self, expr):
-        s = [self.parenthesize(i, PRECEDENCE["Mul"], strict=True) for i in expr.args]
+        s = [self.parenthesize(i, PRECEDENCE["Mul"], strict=True)
+             for i in expr.args]
         a = [s[0]] + [i+"*"+j for i, j in zip(s[1:], "ijk")]
         return " + ".join(a)
 
@@ -965,7 +972,7 @@ class ESRPrinter(Printer):
             return 'd(%s)' % self._print(field)
 
     def _print_Tr(self, expr):
-        #TODO : Handle indices
+        # TODO : Handle indices
         return "%s(%s)" % ("Tr", self._print(expr.args[0]))
 
     def _print_Str(self, s):

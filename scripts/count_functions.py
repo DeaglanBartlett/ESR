@@ -6,10 +6,11 @@ all_compl = np.arange(4, 11)
 dirname = 'core_maths/'
 nfortab = 4
 
+
 def file_len(fname):
 
     p = subprocess.Popen(['wc', '-l', fname], stdout=subprocess.PIPE,
-                                              stderr=subprocess.PIPE)
+                         stderr=subprocess.PIPE)
     result, err = p.communicate()
     if p.returncode != 0:
         raise IOError(err)
@@ -36,7 +37,8 @@ s = ['l'] + ['c'] * (nfortab+1)
 s = '\t\\begin{tabular}{' + '|'.join(s) + '}'
 print(s)
 print('\t\t\\hline')
-s = ['%i parameters'%i if i != 1 else '%i parameter'%i for i in range(nfortab+1)]
+s = ['%i parameters' % i if i != 1 else '%i parameter' %
+     i for i in range(nfortab+1)]
 s = '\t\t& ' + ' & '.join(s) + '\\\\'
 print(s)
 print('\t\t\\hline')
@@ -44,11 +46,11 @@ print('\t\t\\hline')
 for compl in all_compl:
 
     try:
-    
-        fname = dirname + '/compl_%i/all_equations_%i.txt'%(compl,compl)
+
+        fname = dirname + '/compl_%i/all_equations_%i.txt' % (compl, compl)
         total_count = count_fun(fname)
 
-        fname = dirname + '/compl_%i/unique_equations_%i.txt'%(compl,compl)
+        fname = dirname + '/compl_%i/unique_equations_%i.txt' % (compl, compl)
         uniq_count = count_fun(fname)
 
         if (len(uniq_count) < nfortab+1) or (len(total_count) < nfortab+1):
@@ -67,11 +69,10 @@ for compl in all_compl:
         uniq_count = ['YYY' for _ in range(nfortab+1)]
 
     print('\t\t\\rule{0pt}{3ex}')
-    s = ['%s (%s)'%(total_count[i],uniq_count[i]) for i in range(len(total_count))]
+    s = ['%s (%s)' % (total_count[i], uniq_count[i])
+         for i in range(len(total_count))]
     s = ' & '.join(s)
-    s = '\t\t%i & '%compl + s + '\\\\'
+    s = '\t\t%i & ' % compl + s + '\\\\'
     print(s)
 print('\t\t\\hline')
 print('\t\\end{tabular}')
-    
-
