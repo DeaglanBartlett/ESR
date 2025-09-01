@@ -174,36 +174,45 @@ class PanthLikelihood(Likelihood):
         )
 
         self.Hfid = 1.0 * apu.km / apu.s / apu.Mpc
-        data = pd.read_csv(self.data_file, delim_whitespace=True)
-        origlen = len(data)
-        ww = (data['zHD'] > 0.01)
-        zCMB = data['zHD'][ww]
-        mu_obs = data['MU_SH0ES'][ww]
-        mu_err = data['MU_SH0ES_ERR_DIAG'][ww]  #  for plotting
+        # data = pd.read_csv(self.data_file, delim_whitespace=True)
+        # origlen = len(data)
+        # ww = (data['zHD'] > 0.01)
+        # zCMB = data['zHD'][ww]
+        # mu_obs = data['MU_SH0ES'][ww]
+        # mu_err = data['MU_SH0ES_ERR_DIAG'][ww]  #  for plotting
 
-        with open(self.cov_file, 'r') as f:
-            _ = f.readline()
-            n = int(len(zCMB))
-            C = np.zeros((n, n))
-            ii = -1
-            jj = -1
-            for i in range(origlen):
-                jj = -1
-                if ww[i]:
-                    ii += 1
-                for j in range(origlen):
-                    if ww[j]:
-                        jj += 1
-                    val = float(f.readline())
-                    if ww[i]:
-                        if ww[j]:
-                            C[ii, jj] = val
+        # with open(self.cov_file, 'r') as f:
+        #     _ = f.readline()
+        #     n = int(len(zCMB))
+        #     C = np.zeros((n, n))
+        #     ii = -1
+        #     jj = -1
+        #     for i in range(origlen):
+        #         jj = -1
+        #         if ww[i]:
+        #             ii += 1
+        #         for j in range(origlen):
+        #             if ww[j]:
+        #                 jj += 1
+        #             val = float(f.readline())
+        #             if ww[i]:
+        #                 if ww[j]:
+        #                     C[ii, jj] = val
 
         self.ylabel = r'$\mu \left( z \right)$'
-        self.xvar = zCMB.to_numpy() + 1
-        self.yvar = mu_obs.to_numpy()
-        self.inv_cov = np.linalg.inv(C)
-        self.yerr = mu_err.to_numpy()
+        # self.xvar = zCMB.to_numpy() + 1
+        # self.yvar = mu_obs.to_numpy()
+        # self.inv_cov = np.linalg.inv(C)
+        # self.yerr = mu_err.to_numpy()
+        # np.savez(self.data_dir + '/pantheon_data.npz', 
+        #          xvar=self.xvar, yvar=self.yvar, yerr=self.yerr,
+        #          inv_cov=self.inv_cov)
+
+        data = np.load(self.data_dir + '/pantheon_data.npz')
+        self.xvar = data['xvar']
+        self.yvar = data['yvar']
+        self.yerr = data['yerr']
+        self.inv_cov = data['inv_cov']
 
         self.mu_const = astropy.constants.c / self.Hfid / (10 * apu.pc)
         self.mu_const = 5 * np.log10(self.mu_const.to(''))
