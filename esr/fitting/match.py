@@ -17,6 +17,121 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 
+def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_integration=False, print_frequency=1000 ):
+    """
+    Check that the matches have been done correctly by re-evaluating the likelihoods of all functions
+    from the output
+
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
+        :rtol (float, default=1e-5): relative tolerance for comparing likelihoods
+        :atol (float, default=1e-8): absolute tolerance for comparing likelihood
+        :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
+        :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        :print_frequency (int, default=1000): the status of the fits will be printed every ``print_frequency`` number of iterations
+        
+    Returns:
+        :total_nbad (int): number of functions where the likelihood did not match
+    """
+
+    # Output was [negloglike_all, codelen, index_arr] + [params[:, i] for i in range(max_param)])]
+
+    # Stream read through codelen_matches_comp*.dat file
+    if rank == 0:
+        with open(likelihood.out_dir + "/codelen_matches_comp" + str(comp) + ".dat", 'r') as f:
+            num_lines = sum(1 for _ in f)  # Count total lines in the file
+    else:
+        num_lines = None
+
+    # Get start and end indices for each rank based on number of lines
+    num_lines = comm.bcast(num_lines, root=0)
+    lines_per_rank = num_lines // size
+    extra_lines = num_lines % size
+    if rank < extra_lines:
+        start_line = rank * (lines_per_rank + 1)
+        end_line = start_line + lines_per_rank + 1
+    else:
+        start_line = rank * lines_per_rank + extra_lines
+        end_line = start_line + lines_per_rank
+
+    print(f"Rank {rank} processing lines {start_line} to {end_line-1} of {num_lines}", flush=True)
+    comm.Barrier()
+
+    allfn_file = likelihood.fn_dir + \
+        "/compl_%i/all_equations_%i.txt" % (comp, comp)
+    
+    nbad = 0
+
+    with open(likelihood.out_dir + "/codelen_matches_comp" + str(comp) + ".dat", 'r') as f, \
+            open(allfn_file, 'r') as allfn_f:
+        
+        for i, (line, line_fcn) in enumerate(zip(f, allfn_f)):
+
+            comm.Barrier()
+
+            if rank == 0 and i % print_frequency == 0:
+                print(f'{i+1} of {num_lines}', flush=True)
+
+            if i < start_line or i >= end_line:
+                continue  # Skip lines not assigned to this rank
+
+            fcn_i = line_fcn.strip()
+            d = line.strip().split()
+            stored_negloglike = float(d[0])
+            params = [float(p) for p in d[3:]]
+            max_param = len(params)
+            codelen = float(d[1])
+
+            # Evaluate the function with the stored parameters
+            k = simplifier.count_params([fcn_i], max_param)[0]
+            measured = params[:k]
+
+            if 'zoo' in fcn_i:
+                # zoo functions can't be evaluated
+                continue
+
+            if np.any(np.isnan(measured)) or np.any(np.isinf(measured)):
+                # skip functions with invalid parameters
+                continue
+
+            fcn_i, eq, integrated = likelihood.run_sympify(
+                fcn_i, tmax=tmax, try_integration=try_integration)
+
+            if k == 0:
+                eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
+            elif k > 1:
+                all_a = ' '.join([f'a{j}' for j in range(k)])
+                all_a = list(sympy.symbols(all_a, real=True))
+                eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+            else:
+                eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+            new_negloglike = likelihood.negloglike(
+                measured, eq_numpy, integrated=integrated)
+
+            if not np.isclose(stored_negloglike, new_negloglike, rtol=rtol, atol=atol):
+
+                # We only care if the codelength is finite
+                if np.isnan(codelen) or np.isinf(codelen):
+                    continue
+                print(f"Rank {rank}: Mismatch in negloglike for function {fcn_i}",
+                       stored_negloglike, new_negloglike, measured)
+                nbad += 1
+
+    # Gather nbad from all ranks and sum them
+    total_nbad = comm.reduce(nbad, op=MPI.SUM, root=0)
+
+    if rank == 0:
+        if total_nbad == 0:
+            print("All likelihoods match!", flush=True)
+        else:
+            print(f"Total mismatches in likelihoods: {total_nbad}", flush=True)
+
+    comm.Barrier()
+
+    return total_nbad
+
+
 def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
     """Apply results of fitting the unique functions to all functions and save to file
 
@@ -106,13 +221,14 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
         # Access from the unique eqs all_fish array, common to all procs
         fish_measured = all_fish[index, :]
 
-        if (i in all_inv_subs_proc) and not isinstance(all_inv_subs_proc[i], dict):
-            codelen[i] = np.inf
-            continue
+
+        # if (i in all_inv_subs_proc) and not isinstance(all_inv_subs_proc[i], dict):
+        #     codelen[i] = np.inf
+        #     continue
 
         try:
-            if i in all_inv_subs_proc:
-                sub = all_inv_subs_proc[i]
+            if i + data_start in all_inv_subs_proc:
+                sub = all_inv_subs_proc[i + data_start]
             else:
                 sub = {}
             p, fish = simplifier.convert_params(
@@ -163,7 +279,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                     # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                     negloglike_all[i] = f1(p)
                 else:
-                    all_a = ' '.join([f'a{i}' for i in range(nparams)])
+                    all_a = ' '.join([f'a{j}' for j in range(nparams)])
                     all_a = list(sympy.symbols(all_a, real=True))
                     eq_numpy = sympy.lambdify(
                         [x] + all_a, eq, modules=["numpy"])
@@ -179,7 +295,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                         # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                         negloglike_all[i] = f1(p)
                     else:
-                        all_a = ' '.join([f'a{i}' for i in range(nparams)])
+                        all_a = ' '.join([f'a{j}' for j in range(nparams)])
                         all_a = list(sympy.symbols(all_a, real=True))
                         eq_numpy = sympy.lambdify(
                             [x] + all_a, eq, modules=["numpy"])
@@ -285,6 +401,8 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
         string = 'rm ' + likelihood.temp_dir + \
             '/codelen_matches_'+str(comp)+'_*.dat'
         os.system(string)
+
+        print('Saved output to', likelihood.out_dir, flush=True)
 
     comm.Barrier()
 
