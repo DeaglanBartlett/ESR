@@ -31,6 +31,7 @@ def test_cc(monkeypatch):
         esr.fitting.test_all.main(comp, likelihood, log_opt=log_opt)
         esr.fitting.test_all_Fisher.main(comp, likelihood)
         esr.fitting.match.main(comp, likelihood)
+        esr.fitting.match.check_match_results(comp, likelihood)
         esr.fitting.combine_DL.main(comp, likelihood)
         esr.fitting.plot.main(comp, likelihood)
 
@@ -92,6 +93,7 @@ def test_pantheon(monkeypatch):
         comp, likelihood, Niter_params=[4], Nconv_params=[2])
     esr.fitting.test_all_Fisher.main(comp, likelihood)
     esr.fitting.match.main(comp, likelihood)
+    esr.fitting.match.check_match_results(comp, likelihood)
     esr.fitting.combine_DL.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
@@ -139,6 +141,7 @@ def test_gaussian(monkeypatch):
     esr.fitting.test_all.main(comp, likelihood)
     esr.fitting.test_all_Fisher.main(comp, likelihood)
     esr.fitting.match.main(comp, likelihood)
+    esr.fitting.match.check_match_results(comp, likelihood)
     esr.fitting.combine_DL.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
@@ -165,6 +168,7 @@ def test_poisson(monkeypatch):
     esr.fitting.test_all.main(comp, likelihood)
     esr.fitting.test_all_Fisher.main(comp, likelihood)
     esr.fitting.match.main(comp, likelihood)
+    esr.fitting.match.check_match_results(comp, likelihood)
     esr.fitting.combine_DL.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
