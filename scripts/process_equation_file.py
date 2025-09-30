@@ -1,6 +1,6 @@
 ###################################################################
 # Script to convert a list of equations and a given data file into
-# pairs of complexity and MSE on the data set
+#  pairs of complexity and MSE on the data set
 ###################################################################
 import numpy as np
 import pandas as pd
@@ -17,8 +17,8 @@ size = comm.Get_size()
 dirname = '/Users/deaglanbartlett/Desktop/OneDrive - Nexus365/IAP/Work/Exhaustive_Symbolic_Regression/benchmark/'
 
 basis_functions = [["x", "a"],  # type0
-                ["square", "exp", "inv", "sqrt_abs", "log_abs"],  # type1
-                ["+", "*", "-", "/", "pow"]]  # type2
+                   ["square", "exp", "inv", "sqrt_abs", "log_abs"],  # type1
+                   ["+", "*", "-", "/", "pow"]]  # type2
 data_fname = dirname + 'feynman_I_6_2a.tsv'
 
 fn_fname = dirname + 'DM_feyn_fcns_5hr_2.dat'
@@ -46,13 +46,14 @@ with open(fn_fname, 'r') as f:
     all_fun = f.read().splitlines()
 
 df = np.array(pd.read_table(data_fname, sep="\t"))
-xtrue = df[:,0]
-ytrue = df[:,1]
-    
+xtrue = df[:, 0]
+ytrue = df[:, 1]
+
 # SHUFFLE AND SPLIT
-shuffler = np.random.permutation(len(all_fun)) # returns indices to shuffle the list
+# returns indices to shuffle the list
+shuffler = np.random.permutation(len(all_fun))
 if rank == 0:
-    undo_shuffler = np.argsort(shuffler) # returns indices to undo the shuffle
+    undo_shuffler = np.argsort(shuffler)  # returns indices to undo the shuffle
     shuffler = np.array_split(shuffler, size)
 shuffler = comm.scatter(shuffler, root=0)
 shuffled_fun = [all_fun[j] for j in shuffler]
@@ -89,13 +90,13 @@ mse = np.array(mse)
 
 if rank == 0:
     np.savetxt(output_full_fname, np.transpose(np.vstack([compl, mse])))
-    
+
     # Make Pareto front
     unique_compl = np.unique(compl)
     pareto_mse = np.empty(len(unique_compl))
     pareto_fun = [None] * len(unique_compl)
     mse = np.array(mse)
-    
+
     for i, c in enumerate(unique_compl):
         m = compl == c
         if m.sum() == 1:
@@ -105,20 +106,21 @@ if rank == 0:
             pareto_mse[i] = np.amin(mse[m])
             j = np.squeeze(np.where(mse == pareto_mse[i]))
             if isinstance(j, np.ndarray):
-                j = j[compl[j]==c][0]
+                j = j[compl[j] == c][0]
         pareto_fun[i] = all_fun[j]
-        
-    np.savetxt(output_pareto_fname, np.transpose(np.vstack([unique_compl, pareto_mse])))
-    
+
+    np.savetxt(output_pareto_fname, np.transpose(
+        np.vstack([unique_compl, pareto_mse])))
+
     with open(output_pareto_fun_fname, 'w') as f:
         for i in range(len(unique_compl)):
-            print(unique_compl[i], pareto_mse[i], '(' + pareto_fun[i] + ')', file=f)
-    
+            print(unique_compl[i], pareto_mse[i],
+                  '(' + pareto_fun[i] + ')', file=f)
+
     i = np.argmin(mse)
     print(compl[i], mse[i], all_fun[i])
-        
-    
-    
+
+
 quit()
 
 s = 'x * x'

@@ -18,7 +18,8 @@ rerun_fit = False
 # First generate the equations to fit
 esr_dir = os.path.dirname(esr.__file__)
 for comp in range(1, max_comp + 1):
-    fname = os.path.join(esr_dir, 'function_library', runname, f'compl_{comp}', f'all_equations_{comp}.txt')
+    fname = os.path.join(esr_dir, 'function_library', runname,
+                         f'compl_{comp}', f'all_equations_{comp}.txt')
     if os.path.exists(fname):
         if rank == 0:
             print(f"File exists: {os.path.basename(fname)}", flush=True)
@@ -26,24 +27,27 @@ for comp in range(1, max_comp + 1):
         esr.generation.duplicate_checker.main(runname, comp)
 
 # Setup likelihood object
+
+
 class MSE(Likelihood):
     def __init__(self,):
         super().__init__('feynman_I_6_2a.tsv', 'None', runname)
-        self.xvar, self.yvar = np.loadtxt('feynman_I_6_2a.tsv', unpack=True, delimiter='\t', skiprows=1)
-        self.is_mse = True # Warning to not use MSE for DL
+        self.xvar, self.yvar = np.loadtxt(
+            'feynman_I_6_2a.tsv', unpack=True, delimiter='\t', skiprows=1)
+        self.is_mse = True  #  Warning to not use MSE for DL
 
     def negloglike(self, a, eq_numpy, **kwargs):
         """Negative log-likelihood for a given function. Here it is (y-ypred)^2
         Note that this is technically not a log-likelihood, but the function
         name is required to be accessed by other functions.
-        
+
         Args:
             :a (list): parameters to subsitute into equation considered
             :eq_numpy (numpy function): function to use which gives y
-            
+
         Returns:
             :nll (float): - log(likelihood) for this function and parameters
-        
+
         """
 
         ypred = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
@@ -53,6 +57,7 @@ class MSE(Likelihood):
         if np.isnan(nll):
             return np.inf
         return nll
+
 
 # Run the fitting
 likelihood = MSE()
@@ -64,7 +69,8 @@ for comp in range(1, max_comp + 1):
     else:
         if rank == 0:
             print(f"Running fitting for complexity {comp}", flush=True)
-        esr.fitting.test_all.main(comp, likelihood, Niter_params=[10], Nconv_params=[3])
+        esr.fitting.test_all.main(comp, likelihood, Niter_params=[
+                                  10], Nconv_params=[3])
 
 comm.Barrier()  # Ensure all processes have completed before proceeding
 
@@ -73,10 +79,11 @@ if rank == 0:
     all_logL = np.empty(max_comp)
     for comp in range(1, max_comp + 1):
         fname = os.path.join(likelihood.out_dir, f'negloglike_comp{comp}.dat')
-        logL = np.loadtxt(fname)[:,0]
+        logL = np.loadtxt(fname)[:, 0]
         i = np.nanargmin(logL)
         all_logL[comp - 1] = logL[i]
-        fname = os.path.join(esr_dir, 'function_library', runname, f'compl_{comp}', f'unique_equations_{comp}.txt')
+        fname = os.path.join(esr_dir, 'function_library', runname,
+                             f'compl_{comp}', f'unique_equations_{comp}.txt')
         print('\n', comp, i)
         with open(fname, 'r') as f:
             for j, line in enumerate(f):
