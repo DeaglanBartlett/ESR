@@ -1269,26 +1269,34 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
 def convert_params(p_meas, fish_meas, inv_subs, n=4):
     """Convert parameters from those in unique function to those in actual function
 
+    Transforms both the parameters and the full Hessian (Fisher) matrix via the
+    Jacobian of the parameter substitution: fish_new = J^{-T} H J^{-1}.
+
+    .. versionchanged::
+        Previously returned (p_new, diag_fish) where diag_fish was a 1D array
+        of diagonal elements. Now returns the full 2D Fisher matrix to support
+        determinant-based description length calculations.
+
     Args:
         :p_meas (list): list of measured parameters in unique function
-        :fish_meas (list): flattened version of the Hessian of -log(likelihood) at the maximum likelihood point
+        :fish_meas (list): flattened upper triangle of the Hessian of -log(likelihood) at the maximum likelihood point
         :inv_subs (list): list of substitutions required to convert between all and unique functions
-        :n (int, default=4): the number of dimensions of the array from which fish_meas was computed using
+        :n (int, default=4): the number of dimensions of the array from which fish_meas was computed
 
     Returns:
         :p_new (list): list of parameters for the actual function
-        :diag_fish (np.array): the diagonal entries of the Fisher matrix of the actual function at the maximum likelihood point
+        :fish_new (np.ndarray): the full Fisher matrix (shape: max_param x max_param) of the actual function at the maximum likelihood point
 
     """
 
     max_param = len(p_meas)
 
     if np.nan in inv_subs:
-        return np.array([np.nan]*max_param), np.array([np.nan]*max_param)
+        return np.array([np.nan]*max_param), np.full((max_param, max_param), np.nan)
 
     fish = np.zeros((n, n))
     fish[np.triu_indices(n)] = fish_meas
-    fish = np.where(fish, fish, fish.T)
+    fish = (fish + fish.T) - np.diag(np.diag(fish))
     fish = fish[:max_param, :max_param]
 
     param_list = ['a%i' % i for i in range(max_param)]
@@ -1314,9 +1322,7 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4):
 
     fish_new = np.dot(jinv.T, np.dot(fish, jinv))
 
-    diag_fish = np.array([fish_new[i, i] for i in range(fish_new.shape[0])])
-
-    return p_new, diag_fish
+    return p_new, fish_new
 
 
 def check_results(dirname, compl, tmax=10):

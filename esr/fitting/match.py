@@ -132,7 +132,7 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
     return total_nbad
 
 
-def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
+def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, use_det_I=True):
     """Apply results of fitting the unique functions to all functions and save to file
 
     Args:
@@ -141,6 +141,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
         :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
         :print_frequency (int, default=1000): the status of the fits will be printed every ``print_frequency`` number of iterations
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        :use_det_I (bool, default=True): If True, use full Hessian determinant for codelen. If False, use diagonal elements only.
 
     Returns:
         None
@@ -231,24 +232,25 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                 sub = all_inv_subs_proc[i + data_start]
             else:
                 sub = {}
-            p, fish = simplifier.convert_params(
+            p, fish_mat = simplifier.convert_params(
                 measured, fish_measured, sub, n=max_param)
             if isinstance(p, float):
                 p = [p]
             p = np.atleast_1d(p)
+            fish_diag = np.diag(fish_mat)
         except Exception as e:
             print('\nError with function:', fcn_i.strip(), e)
             codelen[i] = np.inf
             continue
 
-        if np.sum(fish <= 0) > 0:
+        if np.sum(fish_diag <= 0) > 0:
             codelen[i] = np.inf
             continue
 
         try:
-            Delta = np.zeros(len(fish))
-            m = (fish != 0)
-            Delta[m] = np.atleast_1d(np.sqrt(12./fish[m]))
+            Delta = np.zeros(len(fish_diag))
+            m = (fish_diag != 0)
+            Delta[m] = np.atleast_1d(np.sqrt(12./fish_diag[m]))
             Delta[~m] = np.inf
             Nsteps = np.atleast_1d(np.abs(np.array(p)))
             m = (Delta != 0)
@@ -332,9 +334,23 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                 elif not np.isfinite(negloglike_all[i]) and not np.isnan(negloglike_all[i]):
                     p = ptrue
                     # set uncertainty=parameter in this case
-                    fish[Nsteps < 1] = 12./(p[Nsteps < 1]**2)
-                    codelen[i] = -k/2.*math.log(3.) + np.sum(0.5 *
-                                                             np.log(fish) + np.log(abs(np.array(p))))
+                    fish_diag_patched = fish_diag.copy()
+                    fish_diag_patched[Nsteps < 1] = 12./(p[Nsteps < 1]**2)
+                    if use_det_I:
+                        fish_mat_patched = fish_mat.copy()
+                        for bi in np.where(Nsteps < 1)[0]:
+                            fish_mat_patched[bi, :] = 0.
+                            fish_mat_patched[:, bi] = 0.
+                            fish_mat_patched[bi, bi] = 12./(p[bi]**2)
+                        sign, logdet = np.linalg.slogdet(fish_mat_patched)
+                        if sign > 0:
+                            codelen[i] = -k/2.*math.log(3.) + 0.5 * logdet + \
+                                np.sum(np.log(abs(np.array(p))))
+                        else:
+                            codelen[i] = np.inf
+                    else:
+                        codelen[i] = -k/2.*math.log(3.) + np.sum(0.5 *
+                                                                 np.log(fish_diag_patched) + np.log(abs(np.array(p))))
                     negloglike_all[i] = negloglike_orig
                     # If p was an array, we can make a list out of it
                     try:
@@ -359,17 +375,26 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                 continue
 
             # Only consider these parameters in the codelen
-            fish = fish[kept_mask]
+            fish_diag = fish_diag[kept_mask]
             p = p[kept_mask]
 
         else:
             kept_mask = np.ones(len(p), dtype=bool)
 
         try:
-            codelen[i] = -k/2.*math.log(3.) + np.sum(0.5 *
-                                                     np.log(fish) + np.log(abs(np.array(p))))
+            if use_det_I:
+                H_active = fish_mat[np.ix_(kept_mask, kept_mask)]
+                sign, logdet = np.linalg.slogdet(H_active)
+                if sign > 0:
+                    codelen[i] = -k/2.*math.log(3.) + 0.5 * logdet + \
+                        np.sum(np.log(abs(np.array(p))))
+                else:
+                    codelen[i] = np.inf
+            else:
+                codelen[i] = -k/2.*math.log(3.) + np.sum(0.5 *
+                                                         np.log(fish_diag) + np.log(abs(np.array(p))))
         except Exception:
-            codelen[i] = np.nan
+            codelen[i] = np.inf
 
         p = ptrue
         p[~kept_mask] = 0.
@@ -384,6 +409,11 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False):
                 params[i, :] = np.zeros(max_param)
 
         assert len(params[i, :]) == max_param
+
+    n_nonposdef = np.sum(np.isinf(codelen))
+    total_nonposdef = comm.reduce(int(n_nonposdef), op=MPI.SUM, root=0)
+    if rank == 0 and total_nonposdef > 0:
+        print(f'Warning: {total_nonposdef} functions had non-positive-definite Hessian (codelen=inf)', flush=True)
 
     out_arr = np.transpose(np.vstack(
         [negloglike_all, codelen, index_arr] + [params[:, i] for i in range(max_param)]))

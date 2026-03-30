@@ -52,7 +52,7 @@ def load_loglike(comp, likelihood, data_start, data_end, split=True):
     return negloglike, params
 
 
-def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_param=4):
+def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_param=4, use_det_I=True):
     """Compute Fisher, correct MLP and find parametric contirbution to description length for single function
 
     Args:
@@ -63,6 +63,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         :likelihood (fitting.likelihood object): object containing data, likelihood functions and file paths
         :negloglike (float): the minimum log-likelihood for this function
         :max_param (int, default=4): The maximum number of parameters considered. This sets the shapes of arrays used.
+        :use_det_I (bool, default=True): If True, use full Hessian determinant for codelen (captures parameter degeneracies). If False, use diagonal elements only (original ESR behaviour).
 
     Returns:
         :params (list): the corrected maximum likelihood values of the parameters
@@ -111,6 +112,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     theta_ML = theta_ML[:nparam]
     Hfun = nd.Hessian(fop)
     Hmat = Hfun(theta_ML)
+    Hmat_best = Hmat.copy()
 
     # 2nd derivatives of -log(L) wrt params
     Fisher_diag = np.array([Hmat[i, i] for i in range(nparam)])
@@ -163,6 +165,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
             # Delta, Nsteps = np.atleast_1d(Delta_array[mode_ind]), np.atleast_1d(Nsteps_array[mode_ind])
             Delta = np.sqrt(12./Fisher_diag)
             Nsteps = abs(np.array(theta_ML))/Delta
+            Hmat_best = Hmat_array_f[mode_ind].copy()
             for i in range(nparam):
                 start = int(i * max_param - (i - 1) * i / 2)
                 deriv[start:start+nparam-i] = Hmat_array_f[mode_ind][i, i:]
@@ -185,6 +188,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
                 Fisher_diag = np.atleast_1d(Fisher_array[mode_ind])
                 Delta = np.sqrt(12./Fisher_diag)
                 Nsteps = abs(np.array(theta_ML))/Delta
+                Hmat_best = Hmat_array_f[mode_ind].copy()
                 for i in range(nparam):
                     start = int(i * max_param - (i - 1) * i / 2)
                     deriv[start:start+nparam-i] = Hmat_array_f[mode_ind][i, i:]
@@ -243,9 +247,19 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     else:
         kept_mask = np.ones(len(theta_ML), dtype=bool)
 
-    codelen = -k/2. * \
-        math.log(3.) + np.sum(0.5*np.log(Fisher_diag) +
-                              np.log(abs(np.array(theta_ML))))
+    if use_det_I:
+        # Use full Hessian determinant for codelen (captures parameter degeneracies)
+        H_active = Hmat_best[np.ix_(kept_mask, kept_mask)]
+        sign, logdet = np.linalg.slogdet(H_active)
+        if sign > 0:
+            codelen = -k/2. * math.log(3.) + 0.5 * logdet + \
+                np.sum(np.log(abs(np.array(theta_ML))))
+        else:
+            codelen = np.inf
+    else:
+        codelen = -k/2. * \
+            math.log(3.) + np.sum(0.5*np.log(Fisher_diag) +
+                                  np.log(abs(np.array(theta_ML))))
 
     # New params after the setting to 0, padded to length max_param as always
     theta_ML = theta_ML_orig
@@ -255,7 +269,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     return params, negloglike, deriv, codelen
 
 
-def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False):
+def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, use_det_I=True):
     """Compute Fisher, correct MLP and find parametric contirbution to description length for all functions and save to file
 
     Args:
@@ -264,6 +278,7 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False):
         :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
         :print_frequency (int, default=50): the status of the fits will be printed every ``print_frequency`` number of iterations
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
+        :use_det_I (bool, default=True): If True, use full Hessian determinant for codelen. If False, use diagonal elements only.
 
     Returns:
         None
@@ -306,7 +321,7 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False):
             fcn_i, eq, integrated = likelihood.run_sympify(
                 fcn_i, tmax=tmax, try_integration=try_integration)
             params[i, :], negloglike[i], deriv[i, :], codelen[i] = convert_params(
-                fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param)
+                fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param, use_det_I=use_det_I)
         except NameError:
             # Occurs if function produced not implemented in numpy
             if try_integration:
@@ -315,7 +330,7 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False):
                 fcn_i, eq, integrated = likelihood.run_sympify(
                     fcn_i, tmax=tmax, try_integration=False)
                 params[i, :], negloglike[i], deriv[i, :], codelen[i] = convert_params(
-                    fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param)
+                    fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param, use_det_I=use_det_I)
             else:
                 params[i, :] = 0.
                 deriv[i, :] = 0.
@@ -325,6 +340,11 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False):
             params[i, :] = 0.
             deriv[i, :] = 0.
             codelen[i] = 0
+
+    n_nonposdef = np.sum(np.isinf(codelen))
+    total_nonposdef = comm.reduce(int(n_nonposdef), op=MPI.SUM, root=0)
+    if rank == 0 and total_nonposdef > 0:
+        print(f'Warning: {total_nonposdef} functions had non-positive-definite Hessian (codelen=inf)', flush=True)
 
     out_arr = np.transpose(
         np.vstack([codelen, negloglike] + [params[:, i] for i in range(max_param)]))

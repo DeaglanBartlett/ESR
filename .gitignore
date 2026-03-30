@@ -52,3 +52,10 @@ data.txt
 
 esr/generation/old_*
 esr/fitting/old_*
+
+# Claude Code
+CLAUDE.md
+Panel_debates/
+log.md
+log-summary.md
+.claude/
