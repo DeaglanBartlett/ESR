@@ -21,6 +21,11 @@ use_relative_dx = True              # CHANGE
 def _compute_codelen(Hmat, Fisher_diag, theta, kept_mask, use_det_I):
     """Compute parametric codelen for a given set of kept parameters.
 
+    Applies a floor of 0 to each ln(|theta_i|/Delta_i) contribution,
+    where Delta_i = sqrt(12/H_ii). This prevents parameters with
+    |theta| < Delta (i.e. value smaller than measurement precision)
+    from artificially reducing the description length.
+
     Args:
         :Hmat (np.ndarray): full Hessian matrix (nparam x nparam)
         :Fisher_diag (np.ndarray): diagonal of the Hessian (nparam,)
@@ -35,18 +40,29 @@ def _compute_codelen(Hmat, Fisher_diag, theta, kept_mask, use_det_I):
     if k == 0:
         return 0.0
     theta_active = theta[kept_mask]
+    diag_active = Fisher_diag[kept_mask]
+
+    # Floor: ln|theta_i| >= ln(Delta_i) where Delta_i = sqrt(12/H_ii)
+    # This ensures each parameter contributes >= 0 to ln(|theta|/Delta).
+    log_theta_floored = np.empty(k)
+    for j in range(k):
+        if diag_active[j] > 0:
+            log_delta = 0.5 * np.log(12. / diag_active[j])
+            log_theta_floored[j] = max(np.log(np.abs(theta_active[j])), log_delta)
+        else:
+            log_theta_floored[j] = np.log(np.abs(theta_active[j]))
+
     if use_det_I:
         H_active = Hmat[np.ix_(kept_mask, kept_mask)]
         sign, logdet = np.linalg.slogdet(H_active)
         if sign > 0:
             return -k/2. * math.log(3.) + 0.5 * logdet + \
-                np.sum(np.log(np.abs(theta_active)))
+                np.sum(log_theta_floored)
         else:
             return np.inf
     else:
-        diag_active = Fisher_diag[kept_mask]
         return -k/2. * math.log(3.) + np.sum(0.5*np.log(diag_active) +
-                                              np.log(np.abs(theta_active)))
+                                              log_theta_floored)
 
 
 def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
