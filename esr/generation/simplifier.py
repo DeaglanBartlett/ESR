@@ -15,7 +15,8 @@ import os
 import esr.generation.utils as utils
 from esr.generation.custom_printer import ESRPrinter
 from esr.fitting.sympy_symbols import (
-    sympy_locs, square, cube, pow_abs, sqrt_abs, log_abs
+    sympy_locs, square, cube, pow_abs, sqrt_abs, log_abs,
+    x as _fprint_x_sym
 )
 
 # ---------------------------------------------------------------------------
@@ -34,9 +35,6 @@ _FPRINT_PARAM_POINTS = {
     f'a{i}': _FPRINT_RNG.uniform(0.5, 3.0, _FPRINT_N_POINTS)
     for i in range(_FPRINT_MAX_PARAMS)
 }
-
-# Import x symbol from the canonical source to ensure symbol identity
-from esr.fitting.sympy_symbols import x as _fprint_x_sym
 
 
 def numerical_fingerprint(expr, max_param=None):
