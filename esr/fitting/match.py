@@ -132,7 +132,7 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
     return total_nbad
 
 
-def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, use_det_I=True):
+def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, use_det_I=True, snap_choice=2):
     """Apply results of fitting the unique functions to all functions and save to file
 
     Args:
@@ -142,6 +142,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         :print_frequency (int, default=1000): the status of the fits will be printed every ``print_frequency`` number of iterations
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :use_det_I (bool, default=True): If True, use full Hessian determinant for codelen. If False, use diagonal elements only.
+        :snap_choice (int, default=2): Controls parameter snapping. 0: diagonal, 1: eigen-informed original-space, 2: full eigenbasis.
 
     Returns:
         None
@@ -264,6 +265,13 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         negloglike_orig = np.copy(negloglike_all[i])
         ptrue = np.copy(p)
 
+        # Compute unsnapped DL (for comparison if snapping is attempted)
+        all_mask = np.ones(len(p), dtype=bool)
+        codelen_nosnap = test_all_Fisher._compute_codelen(fish_mat, fish_diag, p, all_mask, use_det_I)
+        DL_nosnap = negloglike_all[i] + codelen_nosnap
+
+        Nsteps = test_all_Fisher._compute_snap_mask(fish_mat, fish_diag, p, Nsteps, snap_choice)
+
         # Should reevaluate -log(L) with the param(s) set to 0, but doesn't matter unless the fcn is a very good one
         if np.sum(Nsteps < 1) > 0:
             # Set any parameter to 0 that doesn't have at least one precision step, and recompute -log(L)
@@ -330,69 +338,43 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
                 if np.isfinite(negloglike_all[i]):
                     k -= len(idx)
                     kept_mask[idx] = 0
-                # infinite nll
+                # infinite nll — revert to unsnapped since snapping failed
                 elif not np.isfinite(negloglike_all[i]) and not np.isnan(negloglike_all[i]):
-                    p = ptrue
-                    # set uncertainty=parameter in this case
-                    fish_diag_patched = fish_diag.copy()
-                    fish_diag_patched[Nsteps < 1] = 12./(p[Nsteps < 1]**2)
-                    if use_det_I:
-                        fish_mat_patched = fish_mat.copy()
-                        for bi in np.where(Nsteps < 1)[0]:
-                            fish_mat_patched[bi, :] = 0.
-                            fish_mat_patched[:, bi] = 0.
-                            fish_mat_patched[bi, bi] = 12./(p[bi]**2)
-                        sign, logdet = np.linalg.slogdet(fish_mat_patched)
-                        if sign > 0:
-                            codelen[i] = -k/2.*math.log(3.) + 0.5 * logdet + \
-                                np.sum(np.log(abs(np.array(p))))
-                        else:
-                            codelen[i] = np.inf
-                    else:
-                        codelen[i] = -k/2.*math.log(3.) + np.sum(0.5 *
-                                                                 np.log(fish_diag_patched) + np.log(abs(np.array(p))))
+                    p = np.copy(ptrue)
                     negloglike_all[i] = negloglike_orig
-                    # If p was an array, we can make a list out of it
-                    try:
-                        params[i, :] = np.pad(p, (0, max_param-len(p)))
-                    except Exception:
-                        # p is either a number or nothing
-                        if p:
-                            # p is a number
-                            params[i, :] = 0
-                            params[i, 0] = p
-                        else:
-                            params[i, :] = np.zeros(max_param)
-
-                    assert len(params[i, :]) == max_param
-                    continue
+                    k = nparams
+                    kept_mask = np.ones(len(p), dtype=bool)
 
             if k < 0:
                 print("This shouldn't have happened", flush=True)
                 quit()
-            elif k == 0:
-                # If we have no parameters left then the parameter codelength is 0 so we can move on
-                continue
 
-            # Only consider these parameters in the codelen
-            fish_diag = fish_diag[kept_mask]
-            p = p[kept_mask]
+            # Compute snapped codelen and compare DL
+            codelen_snap = test_all_Fisher._compute_codelen(fish_mat, fish_diag, ptrue, kept_mask, use_det_I)
+            DL_snap = negloglike_all[i] + codelen_snap
+
+            if k == 0 or DL_snap >= DL_nosnap:
+                # Snapping did not improve DL — revert
+                p = np.copy(ptrue)
+                negloglike_all[i] = negloglike_orig
+                k = nparams
+                kept_mask = np.ones(len(p), dtype=bool)
 
         else:
             kept_mask = np.ones(len(p), dtype=bool)
 
+        # Log condition number for diagnostics
+        H_active = fish_mat[np.ix_(kept_mask, kept_mask)]
+        if H_active.size > 0:
+            try:
+                cond = np.linalg.cond(H_active)
+                if cond > 1e10:
+                    print(f'Warning: high condition number {cond:.2e} for {fcn_i.strip()}', flush=True)
+            except np.linalg.LinAlgError:
+                pass
+
         try:
-            if use_det_I:
-                H_active = fish_mat[np.ix_(kept_mask, kept_mask)]
-                sign, logdet = np.linalg.slogdet(H_active)
-                if sign > 0:
-                    codelen[i] = -k/2.*math.log(3.) + 0.5 * logdet + \
-                        np.sum(np.log(abs(np.array(p))))
-                else:
-                    codelen[i] = np.inf
-            else:
-                codelen[i] = -k/2.*math.log(3.) + np.sum(0.5 *
-                                                         np.log(fish_diag) + np.log(abs(np.array(p))))
+            codelen[i] = test_all_Fisher._compute_codelen(fish_mat, fish_diag, ptrue, kept_mask, use_det_I)
         except Exception:
             codelen[i] = np.inf
 

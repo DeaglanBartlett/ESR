@@ -3,6 +3,7 @@ import sympy
 import signal
 import sys
 import itertools
+import hashlib
 from mpi4py import MPI
 from contextlib import contextmanager
 import csv
@@ -11,12 +12,200 @@ import gc
 from collections import OrderedDict
 import pprint
 import os
-
 import esr.generation.utils as utils
 from esr.generation.custom_printer import ESRPrinter
 from esr.fitting.sympy_symbols import (
     sympy_locs, square, cube, pow_abs, sqrt_abs, log_abs
 )
+
+# ---------------------------------------------------------------------------
+# Numerical fingerprinting for deduplication
+# ---------------------------------------------------------------------------
+
+# Fixed random evaluation points (deterministic seed for reproducibility).
+# x sampled from a safe positive domain (ESR convention: x > 0).
+# Parameters in a moderate range to avoid overflow/underflow.
+_FPRINT_RNG = np.random.RandomState(42)
+_FPRINT_N_POINTS = 60
+_FPRINT_MAX_PARAMS = 20
+
+_FPRINT_X_POINTS = _FPRINT_RNG.uniform(0.2, 5.0, _FPRINT_N_POINTS)
+_FPRINT_PARAM_POINTS = {
+    f'a{i}': _FPRINT_RNG.uniform(0.5, 3.0, _FPRINT_N_POINTS)
+    for i in range(_FPRINT_MAX_PARAMS)
+}
+
+# Import x symbol from the canonical source to ensure symbol identity
+from esr.fitting.sympy_symbols import x as _fprint_x_sym
+
+
+def numerical_fingerprint(expr, max_param=None):
+    """Compute a numerical fingerprint for a sympy expression.
+
+    Evaluates at fixed random points using numpy (via sympy.lambdify) for speed.
+    Returns a tuple of float values, or None if evaluation fails at too many points.
+
+    Args:
+        :expr: sympy expression
+        :max_param (int or None): maximum parameter index in expression. If None,
+            auto-detected from expr.free_symbols.
+
+    Returns:
+        :fingerprint (tuple or None): tuple of float values, or None on failure
+    """
+    if expr is None:
+        return None
+
+    # Identify symbols in the expression
+    param_symbols = sorted(
+        [s for s in expr.free_symbols if s.name.startswith('a') and s.name[1:].isdigit()],
+        key=lambda s: int(s.name[1:])
+    )
+    has_x = _fprint_x_sym in expr.free_symbols
+
+    if max_param is not None:
+        assert max_param <= _FPRINT_MAX_PARAMS, \
+            f"max_param={max_param} exceeds _FPRINT_MAX_PARAMS={_FPRINT_MAX_PARAMS}"
+
+    # Build lambdified function for fast numpy evaluation
+    args = []
+    if has_x:
+        args.append(_fprint_x_sym)
+    args.extend(param_symbols)
+
+    try:
+        f_numpy = sympy.lambdify(args, expr, modules=["numpy"])
+    except Exception:
+        return None
+
+    # Evaluate at all points at once (vectorized)
+    call_args = []
+    if has_x:
+        call_args.append(_FPRINT_X_POINTS)
+    for p in param_symbols:
+        call_args.append(_FPRINT_PARAM_POINTS[p.name])
+
+    try:
+        with np.errstate(all='ignore'):
+            if len(call_args) == 0:
+                # Constant expression
+                result = np.full(_FPRINT_N_POINTS, float(expr))
+            else:
+                result = np.asarray(f_numpy(*call_args), dtype=float)
+            result = np.atleast_1d(result)
+            if result.shape == ():
+                result = np.full(_FPRINT_N_POINTS, float(result))
+            elif len(result) == 1 and _FPRINT_N_POINTS > 1:
+                result = np.full(_FPRINT_N_POINTS, result[0])
+    except Exception:
+        return None
+
+    # Count failures (non-finite values)
+    finite_mask = np.isfinite(result)
+    n_failed = int(np.sum(~finite_mask))
+
+    # If too many evaluations fail, this expression is problematic.
+    # Threshold of 30%: balances keeping pathological expressions (too strict)
+    # vs. missing duplicates among expressions with some domain issues (too lenient).
+    if n_failed > _FPRINT_N_POINTS * 0.3:
+        return None
+
+    values = []
+    for i in range(_FPRINT_N_POINTS):
+        if finite_mask[i]:
+            values.append(result[i])
+        else:
+            values.append(None)
+
+    return tuple(values)
+
+
+def fingerprint_to_hash(fp):
+    """Convert a numerical fingerprint tuple to an MD5 hash string.
+
+    Values are formatted to 10 significant figures before hashing,
+    grouping expressions that agree numerically but differ symbolically.
+
+    Args:
+        :fp (tuple or None): fingerprint from numerical_fingerprint
+
+    Returns:
+        :hash_str (str or None): MD5 hex digest, or None if fp is None
+    """
+    if fp is None:
+        return None
+
+    rounded = []
+    for v in fp:
+        if v is None:
+            rounded.append("None")
+        elif v == 0.0:
+            rounded.append("0.0")
+        else:
+            rounded.append(f"{v:.10e}")
+    key = "|".join(rounded)
+    return hashlib.md5(key.encode()).hexdigest()
+
+
+def numerical_dedup(uniq_fun, max_param=None, verbose=True):
+    """Remove numerical duplicates from unique functions using fingerprinting.
+
+    Takes the list of unique function strings, converts each to a sympy expression,
+    computes numerical fingerprints, and groups functions with identical hashes.
+    For each group, keeps the first entry.
+
+    Args:
+        :uniq_fun (list): list of unique function strings
+        :max_param (int or None): maximum number of parameters. If None, auto-detected.
+        :verbose (bool, default=True): whether to print progress
+
+    Returns:
+        :deduped_fun (list): deduplicated list of function strings
+        :dedup_map (dict): maps index in uniq_fun to index in deduped_fun
+    """
+    if rank == 0 and verbose:
+        print('\nNumerical deduplication', flush=True)
+
+    n_orig = len(uniq_fun)
+    seen_hashes = {}  # hash -> index in deduped_fun
+    deduped_fun = []
+    dedup_map = {}  # old index -> new index
+
+    for i, fstr in enumerate(uniq_fun):
+        if rank == 0 and verbose and (i % 500 == 0):
+            print(f'\t{i} of {n_orig}', flush=True)
+
+        try:
+            expr = sympy.sympify(fstr, locals=sympy_locs)
+        except Exception:
+            # Can't parse — keep as unique
+            idx = len(deduped_fun)
+            deduped_fun.append(fstr)
+            dedup_map[i] = idx
+            continue
+
+        fp = numerical_fingerprint(expr, max_param=max_param)
+        h = fingerprint_to_hash(fp)
+
+        if h is None or h not in seen_hashes:
+            idx = len(deduped_fun)
+            deduped_fun.append(fstr)
+            if h is not None:
+                seen_hashes[h] = idx
+            dedup_map[i] = idx
+        else:
+            dedup_map[i] = seen_hashes[h]
+
+    if rank == 0 and verbose:
+        n_removed = n_orig - len(deduped_fun)
+        print(f'\tRemoved {n_removed} numerical duplicates '
+              f'({n_removed}/{n_orig} = {100*n_removed/max(n_orig,1):.1f}%)', flush=True)
+
+    assert set(dedup_map.keys()) == set(range(n_orig)), \
+        "dedup_map does not cover all input indices"
+
+    return deduped_fun, dedup_map
+
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()

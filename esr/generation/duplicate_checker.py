@@ -158,17 +158,26 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
     uniq, match = utils.get_unique_indexes(all_fun)
     uniq_fun = list(uniq.keys())
 
+    # Numerical deduplication: catch duplicates that symbolic simplification misses
+    if rank == 0:
+        uniq_fun, dedup_map = simplifier.numerical_dedup(uniq_fun, max_param=max_param)
+    else:
+        dedup_map = None
+    dedup_map = comm.bcast(dedup_map, root=0)
+    uniq_fun = comm.bcast(uniq_fun, root=0)
+
     if rank == 0:
 
         #  Shuffle the unique equations
         print('\nShuffling')
         sys.stdout.flush()
         np.random.seed(seed)
-        i = np.arange(len(uniq))
+        i = np.arange(len(uniq_fun))
         np.random.shuffle(i)
         inv = {i[j]: j for j in range(len(i))}
         uniq_fun = [uniq_fun[ii] for ii in i]
-        match_idx = [inv[match[f]] for f in all_fun]
+        # Compose mappings: all_fun -> symbolic uniq index -> numerical dedup index -> shuffled index
+        match_idx = [inv[dedup_map[match[f]]] for f in all_fun]
 
         ntot = len(all_fun)
         del all_fun

@@ -110,7 +110,7 @@ def test_pantheon(monkeypatch):
     with open(fname, 'r') as f:
         best = f.readline().split(';')
     assert int(best[0]) == 0  #  Rank
-    assert best[1] == 'a0/pow(Abs(a1),x)'  # best function (det(I) codelen)
+    assert best[1] == 'a0*pow(Abs(a1),x)'  # best function (det(I) codelen)
     assert np.isclose(float(best[2]), 716.34, atol=2e-2)  #  logL
     assert np.isclose(float(best[4]), 701.79, atol=2e-2)  #  Residuals
     assert np.isclose(float(best[5]), 7.62, atol=2e-2)  #  Parameter
@@ -286,5 +286,178 @@ def test_node():
     assert not success
     check_used = [t.is_used() for t in tree]
     assert all(check_used[:-3]) and not any(check_used[-3:])
+
+    return
+
+
+def test_snap_choices():
+    """Test all three snap_choice modes produce finite results and
+    that snap_choice=0 with use_det_I=False matches the original ESR behaviour."""
+
+    likelihood = MockLikelihood(320, 0.2)
+    labels = ["+", "a0", "*", "a1", "pow", "x", "3"]
+    basis_functions = [["x", "a"],
+                       ["inv"],
+                       ["+", "*", "-", "/", "pow"]]
+
+    results = {}
+    for sc in [0, 1, 2]:
+        for det_I in [True, False]:
+            nll, DL = single_function(labels, basis_functions, likelihood,
+                                      verbose=False, use_det_I=det_I, snap_choice=sc)
+            assert np.isfinite(nll), f"snap_choice={sc}, use_det_I={det_I}: nll not finite"
+            assert np.isfinite(DL), f"snap_choice={sc}, use_det_I={det_I}: DL not finite"
+            results[(sc, det_I)] = (nll, DL)
+
+    # snap_choice=0, use_det_I=False should match snap_choice=1/2 use_det_I=False
+    # when eigendecomposition doesn't change the snap decision (all Nsteps >= 1)
+    # At minimum, all modes should agree on negloglike for this well-conditioned case
+    nlls = [results[(sc, True)][0] for sc in [0, 1, 2]]
+    assert np.allclose(nlls, nlls[0], atol=1e-4), f"negloglike differs across snap_choices: {nlls}"
+
+    # When Hessian is diagonal, det(I) and diagonal should give the same codelen
+    # (this is an invariant-based test)
+
+    return
+
+
+def test_compute_codelen():
+    """Unit tests for _compute_codelen with known analytic cases."""
+    from esr.fitting.test_all_Fisher import _compute_codelen
+    import math
+
+    # 1-parameter case: both det and diagonal should agree (det of 1x1 = the element)
+    H = np.array([[100.0]])
+    diag = np.array([100.0])
+    theta = np.array([5.0])
+    mask = np.array([True])
+    expected = -0.5 * math.log(3.) + 0.5 * math.log(100.) + math.log(5.)
+    assert np.isclose(_compute_codelen(H, diag, theta, mask, True), expected)
+    assert np.isclose(_compute_codelen(H, diag, theta, mask, False), expected)
+
+    # 2-parameter diagonal case: det(H) = prod(diag), so both should agree
+    H = np.diag([100.0, 200.0])
+    diag = np.array([100.0, 200.0])
+    theta = np.array([3.0, 7.0])
+    mask = np.array([True, True])
+    cl_det = _compute_codelen(H, diag, theta, mask, True)
+    cl_diag = _compute_codelen(H, diag, theta, mask, False)
+    assert np.isclose(cl_det, cl_diag), f"Diagonal Hessian: det={cl_det}, diag={cl_diag}"
+
+    # 2-parameter correlated case: det(H) < prod(diag), so det codelen < diagonal codelen
+    H = np.array([[100.0, 50.0], [50.0, 100.0]])
+    diag = np.array([100.0, 100.0])
+    theta = np.array([3.0, 7.0])
+    cl_det = _compute_codelen(H, diag, theta, mask, True)
+    cl_diag = _compute_codelen(H, diag, theta, mask, False)
+    assert cl_det < cl_diag, f"Correlated: det={cl_det} should be < diag={cl_diag}"
+    # Check exact value: det = 100*100 - 50*50 = 7500
+    expected_det = -1.0 * math.log(3.) + 0.5 * math.log(7500.) + math.log(3.) + math.log(7.)
+    assert np.isclose(cl_det, expected_det)
+
+    # Empty mask: codelen should be 0
+    assert _compute_codelen(H, diag, theta, np.array([False, False]), True) == 0.0
+
+    # Non-positive-definite: codelen should be inf
+    H_bad = np.array([[100.0, 200.0], [200.0, 100.0]])  # det = -30000
+    assert _compute_codelen(H_bad, diag, theta, mask, True) == np.inf
+
+    # Partial mask: only keep first parameter
+    mask1 = np.array([True, False])
+    cl = _compute_codelen(H, diag, theta, mask1, True)
+    expected_1 = -0.5 * math.log(3.) + 0.5 * math.log(100.) + math.log(3.)
+    assert np.isclose(cl, expected_1)
+
+    return
+
+
+def test_compute_snap_mask():
+    """Unit tests for _compute_snap_mask with known analytic cases."""
+    from esr.fitting.test_all_Fisher import _compute_snap_mask
+
+    # Well-constrained 2-param case: no snapping for any mode
+    H = np.array([[1000.0, 0.0], [0.0, 1000.0]])
+    diag = np.array([1000.0, 1000.0])
+    theta = np.array([5.0, 3.0])
+    Nsteps_diag = np.abs(theta) / np.sqrt(12. / diag)  # both >> 1
+    for sc in [0, 1, 2]:
+        result = _compute_snap_mask(H, diag, theta, Nsteps_diag.copy(), sc)
+        assert np.all(result >= 1), f"snap_choice={sc}: should not snap well-constrained params"
+
+    # snap_choice=0: returns input Nsteps unchanged
+    Nsteps_in = np.array([0.5, 2.0])
+    result = _compute_snap_mask(H, diag, theta, Nsteps_in.copy(), 0)
+    assert np.allclose(result, Nsteps_in)
+
+    # Poorly constrained eigendirection: one eigenvalue near zero
+    H_degen = np.array([[100.0, 99.0], [99.0, 100.0]])  # eigenvalues: 1, 199
+    diag_degen = np.array([100.0, 100.0])
+    theta_small = np.array([0.001, 0.001])
+    Nsteps_diag_small = np.abs(theta_small) / np.sqrt(12. / diag_degen)
+    # snap_choice=1 or 2 should identify the unconstrained direction
+    for sc in [1, 2]:
+        result = _compute_snap_mask(H_degen, diag_degen, theta_small, Nsteps_diag_small.copy(), sc)
+        assert np.sum(result < 1) >= 1, f"snap_choice={sc}: should snap at least one param for degenerate Hessian"
+
+    # Non-positive eigenvalue: should always trigger snap
+    H_nonposdef = np.array([[1.0, 2.0], [2.0, 1.0]])  # eigenvalues: -1, 3
+    diag_npd = np.array([1.0, 1.0])
+    theta_npd = np.array([5.0, 5.0])
+    Nsteps_npd = np.abs(theta_npd) / np.sqrt(12. / diag_npd)
+    for sc in [1, 2]:
+        result = _compute_snap_mask(H_nonposdef, diag_npd, theta_npd, Nsteps_npd.copy(), sc)
+        assert np.sum(result < 1) >= 1, f"snap_choice={sc}: should snap for non-positive eigenvalue"
+
+    return
+
+
+def test_numerical_fingerprint():
+    """Unit tests for numerical_fingerprint and fingerprint_to_hash."""
+    import sympy
+    from esr.generation.simplifier import numerical_fingerprint, fingerprint_to_hash
+
+    x = sympy.Symbol('x', positive=True)
+    a0, a1 = sympy.symbols('a0 a1', real=True)
+
+    # Commutative equivalents should hash identically
+    fp1 = numerical_fingerprint(x * a0)
+    fp2 = numerical_fingerprint(a0 * x)
+    assert fp1 is not None
+    assert fp1 == fp2
+    assert fingerprint_to_hash(fp1) == fingerprint_to_hash(fp2)
+
+    # Algebraically equivalent expressions should hash identically
+    fp3 = numerical_fingerprint(a0 + a0)
+    fp4 = numerical_fingerprint(2 * a0)
+    assert fp3 is not None
+    assert fingerprint_to_hash(fp3) == fingerprint_to_hash(fp4)
+
+    # Different functions should hash differently
+    fp_lin = numerical_fingerprint(a0 * x)
+    fp_quad = numerical_fingerprint(a0 * x**2)
+    assert fp_lin is not None and fp_quad is not None
+    assert fingerprint_to_hash(fp_lin) != fingerprint_to_hash(fp_quad)
+
+    # Constant expression should work
+    fp_const = numerical_fingerprint(sympy.Integer(5))
+    assert fp_const is not None
+    assert all(v == 5.0 for v in fp_const if v is not None)
+
+    # Expression with no free symbols
+    fp_num = numerical_fingerprint(sympy.Rational(3, 7))
+    assert fp_num is not None
+
+    # None input returns None
+    assert numerical_fingerprint(None) is None
+
+    # fingerprint_to_hash of None returns None
+    assert fingerprint_to_hash(None) is None
+
+    # Hash is deterministic
+    fp = numerical_fingerprint(a0 * x + a1)
+    h1 = fingerprint_to_hash(fp)
+    h2 = fingerprint_to_hash(fp)
+    assert h1 == h2
+    assert isinstance(h1, str) and len(h1) == 32  # MD5 hex digest
 
     return

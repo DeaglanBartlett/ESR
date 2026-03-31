@@ -17,6 +17,82 @@ warnings.filterwarnings("ignore")
 
 use_relative_dx = True              # CHANGE
 
+
+def _compute_codelen(Hmat, Fisher_diag, theta, kept_mask, use_det_I):
+    """Compute parametric codelen for a given set of kept parameters.
+
+    Args:
+        :Hmat (np.ndarray): full Hessian matrix (nparam x nparam)
+        :Fisher_diag (np.ndarray): diagonal of the Hessian (nparam,)
+        :theta (np.ndarray): parameter values (nparam,)
+        :kept_mask (np.ndarray): boolean mask of which parameters to include
+        :use_det_I (bool): if True, use det(H); if False, use prod(diag(H))
+
+    Returns:
+        :codelen (float): the parametric contribution to description length
+    """
+    k = int(np.sum(kept_mask))
+    if k == 0:
+        return 0.0
+    theta_active = theta[kept_mask]
+    if use_det_I:
+        H_active = Hmat[np.ix_(kept_mask, kept_mask)]
+        sign, logdet = np.linalg.slogdet(H_active)
+        if sign > 0:
+            return -k/2. * math.log(3.) + 0.5 * logdet + \
+                np.sum(np.log(np.abs(theta_active)))
+        else:
+            return np.inf
+    else:
+        diag_active = Fisher_diag[kept_mask]
+        return -k/2. * math.log(3.) + np.sum(0.5*np.log(diag_active) +
+                                              np.log(np.abs(theta_active)))
+
+
+def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
+    """Compute which parameters to snap to zero based on snap_choice.
+
+    For snap_choice 1 or 2, eigendecomposes Hmat to identify unconstrained
+    directions, then maps them back to original parameters. Falls back to the
+    diagonal-based Nsteps if eigendecomposition fails.
+
+    Args:
+        :Hmat (np.ndarray): full Hessian matrix (nparam x nparam)
+        :Fisher_diag (np.ndarray): diagonal of the Hessian (nparam,)
+        :theta (np.ndarray): parameter values (nparam,)
+        :Nsteps (np.ndarray): diagonal-based Nsteps (used for snap_choice=0 and as fallback)
+        :snap_choice (int): 0=diagonal, 1=eigen-informed (uses diagonal Nsteps in eigenbasis),
+            2=full eigenbasis (uses rotated theta for Nsteps)
+
+    Returns:
+        :Nsteps (np.ndarray): updated Nsteps array (values < 1 indicate parameters to snap)
+    """
+    nparam = len(theta)
+    if snap_choice not in (1, 2):
+        return Nsteps
+
+    try:
+        eigenvalues, eigenvectors = np.linalg.eigh(Hmat[:nparam, :nparam])
+        theta_rot = eigenvectors.T @ theta
+        good_eig = eigenvalues > 0
+        # Non-positive eigenvalues get Nsteps_rot=0, so they always trigger snapping
+        # — this is correct: they indicate unconstrained or saddle-point directions
+        Nsteps_rot = np.zeros(nparam)
+        Nsteps_rot[good_eig] = np.abs(theta_rot[good_eig]) / np.sqrt(12. / eigenvalues[good_eig])
+        # Map unconstrained eigendirections back to original parameters:
+        # for each bad eigendirection, snap the original param with largest projection
+        bad_eig = np.where(Nsteps_rot < 1)[0]
+        snap_set = set()
+        for ei in bad_eig:
+            snap_set.add(np.argmax(np.abs(eigenvectors[:, ei])))
+        Nsteps = np.ones(nparam)
+        for j in snap_set:
+            Nsteps[j] = 0.
+    except np.linalg.LinAlgError:
+        pass  # keep diagonal-based Nsteps
+
+    return Nsteps
+
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
@@ -47,12 +123,13 @@ def load_loglike(comp, likelihood, data_start, data_end, split=True):
         data = np.genfromtxt(selected_lines)
     else:
         data = np.genfromtxt(fname)
+    data = np.atleast_2d(data)
     negloglike = np.atleast_1d(data[:, 0])
     params = np.atleast_2d(data[:, 1:])
     return negloglike, params
 
 
-def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_param=4, use_det_I=True):
+def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_param=4, use_det_I=True, snap_choice=2):
     """Compute Fisher, correct MLP and find parametric contirbution to description length for single function
 
     Args:
@@ -64,6 +141,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         :negloglike (float): the minimum log-likelihood for this function
         :max_param (int, default=4): The maximum number of parameters considered. This sets the shapes of arrays used.
         :use_det_I (bool, default=True): If True, use full Hessian determinant for codelen (captures parameter degeneracies). If False, use diagonal elements only (original ESR behaviour).
+        :snap_choice (int, default=2): Controls how parameters are snapped to zero. 0: original diagonal approach (Nsteps_i = |theta_i|/sqrt(12/H_ii)). 1: eigendecompose H, identify unconstrained eigendirections, snap the original parameter with largest projection onto each. 2: same as 1 but Nsteps computed in rotated eigenbasis (theta_rot = V^T @ theta, Nsteps_i = |theta_rot_i|/sqrt(12/d_i)). Codelen formula is the same for all modes.
 
     Returns:
         :params (list): the corrected maximum likelihood values of the parameters
@@ -202,6 +280,13 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     theta_ML_orig = np.copy(theta_ML)
     negloglike_orig = np.copy(negloglike)
 
+    Nsteps = _compute_snap_mask(Hmat_best, Fisher_diag, theta_ML, Nsteps, snap_choice)
+
+    # Compute unsnapped DL (for comparison if snapping is attempted)
+    all_mask = np.ones(nparam, dtype=bool)
+    codelen_nosnap = _compute_codelen(Hmat_best, Fisher_diag, theta_ML, all_mask, use_det_I)
+    DL_nosnap = negloglike + codelen_nosnap
+
     # See whether we can snap any parameters to zero
     if np.sum(Nsteps < 1) > 0:
 
@@ -215,7 +300,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
             k -= np.sum(Nsteps < 1)
             kept_mask = Nsteps >= 1
         else:
-            #  Let's see if setting any of the parameters to zero is ok
+            #  Let's see if setting any of the parameters to zero is ok
             try_idx = np.arange(nparam)[Nsteps < 1]
             for r in reversed(range(1, len(try_idx))):
                 for idx in itertools.combinations(try_idx, r):
@@ -237,29 +322,32 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         if k < 0:
             print("This shouldn't have happened", flush=True)
             quit()
-        elif k == 0:
-            codelen = 0
-            return params, negloglike, deriv, codelen
 
-        # Only consider these parameters in the codelen
-        Fisher_diag = Fisher_diag[kept_mask]
-        theta_ML = theta_ML[kept_mask]
+        # Compute snapped codelen and compare DL
+        codelen_snap = _compute_codelen(Hmat_best, Fisher_diag, theta_ML_orig, kept_mask, use_det_I)
+        DL_snap = negloglike + codelen_snap
+
+        if k == 0 or DL_snap >= DL_nosnap:
+            # Snapping did not improve DL — revert
+            theta_ML = theta_ML_orig
+            negloglike = negloglike_orig
+            k = nparam
+            kept_mask = np.ones(nparam, dtype=bool)
     else:
         kept_mask = np.ones(len(theta_ML), dtype=bool)
 
-    if use_det_I:
-        # Use full Hessian determinant for codelen (captures parameter degeneracies)
-        H_active = Hmat_best[np.ix_(kept_mask, kept_mask)]
-        sign, logdet = np.linalg.slogdet(H_active)
-        if sign > 0:
-            codelen = -k/2. * math.log(3.) + 0.5 * logdet + \
-                np.sum(np.log(abs(np.array(theta_ML))))
-        else:
-            codelen = np.inf
-    else:
-        codelen = -k/2. * \
-            math.log(3.) + np.sum(0.5*np.log(Fisher_diag) +
-                                  np.log(abs(np.array(theta_ML))))
+    # Log condition number for diagnostics
+    H_active = Hmat_best[np.ix_(kept_mask, kept_mask)]
+    if H_active.size > 0:
+        try:
+            cond = np.linalg.cond(H_active)
+            if cond > 1e10:
+                print(f'Warning: high condition number {cond:.2e} for {fcn_i}', flush=True)
+        except np.linalg.LinAlgError:
+            pass
+
+    # Compute final codelen
+    codelen = _compute_codelen(Hmat_best, Fisher_diag, theta_ML_orig, kept_mask, use_det_I)
 
     # New params after the setting to 0, padded to length max_param as always
     theta_ML = theta_ML_orig
@@ -269,7 +357,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     return params, negloglike, deriv, codelen
 
 
-def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, use_det_I=True):
+def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, use_det_I=True, snap_choice=2):
     """Compute Fisher, correct MLP and find parametric contirbution to description length for all functions and save to file
 
     Args:
@@ -279,6 +367,7 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
         :print_frequency (int, default=50): the status of the fits will be printed every ``print_frequency`` number of iterations
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :use_det_I (bool, default=True): If True, use full Hessian determinant for codelen. If False, use diagonal elements only.
+        :snap_choice (int, default=2): Controls parameter snapping. 0: diagonal, 1: eigen-informed original-space, 2: full eigenbasis.
 
     Returns:
         None
@@ -321,7 +410,7 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
             fcn_i, eq, integrated = likelihood.run_sympify(
                 fcn_i, tmax=tmax, try_integration=try_integration)
             params[i, :], negloglike[i], deriv[i, :], codelen[i] = convert_params(
-                fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param, use_det_I=use_det_I)
+                fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param, use_det_I=use_det_I, snap_choice=snap_choice)
         except NameError:
             # Occurs if function produced not implemented in numpy
             if try_integration:
@@ -330,7 +419,7 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
                 fcn_i, eq, integrated = likelihood.run_sympify(
                     fcn_i, tmax=tmax, try_integration=False)
                 params[i, :], negloglike[i], deriv[i, :], codelen[i] = convert_params(
-                    fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param, use_det_I=use_det_I)
+                    fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param, use_det_I=use_det_I, snap_choice=snap_choice)
             else:
                 params[i, :] = 0.
                 deriv[i, :] = 0.
