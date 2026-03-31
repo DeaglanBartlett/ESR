@@ -110,7 +110,9 @@ def test_pantheon(monkeypatch):
     with open(fname, 'r') as f:
         best = f.readline().split(';')
     assert int(best[0]) == 0  #  Rank
-    assert best[1] == 'a0/pow(Abs(a1),x)'  # best function (det(I) codelen)
+    # a0*pow(Abs(a1),x) and a0/pow(Abs(a1),x) are the same function (sign flip on a1)
+    # which variant ranks first depends on numerical precision across environments
+    assert best[1] in ('a0*pow(Abs(a1),x)', 'a0/pow(Abs(a1),x)')  # best function (det(I) codelen)
     assert np.isclose(float(best[2]), 716.34, atol=2e-2)  #  logL
     assert np.isclose(float(best[4]), 701.79, atol=2e-2)  #  Residuals
     assert np.isclose(float(best[5]), 7.62, atol=2e-2)  #  Parameter
