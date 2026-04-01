@@ -377,19 +377,22 @@ def test_compute_snap_mask():
     """Unit tests for _compute_snap_mask with known analytic cases."""
     from esr.fitting.test_all_Fisher import _compute_snap_mask
 
-    # Well-constrained 2-param case: no snapping for any mode
+    # Well-constrained 2-param case: no snapping for any mode, not degenerate
     H = np.array([[1000.0, 0.0], [0.0, 1000.0]])
     diag = np.array([1000.0, 1000.0])
     theta = np.array([5.0, 3.0])
     Nsteps_diag = np.abs(theta) / np.sqrt(12. / diag)  # both >> 1
     for sc in [0, 1, 2]:
-        result = _compute_snap_mask(H, diag, theta, Nsteps_diag.copy(), sc)
+        result, degen = _compute_snap_mask(H, diag, theta, Nsteps_diag.copy(), sc)
         assert np.all(result >= 1), f"snap_choice={sc}: should not snap well-constrained params"
+        if sc in (1, 2):
+            assert not degen, f"snap_choice={sc}: well-conditioned Hessian should not be degenerate"
 
-    # snap_choice=0: returns input Nsteps unchanged
+    # snap_choice=0: returns input Nsteps unchanged, not degenerate
     Nsteps_in = np.array([0.5, 2.0])
-    result = _compute_snap_mask(H, diag, theta, Nsteps_in.copy(), 0)
+    result, degen = _compute_snap_mask(H, diag, theta, Nsteps_in.copy(), 0)
     assert np.allclose(result, Nsteps_in)
+    assert not degen
 
     # Poorly constrained eigendirection: one eigenvalue near zero
     H_degen = np.array([[100.0, 99.0], [99.0, 100.0]])  # eigenvalues: 1, 199
@@ -398,17 +401,20 @@ def test_compute_snap_mask():
     Nsteps_diag_small = np.abs(theta_small) / np.sqrt(12. / diag_degen)
     # snap_choice=1 or 2 should identify the unconstrained direction
     for sc in [1, 2]:
-        result = _compute_snap_mask(H_degen, diag_degen, theta_small, Nsteps_diag_small.copy(), sc)
+        result, degen = _compute_snap_mask(H_degen, diag_degen, theta_small, Nsteps_diag_small.copy(), sc)
         assert np.sum(result < 1) >= 1, f"snap_choice={sc}: should snap at least one param for degenerate Hessian"
+        # eigenvalue 1 is above 199 * 1e-6 = 0.000199, so NOT degenerate by threshold
+        # (degenerate flag depends on the relative threshold, not absolute smallness)
 
-    # Non-positive eigenvalue: should always trigger snap
+    # Non-positive eigenvalue: should always trigger snap and flag degenerate
     H_nonposdef = np.array([[1.0, 2.0], [2.0, 1.0]])  # eigenvalues: -1, 3
     diag_npd = np.array([1.0, 1.0])
     theta_npd = np.array([5.0, 5.0])
     Nsteps_npd = np.abs(theta_npd) / np.sqrt(12. / diag_npd)
     for sc in [1, 2]:
-        result = _compute_snap_mask(H_nonposdef, diag_npd, theta_npd, Nsteps_npd.copy(), sc)
+        result, degen = _compute_snap_mask(H_nonposdef, diag_npd, theta_npd, Nsteps_npd.copy(), sc)
         assert np.sum(result < 1) >= 1, f"snap_choice={sc}: should snap for non-positive eigenvalue"
+        assert degen, f"snap_choice={sc}: non-positive eigenvalue should be flagged degenerate"
 
     return
 

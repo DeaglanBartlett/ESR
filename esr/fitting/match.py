@@ -270,7 +270,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         codelen_nosnap = test_all_Fisher._compute_codelen(fish_mat, fish_diag, p, all_mask, use_det_I)
         DL_nosnap = negloglike_all[i] + codelen_nosnap
 
-        Nsteps = test_all_Fisher._compute_snap_mask(fish_mat, fish_diag, p, Nsteps, snap_choice)
+        Nsteps, has_degenerate_eig = test_all_Fisher._compute_snap_mask(fish_mat, fish_diag, p, Nsteps, snap_choice)
 
         # Should reevaluate -log(L) with the param(s) set to 0, but doesn't matter unless the fcn is a very good one
         if np.sum(Nsteps < 1) > 0:
@@ -349,12 +349,17 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
                 print("This shouldn't have happened", flush=True)
                 quit()
 
-            # Compute snapped codelen and compare DL
+            # Compute snapped codelen and compare DL.
+            # If Hessian has degenerate eigenvalues (detected by _compute_snap_mask),
+            # snap is mandatory — reverting would allow det(H)→0 to give
+            # artificially low codelen.
             codelen_snap = test_all_Fisher._compute_codelen(fish_mat, fish_diag, ptrue, kept_mask, use_det_I)
             DL_snap = negloglike_all[i] + codelen_snap
 
-            if k == 0 or DL_snap >= DL_nosnap:
-                # Snapping did not improve DL — revert
+            if has_degenerate_eig:
+                pass  # mandatory snap — degenerate Hessian
+            elif k == 0 or DL_snap >= DL_nosnap:
+                # Well-conditioned but snapping didn't help — revert
                 p = np.copy(ptrue)
                 negloglike_all[i] = negloglike_orig
                 k = nparams

@@ -17,6 +17,11 @@ warnings.filterwarnings("ignore")
 
 use_relative_dx = True              # CHANGE
 
+# Eigenvalues below this fraction of the largest are treated as degenerate
+# (unconstrained direction in parameter space). This prevents det(H)→0
+# from corrupting the codelen when parameters are structurally redundant.
+EIGENVALUE_REL_THRESHOLD = 1e-6
+
 
 def _compute_codelen(Hmat, Fisher_diag, theta, kept_mask, use_det_I):
     """Compute parametric codelen for a given set of kept parameters.
@@ -82,17 +87,25 @@ def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
 
     Returns:
         :Nsteps (np.ndarray): updated Nsteps array (values < 1 indicate parameters to snap)
+        :has_degenerate_eig (bool): True if any eigenvalue is below EIGENVALUE_REL_THRESHOLD
+            relative to the largest. Used to decide whether snap is mandatory.
     """
     nparam = len(theta)
+    has_degenerate_eig = False
+
     if snap_choice not in (1, 2):
-        return Nsteps
+        return Nsteps, has_degenerate_eig
 
     try:
         eigenvalues, eigenvectors = np.linalg.eigh(Hmat[:nparam, :nparam])
         theta_rot = eigenvectors.T @ theta
-        good_eig = eigenvalues > 0
-        # Non-positive eigenvalues get Nsteps_rot=0, so they always trigger snapping
-        # — this is correct: they indicate unconstrained or saddle-point directions
+        # Eigenvalues that are non-positive OR negligibly small relative to the
+        # largest indicate degenerate/unconstrained directions. Use a relative
+        # threshold to catch near-zero eigenvalues from parameter redundancies
+        # (e.g. g and c*g having the same f_DE = g/g(1)).
+        eig_threshold = max(eigenvalues.max(), 1.0) * EIGENVALUE_REL_THRESHOLD
+        good_eig = eigenvalues > eig_threshold
+        has_degenerate_eig = not np.all(good_eig)
         Nsteps_rot = np.zeros(nparam)
         Nsteps_rot[good_eig] = np.abs(theta_rot[good_eig]) / np.sqrt(12. / eigenvalues[good_eig])
         # Map unconstrained eigendirections back to original parameters:
@@ -105,9 +118,9 @@ def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
         for j in snap_set:
             Nsteps[j] = 0.
     except np.linalg.LinAlgError:
-        pass  # keep diagonal-based Nsteps
+        has_degenerate_eig = True  # can't decompose — treat as degenerate
 
-    return Nsteps
+    return Nsteps, has_degenerate_eig
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -296,7 +309,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     theta_ML_orig = np.copy(theta_ML)
     negloglike_orig = np.copy(negloglike)
 
-    Nsteps = _compute_snap_mask(Hmat_best, Fisher_diag, theta_ML, Nsteps, snap_choice)
+    Nsteps, has_degenerate_eig = _compute_snap_mask(Hmat_best, Fisher_diag, theta_ML, Nsteps, snap_choice)
 
     # Compute unsnapped DL (for comparison if snapping is attempted)
     all_mask = np.ones(nparam, dtype=bool)
@@ -339,12 +352,18 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
             print("This shouldn't have happened", flush=True)
             quit()
 
-        # Compute snapped codelen and compare DL
+        # Compute snapped codelen and compare DL.
+        # If Hessian has degenerate eigenvalues (detected by _compute_snap_mask),
+        # snap is mandatory — reverting would allow det(H)→0 to give
+        # artificially low codelen.
         codelen_snap = _compute_codelen(Hmat_best, Fisher_diag, theta_ML_orig, kept_mask, use_det_I)
         DL_snap = negloglike + codelen_snap
 
-        if k == 0 or DL_snap >= DL_nosnap:
-            # Snapping did not improve DL — revert
+        if has_degenerate_eig:
+            # Mandatory snap — Hessian is degenerate, don't trust DL comparison
+            pass
+        elif k == 0 or DL_snap >= DL_nosnap:
+            # Well-conditioned Hessian but snapping didn't help — revert
             theta_ML = theta_ML_orig
             negloglike = negloglike_orig
             k = nparam
