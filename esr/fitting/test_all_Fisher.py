@@ -20,7 +20,7 @@ use_relative_dx = True              # CHANGE
 # Eigenvalues below this fraction of the largest are treated as degenerate
 # (unconstrained direction in parameter space). This prevents det(H)→0
 # from corrupting the codelen when parameters are structurally redundant.
-EIGENVALUE_REL_THRESHOLD = 1e-6
+EIGENVALUE_REL_THRESHOLD = 1e-3
 
 
 def _compute_codelen(Hmat, Fisher_diag, theta, kept_mask, use_det_I):

@@ -320,7 +320,10 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
                 k -= np.sum(Nsteps < 1)
                 kept_mask = Nsteps >= 1
             else:
-                # Let's see if setting any of the parameters to zero is ok
+                # Snap failed for the eigenvector-selected param(s).
+                # Try subsets of the flagged params (existing logic),
+                # then — if degenerate — try every individual param.
+                snap_succeeded = False
                 try_idx = np.arange(nparams)[Nsteps < 1]
                 for r in reversed(range(1, len(try_idx))):
                     for idx in itertools.combinations(try_idx, r):
@@ -328,18 +331,48 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
                         for idx_ in idx:
                             p[idx_] = 0.
                         if k == 1:
-                            # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                             negloglike_all[i] = f1(p)
                         else:
                             negloglike_all[i] = fop(p)
                         if np.isfinite(negloglike_all[i]):
+                            snap_succeeded = True
                             break
-                kept_mask = np.ones(len(p), dtype=bool)
-                if np.isfinite(negloglike_all[i]):
+                    if snap_succeeded:
+                        break
+
+                if snap_succeeded:
+                    kept_mask = np.ones(len(p), dtype=bool)
                     k -= len(idx)
-                    kept_mask[idx] = 0
-                # infinite nll — revert to unsnapped since snapping failed
-                elif not np.isfinite(negloglike_all[i]) and not np.isnan(negloglike_all[i]):
+                    for idx_ in idx:
+                        kept_mask[idx_] = False
+                elif has_degenerate_eig:
+                    # Eigenvector-selected snap failed. Try each individual
+                    # parameter — the degeneracy means at least one should
+                    # be removable, but the largest-projection heuristic
+                    # may have picked one that is pathological at zero.
+                    for j in range(nparams):
+                        p = np.copy(ptrue)
+                        p[j] = 0.
+                        try:
+                            if nparams == 1:
+                                negloglike_all[i] = f1(p)
+                            else:
+                                negloglike_all[i] = fop(p)
+                        except Exception:
+                            negloglike_all[i] = np.nan
+                        if np.isfinite(negloglike_all[i]):
+                            kept_mask = np.ones(len(p), dtype=bool)
+                            kept_mask[j] = False
+                            k -= 1
+                            snap_succeeded = True
+                            break
+                    if not snap_succeeded:
+                        # No single-param snap works — codelen is undefined
+                        codelen[i] = np.inf
+                        negloglike_all[i] = negloglike_orig
+                        continue
+                else:
+                    # Not degenerate, snap just didn't help — revert
                     p = np.copy(ptrue)
                     negloglike_all[i] = negloglike_orig
                     k = nparams
