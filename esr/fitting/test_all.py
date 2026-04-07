@@ -177,7 +177,16 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
         fcn_i, eq, integrated = likelihood.run_sympify(
             fcn_i, tmax=tmax, try_integration=try_integration)
 
-        if "a0" not in fcn_i:
+        # Check if the (possibly reduced) expression has free parameters.
+        # run_sympify may eliminate parameters (e.g. g(x)=a0 -> f_DE=1),
+        # so check the expression, not just the original string.
+        eq_has_params = "a0" in fcn_i
+        if integrated:
+            try:
+                eq_has_params = bool(eq.free_symbols - {x})
+            except Exception:
+                pass
+        if not eq_has_params:
             eq_numpy = sympy.lambdify(x, eq, modules=["numpy"])
             chi2_i = likelihood.negloglike([], eq_numpy, integrated=integrated)
             return chi2_i, params

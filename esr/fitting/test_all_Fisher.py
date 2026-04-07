@@ -182,6 +182,18 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
 
     nparam = simplifier.count_params([fcn_i], max_param)[0]
 
+    # If run_sympify reduced the expression (integrated=True), the actual
+    # number of free parameters may be less than what the original string
+    # suggests (e.g. g(x)=a0 -> f_DE=1, eliminating a0).
+    if integrated:
+        try:
+            eq_free = eq.free_symbols - {x}
+            nparam_actual = len(eq_free)
+            if nparam_actual < nparam:
+                nparam = nparam_actual
+        except Exception:
+            pass
+
     if nparam > 0:
         def fop(x):
             return likelihood.negloglike(x, eq_numpy, integrated=integrated)
