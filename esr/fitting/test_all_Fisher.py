@@ -312,10 +312,77 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
                     start = int(i * max_param - (i - 1) * i / 2)
                     deriv[start:start+nparam-i] = Hmat_array_f[mode_ind][i, i:]
 
-    # Must indicate a bad fcn, so just need to make sure it doesn't have a good -log(L)
+    # Fisher_diag <= 0 means we're not at a minimum.  Before giving up,
+    # re-optimise: try Nelder-Mead from the current point, then a grid of
+    # starting points in log-space to catch cases where test_all landed far
+    # from the global minimum.
     if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0):
-        codelen = np.nan
-        return params, negloglike, deriv, codelen
+        from scipy.optimize import minimize as _minimize
+
+        best_nll = negloglike
+        best_theta = theta_ML.copy()
+
+        # Phase 1: Nelder-Mead from current point
+        try:
+            res = _minimize(fop, theta_ML, method='Nelder-Mead',
+                            options={'xatol': 1e-8, 'fatol': 1e-10,
+                                     'maxiter': 5000 * nparam})
+            if np.isfinite(res.fun) and res.fun < best_nll:
+                best_nll = res.fun
+                best_theta = res.x.copy()
+        except Exception:
+            pass
+
+        # Phase 2: multi-start from log-spaced grid covering |a| in [0.1, 100]
+        # with both signs, to catch minima far from the test_all result
+        _log_starts = np.linspace(-1, 2, 7)  # 10^[-1..2] = [0.1, 100]
+        _sign_combos = list(itertools.product([1, -1], repeat=nparam))
+        for signs in _sign_combos:
+            for log_vals in itertools.product(_log_starts, repeat=nparam):
+                x0 = np.array([s * 10**lv for s, lv in zip(signs, log_vals)])
+                try:
+                    res = _minimize(fop, x0, method='Nelder-Mead',
+                                    options={'xatol': 1e-8, 'fatol': 1e-10,
+                                             'maxiter': 3000 * nparam})
+                    if np.isfinite(res.fun) and res.fun < best_nll:
+                        best_nll = res.fun
+                        best_theta = res.x.copy()
+                except Exception:
+                    pass
+
+        if best_nll <= negloglike + 0.01:
+            theta_ML = best_theta
+            negloglike = best_nll
+            # Recompute Hessian at the new point
+            Hfun_retry = nd.Hessian(fop)
+            Hmat_best = Hfun_retry(theta_ML)
+            Fisher_diag = np.array([Hmat_best[i, i] for i in range(nparam)])
+            for i in range(nparam):
+                start = int(i * max_param - (i - 1) * i / 2)
+                deriv[start:start+nparam-i] = Hmat_best[i, i:]
+            if use_relative_dx:
+                # Also try relative step sizes if default Hessian fails
+                if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0):
+                    for d2 in [1.e-5, 1.e-4, 1.e-3, 1.e-6]:
+                        Hfun_retry = nd.Hessian(fop, step=np.abs(d2 * theta_ML) + 1e-15)
+                        Hmat_try = Hfun_retry(theta_ML)
+                        diag_try = np.array([Hmat_try[i, i] for i in range(nparam)])
+                        if np.all(diag_try > 0) and not np.any(np.isnan(diag_try)):
+                            Hmat_best = Hmat_try
+                            Fisher_diag = diag_try
+                            for i in range(nparam):
+                                start = int(i * max_param - (i - 1) * i / 2)
+                                deriv[start:start+nparam-i] = Hmat_best[i, i:]
+                            break
+            Delta = np.sqrt(12. / Fisher_diag)
+            Nsteps = abs(np.array(theta_ML)) / Delta
+            print(f'Re-optimised {fcn_i}: NLL {negloglike:.4f}, '
+                  f'theta={theta_ML}, Fisher_diag={Fisher_diag}', flush=True)
+
+        # If still bad after re-optimisation, give up
+        if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0):
+            codelen = np.nan
+            return params, negloglike, deriv, codelen
 
     k = nparam
     theta_ML_orig = np.copy(theta_ML)
