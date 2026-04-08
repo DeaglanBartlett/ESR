@@ -153,6 +153,15 @@ def load_loglike(comp, likelihood, data_start, data_end, split=True):
     else:
         data = np.genfromtxt(fname)
     data = np.atleast_2d(data)
+    if data.size == 0:
+        # Partial files are empty (e.g., parameterless functions).
+        # Read NLLs from the main negloglike file instead.
+        all_data = np.atleast_2d(np.genfromtxt(fname))
+        if all_data.size == 0:
+            nfun = data_end - data_start
+            return np.full(nfun, np.inf), np.zeros((nfun, 0))
+        negloglike = np.atleast_1d(all_data[data_start:data_end, 0])
+        return negloglike, np.zeros((len(negloglike), 0))
     negloglike = np.atleast_1d(data[:, 0])
     params = np.atleast_2d(data[:, 1:])
     return negloglike, params
@@ -552,10 +561,11 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
     out_arr = np.transpose(
         np.vstack([codelen, negloglike] + [params[:, i] for i in range(max_param)]))
 
-    out_arr_deriv = np.transpose(np.vstack([deriv[:, 0], deriv[:, 1], deriv[:, 2], deriv[:, 3],
-                                 deriv[:, 4], deriv[:, 5], deriv[:, 6], deriv[:, 7], deriv[:, 8], deriv[:, 9]]))
-    out_arr_deriv = np.transpose(
-        np.vstack([deriv[:, i] for i in range(deriv.shape[1])]))
+    if deriv.shape[1] > 0:
+        out_arr_deriv = np.transpose(
+            np.vstack([deriv[:, i] for i in range(deriv.shape[1])]))
+    else:
+        out_arr_deriv = np.empty((len(codelen), 0))
 
     np.savetxt(likelihood.temp_dir + '/codelen_deriv_' +
                str(comp)+'_'+str(rank)+'.dat', out_arr, fmt='%.7e')
