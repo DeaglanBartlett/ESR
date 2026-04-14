@@ -186,6 +186,11 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     # 2D array of shape (# unique fcns, 10)
     all_fish = np.loadtxt(likelihood.out_dir + '/derivs_comp'+str(comp)+'.dat')
     all_fish = np.atleast_2d(all_fish)
+    if all_fish.size == 0:
+        # No valid Fisher results — fill with zeros so indexing works
+        # (codelen will be nan/inf for all functions)
+        n_unique = len(open(likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt" % (comp, comp)).readlines())
+        all_fish = np.zeros((n_unique, int(max_param * (max_param + 1) / 2)))
 
     # Both of these are also just for this proc
     codelen = np.zeros(len(fcn_list_proc))

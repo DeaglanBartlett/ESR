@@ -132,12 +132,20 @@ def main(comp, likelihood, print_frequency=1000):
                 if num_params == 0:
                     num_params = len(parts) - 4
         print(f"Number of parameters: {num_params}", flush=True)
-        print(f'Original file length: {i+1}', flush=True)
+        n_read = i + 1 if 'i' in dir() else 0
+        print(f'Original file length: {n_read}', flush=True)
         data_entries.sort(key=lambda x: x[0])
         print(
             f"Sorted {len(data_entries)} entries by DL for complexity {comp}", flush=True)
 
         #  Get relative probabilities
+        if len(data_entries) == 0:
+            print("(no valid functions at this complexity)", flush=True)
+            os.system("touch " + likelihood.out_dir + '/' +
+                      likelihood.final_prefix+str(comp)+'.dat')
+            comm.Barrier()
+            return
+
         Prel_DL = np.array([entry[0] for entry in data_entries])
         log_L = np.array([entry[1][-3] for entry in data_entries])
         Prel_DL -= Prel_DL[0]  # Shift so the best function has DL=0
