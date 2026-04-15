@@ -226,6 +226,11 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             measured = params_meas[index, :nparams].copy()
 
         # Access from the unique eqs all_fish array, common to all procs
+        if index >= all_fish.shape[0]:
+            # derivs file has fewer rows than unique equations (Fisher
+            # only writes entries for successfully fitted functions)
+            codelen[i] = np.inf
+            continue
         fish_measured = all_fish[index, :]
 
 

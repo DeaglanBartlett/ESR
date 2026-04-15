@@ -59,7 +59,12 @@ def main(comp, likelihood, print_frequency=1000):
             if line.strip() == '':
                 continue  # Skip empty lines
             parts = line.strip().split()
-            idx = int(float(parts[2]))  # Index is in column 3
+            if len(parts) < 3:
+                continue  # Skip corrupted/truncated lines
+            try:
+                idx = int(float(parts[2]))  # Index is in column 3
+            except (ValueError, IndexError):
+                continue  # Skip unparseable lines
 
             if idx in needed_indices:
 
@@ -171,21 +176,26 @@ def main(comp, likelihood, print_frequency=1000):
                 fcn = d[-1]
                 DL = d[0]
                 params = [float(pp) for pp in d[1][:-3]]
+                # Pad params to num_params (0-param functions have fewer columns)
+                while len(params) < num_params:
+                    params.append(0.0)
                 negloglike = float(d[1][-3])
                 codelen = float(d[1][-2])
                 aifeyn = float(d[1][-1])
                 ptab.add_row([i+1, fcn, '%.2f' % DL, '%.2e' % Prel[i], '%.2f' % negloglike,
-                             '%.2f' % codelen, '%.2e' % aifeyn] + ['%.2e' % p for p in params])
+                             '%.2f' % codelen, '%.2e' % aifeyn] + ['%.2e' % p for p in params[:num_params]])
 
             with open(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat', 'a') as f:
                 writer = csv.writer(f, delimiter=';')
+                # Pad params to num_params for consistent column count
+                row_params = list(d[1][:-3]) + ['0.0'] * max(0, num_params - len(d[1][:-3]))
                 writer.writerow([i,
                                  d[-1],  # fcn
                                  d[0],  # DL
                                  Prel[i],
                                  d[1][-3],  # negloglike
                                  d[1][-2],  # codelen
-                                 d[1][-1]] + d[1][:-3])  # aifeyn, params
+                                 d[1][-1]] + row_params[:num_params])  # aifeyn, params
 
         if len(data_entries) == 0:
             os.system("touch " + likelihood.out_dir + '/' +
