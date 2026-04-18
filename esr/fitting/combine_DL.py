@@ -85,6 +85,9 @@ def main(comp, likelihood, print_frequency=1000):
                     results_fcn[idx] = line_fcn.strip()
 
     num_cols = len(results[next(iter(results))]) if results else 0
+    # Ensure all ranks agree on row width so the concatenated file has a
+    # consistent number of columns even when some ranks have no valid results.
+    num_cols = comm.allreduce(num_cols, op=MPI.MAX)
 
     prefix = likelihood.combineDL_prefix
 
@@ -134,7 +137,7 @@ def main(comp, likelihood, print_frequency=1000):
                 if (not np.isnan(DL)) and (not np.isinf(DL)):
                     # Store DL, index, and other info
                     data_entries.append((DL, parts[1:], fcn_line.strip()))
-                if num_params == 0:
+                if num_params == 0 and len(parts) >= 4:
                     num_params = len(parts) - 4
         print(f"Number of parameters: {num_params}", flush=True)
         n_read = i + 1 if 'i' in dir() else 0
