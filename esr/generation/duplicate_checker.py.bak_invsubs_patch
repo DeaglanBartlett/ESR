@@ -249,11 +249,8 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
                 idx = []
 
         if rank == 0:
-            n_pair = min(len(idx), len(inv))
-            if len(idx) != len(inv):
-                print('WARNING: inv_idx/inv_subs length mismatch in round %i: len(idx)=%i len(inv)=%i - using first %i pairs' % (r, len(idx), len(inv), n_pair), flush=True)
-            for i in range(n_pair):
-                all_inv_subs[idx[i]] = all_inv_subs[idx[i]] + inv[i]
+            for i, j in enumerate(idx):
+                all_inv_subs[j] = all_inv_subs[j] + inv[i]
             del idx, inv
             gc.collect()
 
