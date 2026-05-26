@@ -104,6 +104,13 @@ each transformed symbolic model family, then maps the result back to all
 raw expressions so their original tree complexities can still enter the
 final description length.
 
+Likelihoods that evaluate generated expressions directly, without changing
+their fitted model family or parameter layout, should leave this catalogue
+inactive. If a custom likelihood has a ``run_sympify`` method only for parsing
+or diagnostics and its stored ``negloglike_comp*.dat`` files correspond to the
+raw unique catalogue, set ``use_likelihood_catalogue = False`` on the
+likelihood class or instance before running ``test_all_Fisher``/``match``.
+
 Numerical duplicate checks are available only as an opt-in diagnostic:
 
 .. code:: python

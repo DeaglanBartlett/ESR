@@ -129,6 +129,21 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
     ensure_output_dirs(likelihood)
     paths = likelihood_catalogue_paths(comp, likelihood)
     settings = _likelihood_catalogue_settings(tmax, try_integration)
+    if not getattr(likelihood, 'use_likelihood_catalogue', True):
+        if rank == 0:
+            for path in [paths['unique'], paths['matches']]:
+                if os.path.exists(path):
+                    os.remove(path)
+            metadata = {
+                'active': False,
+                'settings': settings,
+                'disabled_by_likelihood': True,
+            }
+            with open(paths['metadata'], 'w') as f:
+                json.dump(metadata, f, indent=2, sort_keys=True)
+        comm.Barrier()
+        return False
+
     metadata = _read_likelihood_catalogue_metadata(comp, likelihood)
     if metadata is not None and metadata.get('settings') == settings and (
             not metadata.get('active', False) or likelihood_catalogue_active(comp, likelihood)):

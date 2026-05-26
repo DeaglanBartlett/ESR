@@ -109,6 +109,13 @@ the code will fail loudly on stale row counts rather than reusing incompatible
 ``test_all`` or Fisher outputs; rerun ``test_all.main`` and
 ``test_all_Fisher.main`` with the current likelihood/settings.
 
+Do not use the likelihood-aware catalogue for likelihoods that evaluate ESR
+expressions directly and whose fitted rows already correspond to the raw
+``unique_equations`` catalogue. Such likelihoods can opt out by defining
+``use_likelihood_catalogue = False`` on the likelihood class or instance. This
+is appropriate when ``run_sympify`` parses the expression but does not change
+which model family was fitted or how its parameters are laid out.
+
 Once you have run this for many complexities, you can plot the pareto front and save it to file using the following function.
 
 .. code-block:: python

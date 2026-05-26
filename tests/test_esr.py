@@ -487,6 +487,58 @@ def test_likelihood_aware_catalogue_groups_transformed_models(tmp_path):
     assert matches[2] != matches[0]
 
 
+def test_likelihood_can_disable_likelihood_aware_catalogue(tmp_path):
+    import json
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    class DirectLikelihood:
+        is_mse = False
+        use_likelihood_catalogue = False
+        base_out_dir = str(tmp_path / 'out_base')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+        fn_dir = str(tmp_path / 'functions')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            # This transformation would normally trigger the catalogue because
+            # a0 is removed. Direct likelihoods can opt out when their fitted
+            # NLL files already correspond to the raw unique catalogue.
+            a0, a1 = sympy.symbols('a0 a1', real=True)
+            eq = sympy.sympify(fcn_i, locals={'x': x, 'a0': a0, 'a1': a1})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), True
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    all_functions = ['a0*(a1 + x)', 'a0*x']
+    (compl_dir / f'all_equations_{comp}.txt').write_text(
+        '\n'.join(all_functions) + '\n')
+    (compl_dir / f'unique_equations_{comp}.txt').write_text(
+        '\n'.join(all_functions) + '\n')
+
+    likelihood = DirectLikelihood()
+    os.makedirs(likelihood.out_dir)
+    paths = test_all.likelihood_catalogue_paths(comp, likelihood)
+    for key in ('unique', 'matches'):
+        with open(paths[key], 'w') as f:
+            f.write('stale\n')
+
+    assert not test_all.ensure_likelihood_catalogue(
+        comp, likelihood, tmax=5, try_integration=False)
+    assert not os.path.exists(paths['unique'])
+    assert not os.path.exists(paths['matches'])
+    with open(paths['metadata']) as f:
+        metadata = json.load(f)
+    assert metadata['active'] is False
+    assert metadata['disabled_by_likelihood'] is True
+
+    fcn_list, data_start, data_end = test_all.get_functions(comp, likelihood)
+    assert fcn_list == all_functions
+    assert (data_start, data_end) == (0, len(all_functions))
+
+
 def test_likelihood_aware_match_uses_transformed_representatives(tmp_path):
     import sympy
     from esr.fitting.sympy_symbols import x
