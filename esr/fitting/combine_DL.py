@@ -111,20 +111,14 @@ def main(comp, likelihood, print_frequency=1000):
     comm.Barrier()
 
     if rank == 0:
-        string = 'cat `find ' + likelihood.temp_dir + '/ -name "'+prefix + \
-            str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + \
-            '/'+prefix+'comp'+str(comp)+'.dat'
-        os.system(string)
-        string = 'rm ' + likelihood.temp_dir + '/'+prefix+str(comp)+'_*.dat'
-        os.system(string)
-
-        string = 'cat `find ' + likelihood.temp_dir + '/ -name "'+prefix+'fcn_' + \
-            str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + \
-            '/'+prefix+'fcn_comp'+str(comp)+'.dat'
-        os.system(string)
-        string = 'rm ' + likelihood.temp_dir + \
-            '/'+prefix+'fcn_'+str(comp)+'_*.dat'
-        os.system(string)
+        test_all.combine_temp_files(
+            likelihood.temp_dir,
+            prefix + str(comp) + '_*.dat',
+            likelihood.out_dir + '/' + prefix + 'comp' + str(comp) + '.dat')
+        test_all.combine_temp_files(
+            likelihood.temp_dir,
+            prefix + 'fcn_' + str(comp) + '_*.dat',
+            likelihood.out_dir + '/' + prefix + 'fcn_comp' + str(comp) + '.dat')
         data_entries = []
         num_params = 0
         with open(likelihood.out_dir + '/'+prefix+'comp'+str(comp)+'.dat', 'r') as f, \
@@ -149,8 +143,8 @@ def main(comp, likelihood, print_frequency=1000):
         #  Get relative probabilities
         if len(data_entries) == 0:
             print("(no valid functions at this complexity)", flush=True)
-            os.system("touch " + likelihood.out_dir + '/' +
-                      likelihood.final_prefix+str(comp)+'.dat')
+            open(likelihood.out_dir + '/' + likelihood.final_prefix +
+                 str(comp) + '.dat', 'a').close()
             comm.Barrier()
             return
 
@@ -201,8 +195,8 @@ def main(comp, likelihood, print_frequency=1000):
                                  d[1][-1]] + row_params[:num_params])  # aifeyn, params
 
         if len(data_entries) == 0:
-            os.system("touch " + likelihood.out_dir + '/' +
-                      likelihood.final_prefix+str(comp)+'.dat')
+            open(likelihood.out_dir + '/' + likelihood.final_prefix +
+                 str(comp) + '.dat', 'a').close()
 
         print(ptab)
 

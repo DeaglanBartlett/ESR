@@ -62,13 +62,58 @@ To install ESR and its dependencies in a new virtual environment, run
 	python3 -m venv esr_env
 	source esr_env/bin/activate
 	git clone git@github.com:DeaglanBartlett/ESR.git
-	pip install -e ESR
+	cd ESR
+	pip install -e .
 
 If you are unable to clone the repo with the above, try the https version instead
 
 .. code:: bash
 
 	git clone https://github.com/DeaglanBartlett/ESR.git
+
+Current MDL behaviour
+=====================
+
+The fitting pipeline computes Fisher matrices after the maximum-likelihood
+fit and uses them in the parametric part of the minimum-description-length
+score. The default Fisher scoring uses the positive-definite full Hessian
+determinant with eigenbasis snapping:
+
+.. code:: python
+
+	esr.fitting.test_all_Fisher.main(comp, likelihood,
+	                                 use_det_I=True, snap_choice=1)
+
+This is the recommended setting for new runs because it accounts for
+parameter correlations and rejects non-positive-definite Hessians. The
+published diagonal Fisher approximation remains available for comparison:
+
+.. code:: python
+
+	esr.fitting.test_all_Fisher.main(comp, likelihood,
+	                                 use_det_I=False, snap_choice=0)
+
+The diagonal option reproduces the diagonal codelength formula, but runs
+through the current corrected pipeline rather than reproducing every
+historical side effect of older ESR versions.
+
+If a likelihood's ``run_sympify`` method removes or relabels parameters
+for example by normalising a generated expression, ESR builds a
+likelihood-aware catalogue automatically. It fits one representative for
+each transformed symbolic model family, then maps the result back to all
+raw expressions so their original tree complexities can still enter the
+final description length.
+
+Numerical duplicate checks are available only as an opt-in diagnostic:
+
+.. code:: python
+
+	esr.generation.duplicate_checker.main(
+	    runname, comp, diagnose_numerical_duplicates=True)
+
+The diagnostic writes candidate fingerprint collisions but does not remove
+or remap equations. Matching numerical fingerprints should be treated as
+possible missed identities, not as proof of model equivalence.
 
 Licence and Citation
 ====================
@@ -152,4 +197,3 @@ Acknowledgements
 ================
 DJB is supported by the Simons Collaboration on "Learning the Universe" and was supported by STFC and Oriel College, Oxford.
 HD is supported by a Royal Society University Research Fellowship (grant no. 211046).
-

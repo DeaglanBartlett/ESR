@@ -20,12 +20,13 @@ from esr.fitting.sympy_symbols import (
 )
 
 # ---------------------------------------------------------------------------
-# Numerical fingerprinting for deduplication
+# Numerical fingerprinting diagnostics
 # ---------------------------------------------------------------------------
 
 # Fixed random evaluation points (deterministic seed for reproducibility).
-# x sampled from a safe positive domain (ESR convention: x > 0).
-# Parameters in a moderate range to avoid overflow/underflow.
+# These points make fingerprinting reproducible, but are not a proof of
+# function or model-family equivalence: they do not cover boundaries,
+# singularities, or all allowed parameter signs and domains.
 _FPRINT_RNG = np.random.RandomState(42)
 _FPRINT_N_POINTS = 60
 _FPRINT_MAX_PARAMS = 20
@@ -38,10 +39,13 @@ _FPRINT_PARAM_POINTS = {
 
 
 def numerical_fingerprint(expr, max_param=None):
-    """Compute a numerical fingerprint for a sympy expression.
+    """Compute a heuristic numerical fingerprint for a sympy expression.
 
     Evaluates at fixed random points using numpy (via sympy.lambdify) for speed.
     Returns a tuple of float values, or None if evaluation fails at too many points.
+    A matching fingerprint is only a candidate equivalence: it cannot establish
+    equality at unsampled boundaries or singularities, nor equivalence between
+    real-parameter model families.
 
     Args:
         :expr: sympy expression
@@ -145,12 +149,16 @@ def fingerprint_to_hash(fp):
     return hashlib.md5(key.encode()).hexdigest()
 
 
-def numerical_dedup(uniq_fun, max_param=None, verbose=True):
-    """Remove numerical duplicates from unique functions using fingerprinting.
+def numerical_duplicate_candidates(uniq_fun, max_param=None, verbose=True):
+    """Identify candidate numerical collisions without removing expressions.
 
     Takes the list of unique function strings, converts each to a sympy expression,
-    computes numerical fingerprints, and groups functions with identical hashes.
-    For each group, keeps the first entry.
+    computes numerical fingerprints, and returns groups with identical hashes.
+
+    This is a diagnostic only. Matching finite samples are not sufficient to
+    merge ESR expressions: callers must separately verify the variable domain,
+    boundaries and singularities, real parameter domains/reparameterisations,
+    and description-length/model-counting semantics.
 
     Args:
         :uniq_fun (list): list of unique function strings
@@ -158,16 +166,15 @@ def numerical_dedup(uniq_fun, max_param=None, verbose=True):
         :verbose (bool, default=True): whether to print progress
 
     Returns:
-        :deduped_fun (list): deduplicated list of function strings
-        :dedup_map (dict): maps index in uniq_fun to index in deduped_fun
+        :candidate_groups (list): list of ``(hash, indexes)`` tuples, one
+            for each hash shared by at least two expressions. ``indexes``
+            indexes ``uniq_fun``.
     """
     if rank == 0 and verbose:
-        print('\nNumerical deduplication', flush=True)
+        print('\nNumerical duplicate diagnostic (candidate groups only)', flush=True)
 
     n_orig = len(uniq_fun)
-    seen_hashes = {}  # hash -> index in deduped_fun
-    deduped_fun = []
-    dedup_map = {}  # old index -> new index
+    hash_indexes = OrderedDict()
 
     for i, fstr in enumerate(uniq_fun):
         if rank == 0 and verbose and (i % 500 == 0):
@@ -176,33 +183,28 @@ def numerical_dedup(uniq_fun, max_param=None, verbose=True):
         try:
             expr = sympy.sympify(fstr, locals=sympy_locs)
         except Exception:
-            # Can't parse — keep as unique
-            idx = len(deduped_fun)
-            deduped_fun.append(fstr)
-            dedup_map[i] = idx
             continue
 
         fp = numerical_fingerprint(expr, max_param=max_param)
         h = fingerprint_to_hash(fp)
+        if h is not None:
+            hash_indexes.setdefault(h, []).append(i)
 
-        if h is None or h not in seen_hashes:
-            idx = len(deduped_fun)
-            deduped_fun.append(fstr)
-            if h is not None:
-                seen_hashes[h] = idx
-            dedup_map[i] = idx
-        else:
-            dedup_map[i] = seen_hashes[h]
+    candidate_groups = [
+        (h, indexes) for h, indexes in hash_indexes.items()
+        if len(indexes) > 1
+    ]
 
     if rank == 0 and verbose:
-        n_removed = n_orig - len(deduped_fun)
-        print(f'\tRemoved {n_removed} numerical duplicates '
-              f'({n_removed}/{n_orig} = {100*n_removed/max(n_orig,1):.1f}%)', flush=True)
+        n_flagged = sum(len(indexes) - 1 for _, indexes in candidate_groups)
+        print(f'\tFound {len(candidate_groups)} candidate groups containing '
+              f'{n_flagged} additional expressions '
+              f'({n_flagged}/{n_orig} = {100*n_flagged/max(n_orig,1):.1f}%)',
+              flush=True)
+        print('\tWARNING: candidates are not removed; verify exact model '
+              'equivalence before any catalogue change.', flush=True)
 
-    assert set(dedup_map.keys()) == set(range(n_orig)), \
-        "dedup_map does not cover all input indices"
-
-    return deduped_fun, dedup_map
+    return candidate_groups
 
 
 comm = MPI.COMM_WORLD
@@ -908,8 +910,8 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
     # If we find a zoo, let's make this a nan
     for i in range(len(sym_fun)):
         if sympy.zoo in sym_fun[i].atoms():
-            sym_fun[i] = sympy.core.numbers.NaN
-            str_fun[i] = str(sympy.core.numbers.NaN)
+            sym_fun[i] = sympy.nan
+            str_fun[i] = esrp.doprint(sym_fun[i])
 
     comm.Barrier()
 
@@ -942,7 +944,7 @@ def expand_or_factor(all_sym, tmax=1, method='expand'):
     p = ESRPrinter()
     if len(i) > 0:
         for j in range(i[0], i[-1]+1):
-            if vals[j] is sympy.core.numbers.NaN:
+            if vals[j] is sympy.nan:
                 continue
             try:
                 with time_limit(tmax):

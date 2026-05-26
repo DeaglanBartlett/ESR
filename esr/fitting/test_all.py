@@ -3,6 +3,9 @@ import sympy
 import warnings
 import os
 import sys
+import json
+import glob
+import re
 from mpi4py import MPI
 from scipy.optimize import minimize
 import itertools
@@ -47,6 +50,163 @@ def chi2_fcn(x, likelihood, eq_numpy, integrated, signs):
     return likelihood.negloglike(p, eq_numpy, integrated=integrated)
 
 
+def ensure_output_dirs(likelihood):
+    if rank == 0:
+        for dirname in [likelihood.base_out_dir, likelihood.out_dir, likelihood.temp_dir]:
+            if not os.path.exists(dirname):
+                print('Making dir:', dirname)
+            os.makedirs(dirname, exist_ok=True)
+    comm.Barrier()
+
+
+def _natural_sort_key(path):
+    return [int(text) if text.isdigit() else text
+            for text in re.split(r'(\d+)', path)]
+
+
+def combine_temp_files(temp_dir, pattern, output_file, remove=True):
+    """Concatenate rank-local temporary files in natural-sort order."""
+    paths = sorted(glob.glob(os.path.join(temp_dir, pattern)),
+                   key=_natural_sort_key)
+    with open(output_file, 'w') as fout:
+        for path in paths:
+            with open(path, 'r') as fin:
+                fout.writelines(fin)
+    if remove:
+        for path in paths:
+            os.remove(path)
+
+
+def likelihood_catalogue_paths(comp, likelihood):
+    prefix = os.path.join(likelihood.out_dir, 'likelihood_catalogue_comp' + str(comp))
+    return {
+        'unique': prefix + '_unique_equations.txt',
+        'matches': prefix + '_matches.txt',
+        'metadata': prefix + '_metadata.json',
+    }
+
+
+def _likelihood_catalogue_settings(tmax, try_integration):
+    return {
+        'version': 2,
+        'tmax': float(tmax),
+        'try_integration': bool(try_integration),
+    }
+
+
+def _read_likelihood_catalogue_metadata(comp, likelihood):
+    paths = likelihood_catalogue_paths(comp, likelihood)
+    try:
+        with open(paths['metadata'], 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+
+
+def likelihood_catalogue_active(comp, likelihood):
+    metadata = _read_likelihood_catalogue_metadata(comp, likelihood)
+    if metadata is None or not metadata.get('active', False):
+        return False
+    paths = likelihood_catalogue_paths(comp, likelihood)
+    return os.path.exists(paths['unique']) and os.path.exists(paths['matches'])
+
+
+def _canonical_transformed_key(fcn_i, likelihood, tmax, try_integration):
+    fcn_i, eq, integrated = likelihood.run_sympify(
+        fcn_i, tmax=tmax, try_integration=try_integration)
+    eq, active_params = canonicalize_parameter_symbols(eq)
+    try:
+        eq_key = sympy.factor(sympy.cancel(eq))
+    except Exception:
+        eq_key = eq
+    return (bool(integrated), sympy.srepr(eq_key)), [
+        symbol.name for symbol in active_params
+    ]
+
+
+def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False):
+    """Build a likelihood-aware catalogue when run_sympify changes parameter space."""
+    ensure_output_dirs(likelihood)
+    paths = likelihood_catalogue_paths(comp, likelihood)
+    settings = _likelihood_catalogue_settings(tmax, try_integration)
+    metadata = _read_likelihood_catalogue_metadata(comp, likelihood)
+    if metadata is not None and metadata.get('settings') == settings and (
+            not metadata.get('active', False) or likelihood_catalogue_active(comp, likelihood)):
+        comm.Barrier()
+        return metadata.get('active', False)
+
+    if rank == 0:
+        allfn_file = likelihood.fn_dir + \
+            "/compl_%i/all_equations_%i.txt" % (comp, comp)
+        unifn_file = likelihood.fn_dir + \
+            "/compl_%i/unique_equations_%i.txt" % (comp, comp)
+        with open(allfn_file, 'r') as f:
+            all_functions = [line.strip() for line in f]
+        with open(unifn_file, 'r') as f:
+            raw_unique_count = sum(1 for _ in f)
+
+        key_to_unique = {}
+        unique_representatives = []
+        matches = []
+        changed_layout_count = 0
+        failed_count = 0
+
+        max_param = int(max(4, np.floor((comp - 1) / 2)))
+        for index, fcn_i in enumerate(all_functions):
+            expected = [f'a{i}' for i in range(
+                simplifier.count_params([fcn_i], max_param)[0])]
+            try:
+                with simplifier.time_limit(tmax):
+                    key, active = _canonical_transformed_key(
+                        fcn_i, likelihood, tmax, try_integration)
+            except Exception:
+                failed_count += 1
+                key = ('failed', index, fcn_i)
+                active = expected
+
+            if active != expected:
+                changed_layout_count += 1
+
+            if key not in key_to_unique:
+                key_to_unique[key] = len(unique_representatives)
+                unique_representatives.append(fcn_i)
+            matches.append(key_to_unique[key])
+
+        active = changed_layout_count > 0
+        if active:
+            with open(paths['unique'], 'w') as f:
+                for fcn_i in unique_representatives:
+                    f.write(fcn_i + '\n')
+            with open(paths['matches'], 'w') as f:
+                for match in matches:
+                    f.write(str(match) + '\n')
+        else:
+            for path in [paths['unique'], paths['matches']]:
+                if os.path.exists(path):
+                    os.remove(path)
+
+        metadata = {
+            'active': bool(active),
+            'settings': settings,
+            'n_all': len(all_functions),
+            'n_unique': len(unique_representatives),
+            'raw_unique_count': raw_unique_count,
+            'changed_layout_count': changed_layout_count,
+            'failed_count': failed_count,
+        }
+        with open(paths['metadata'], 'w') as f:
+            json.dump(metadata, f, indent=2, sort_keys=True)
+        if active:
+            print('Using likelihood-aware catalogue: '
+                  f"{len(unique_representatives)} transformed families from "
+                  f"{len(all_functions)} equations; "
+                  f"{changed_layout_count} parameter-layout changes.",
+                  flush=True)
+    comm.Barrier()
+    metadata = _read_likelihood_catalogue_metadata(comp, likelihood)
+    return bool(metadata is not None and metadata.get('active', False))
+
+
 def get_functions(comp, likelihood, unique=True):
     """Load all functions for a given complexity to use and distribute among ranks
 
@@ -62,7 +222,9 @@ def get_functions(comp, likelihood, unique=True):
 
     """
 
-    if unique:
+    if unique and likelihood_catalogue_active(comp, likelihood):
+        unifn_file = likelihood_catalogue_paths(comp, likelihood)['unique']
+    elif unique:
         unifn_file = likelihood.fn_dir + \
             "/compl_%i/unique_equations_%i.txt" % (comp, comp)
     else:
@@ -72,12 +234,7 @@ def get_functions(comp, likelihood, unique=True):
     if comp >= 8:
         sys.setrecursionlimit(2000 + 500 * (comp - 8))
 
-    if rank == 0:
-        for dirname in [likelihood.base_out_dir, likelihood.out_dir, likelihood.temp_dir]:
-            if not os.path.isdir(dirname):
-                print('Making dir:', dirname)
-                os.mkdir(dirname)
-    comm.Barrier()
+    ensure_output_dirs(likelihood)
 
     if rank == 0:
         print("Number of cores:", size, flush=True)
@@ -99,7 +256,7 @@ def get_functions(comp, likelihood, unique=True):
         nLs -= 1
 
     if rank == 0:
-        print("Total number of functions: ", nLs, flush=True)
+        print("Total number of functions: ", total_lines, flush=True)
         print("Number of test points per proc: ", nLs, flush=True)
 
     data_start = rank*nLs
@@ -121,6 +278,32 @@ def get_functions(comp, likelihood, unique=True):
             fcn_list.append(line.strip())
 
     return fcn_list, data_start, data_end
+
+
+def canonicalize_parameter_symbols(eq):
+    """Rename surviving ESR parameters to a contiguous a0, a1, ... sequence."""
+    active_params = sorted(
+        [
+            symbol for symbol in eq.free_symbols
+            if symbol != x and symbol.name.startswith('a')
+            and symbol.name[1:].isdigit()
+        ],
+        key=lambda symbol: int(symbol.name[1:])
+    )
+    if len(active_params) == 0:
+        return eq, active_params
+
+    canonical = sympy.symbols(
+        ' '.join([f'a{i}' for i in range(len(active_params))]), real=True)
+    canonical = list(np.atleast_1d(canonical))
+    replacements = {
+        active_params[i]: canonical[i]
+        for i in range(len(active_params))
+        if active_params[i] != canonical[i]
+    }
+    if replacements:
+        eq = eq.subs(replacements, simultaneous=True)
+    return eq, active_params
 
 
 def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=[40, 60], Nconv_params=[5, 20], test_success=False, ignore_previous_eqns=True):
@@ -154,7 +337,6 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
 
     xvar = getattr(likelihood, 'xvar', None)
 
-    nparam = simplifier.count_params([fcn_i], max_param)[0]
     params = np.zeros(max_param)
 
     if comp > 1 and ignore_previous_eqns:
@@ -166,27 +348,23 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
         if fcn_i in previous_fns:
             return np.inf, params
 
-    Niter = int(np.sum(nparam ** np.arange(len(Niter_params))
-                * np.array(Niter_params)))
-    Nconv = int(np.sum(nparam ** np.arange(len(Nconv_params))
-                * np.array(Nconv_params)))
-    if (Nconv <= 0) or (Niter <= 0) or (Nconv > Niter):
-        raise ValueError("Nconv and/or Niter have unacceptable values")
-
     try:
         fcn_i, eq, integrated = likelihood.run_sympify(
             fcn_i, tmax=tmax, try_integration=try_integration)
 
-        # Check if the (possibly reduced) expression has free parameters.
-        # run_sympify may eliminate parameters (e.g. g(x)=a0 -> f_DE=1),
-        # so check the expression, not just the original string.
-        eq_has_params = "a0" in fcn_i
-        if integrated:
-            try:
-                eq_has_params = bool(eq.free_symbols - {x})
-            except Exception:
-                pass
-        if not eq_has_params:
+        # A likelihood transformation can remove a parameter without retaining
+        # a prefix, e.g. a0*(a1+x) / g(1) leaves a1. Fit a canonical parameter
+        # vector for the transformed expression rather than the original tree.
+        eq, active_params = canonicalize_parameter_symbols(eq)
+        nparam = len(active_params)
+        Niter = int(np.sum(nparam ** np.arange(len(Niter_params))
+                    * np.array(Niter_params)))
+        Nconv = int(np.sum(nparam ** np.arange(len(Nconv_params))
+                    * np.array(Nconv_params)))
+        if (Nconv <= 0) or (Niter <= 0) or (Nconv > Niter):
+            raise ValueError("Nconv and/or Niter have unacceptable values")
+
+        if nparam == 0:
             eq_numpy = sympy.lambdify(x, eq, modules=["numpy"])
             chi2_i = likelihood.negloglike([], eq_numpy, integrated=integrated)
             return chi2_i, params
@@ -394,6 +572,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
     if rank == 0:
         print('\nRunning fits', flush=True)
 
+    ensure_likelihood_catalogue(comp, likelihood, tmax, try_integration)
     fcn_list_proc, _, _ = get_functions(comp, likelihood)
 
     if rank == 0 and ignore_previous_eqns:
@@ -465,13 +644,10 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
     comm.Barrier()
 
     if rank == 0:
-        string = 'cat `find ' + likelihood.temp_dir + '/ -name "chi2_comp' + \
-            str(comp)+'weights_*.dat" | sort -V` > ' + \
-            likelihood.out_dir + '/negloglike_comp'+str(comp)+'.dat'
-        os.system(string)
-        string = 'rm ' + likelihood.temp_dir + \
-            '/chi2_comp'+str(comp)+'weights_*.dat'
-        os.system(string)
+        combine_temp_files(
+            likelihood.temp_dir,
+            'chi2_comp' + str(comp) + 'weights_*.dat',
+            likelihood.out_dir + '/negloglike_comp' + str(comp) + '.dat')
 
     comm.Barrier()
 

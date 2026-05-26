@@ -16,6 +16,29 @@ To generate all functions at a given complexity (here complexity 5), one simply 
 	comp = 5
 	esr.generation.duplicate_checker.main(runname, comp)
 
+Numerical duplicate diagnostic
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Symbolic simplification is used to generate the fitted catalogue. You may
+optionally generate a diagnostic list of expressions that agree on a fixed
+set of numerical evaluation points:
+
+.. code-block:: python
+
+	esr.generation.duplicate_checker.main(
+		runname, comp, diagnose_numerical_duplicates=True)
+
+This writes ``numerical_duplicate_candidates_<comp>.txt`` inside the
+corresponding function-library directory. The report is exploratory only:
+it does not remove equations or change the ``matches`` mapping.
+
+Matching numerical fingerprints are useful for locating possible missed
+identities, but must not be treated as proof of duplicate models. In
+particular, expressions may differ at boundaries or singularities, for
+different allowed signs or domains of their parameters, or in their
+description-length interpretation. Numerical candidates should be merged
+only after an application-specific exact equivalence check.
+
 
 In ``esr.generation.duplicate_checker`` we have  predefined a few sets of functions which we believe would be useful. However, one simply needs to add another option to the start of that script to define a new run:
 
@@ -43,9 +66,9 @@ where type 0, 1 and 2 functions are nullary, unary, and binary, respectively.
 Fitting to a dataset
 --------------------
 
-Suppose we have already generated the equations required for the ``CCLikelihood`` class. 
-In the following we show the steps that are required to fit the complexity 5 functions to these data. 
-The various ``fitting'' functions run rely on the output of the previous script, so the order cannot change. 
+Suppose we have already generated the equations required for the ``CCLikelihood`` class.
+In the following we show the steps that are required to fit the complexity 5 functions to these data.
+The various ``fitting`` functions rely on the output of the previous script, so the order cannot change.
 
 
 .. code-block:: python
@@ -66,7 +89,27 @@ The various ``fitting'' functions run rely on the output of the previous script,
 	esr.fitting.combine_DL.main(comp, likelihood)
 	esr.fitting.plot.main(comp, likelihood)
 
-Once you have run this more many complexities, you can plot the pareto front and save it to file using the following function.
+The Fisher stage defaults to determinant scoring with eigenbasis snapping:
+``use_det_I=True, snap_choice=1``. It writes these choices to the output
+directory, and ``match.main`` reads them back so that matching cannot silently
+use different settings from the Fisher calculation. To compare against the
+published diagonal parameter-codelength formula, run
+``test_all_Fisher.main(comp, likelihood, use_det_I=False, snap_choice=0)``
+and then ``match.main(comp, likelihood)``. This comparison uses the diagonal
+formula, but still includes current fixes in expression handling and Fisher
+validation, so it is not a byte-for-byte reproduction of an older ESR run.
+
+When ``likelihood.run_sympify`` removes or relabels parameters, for example
+through model normalisation, ESR builds a likelihood-aware catalogue. Raw
+equations are grouped by their exact symbolic transformed expression after
+canonical parameter relabelling; one raw representative is fitted for each
+transformed model family, while ``combine_DL`` still uses the raw expression's
+tree complexity for the final description length. If this catalogue changes,
+the code will fail loudly on stale row counts rather than reusing incompatible
+``test_all`` or Fisher outputs; rerun ``test_all.main`` and
+``test_all_Fisher.main`` with the current likelihood/settings.
+
+Once you have run this for many complexities, you can plot the pareto front and save it to file using the following function.
 
 .. code-block:: python
 
@@ -236,5 +279,3 @@ We also have a Poisson likelihood already implemented, which can be run as
         esr.fitting.match.main(comp, likelihood)
         esr.fitting.combine_DL.main(comp, likelihood)
         esr.fitting.plot.main(comp, likelihood)
-
-

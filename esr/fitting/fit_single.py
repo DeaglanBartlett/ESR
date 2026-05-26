@@ -9,7 +9,7 @@ import esr.generation.simplifier as simplifier
 
 def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
                     try_integration=False, verbose=False, Niter=30, Nconv=5, log_opt=False,
-                    return_params=False, use_det_I=True, snap_choice=2):
+                    return_params=False, use_det_I=True, snap_choice=1):
     """Run end-to-end fitting of function for a single function
 
     Args:
@@ -38,10 +38,11 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
             log space
         :return_params (bool, default=False): whether to return the parameters of the
             maximum likelihood point
-        :use_det_I (bool, default=True): If True, use full Hessian determinant for
-            codelen. If False, use diagonal elements only.
-        :snap_choice (int, default=2): Controls parameter snapping. 0: diagonal,
-            1: eigen-informed original-space, 2: full eigenbasis.
+        :use_det_I (bool, default=True): If True, use a positive-definite full
+            Hessian determinant for codelen. If False, use the published
+            diagonal parameter-codelength formula for comparison.
+        :snap_choice (int, default=1): Controls parameter snapping. 0:
+            diagonal, 1: eigenbasis.
 
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to
@@ -110,7 +111,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
 def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
                     try_integration=False, verbose=False, Niter=30, Nconv=5, maxvar=20,
                     log_opt=False, replace_floats=False, return_params=False, use_det_I=True,
-                    snap_choice=2):
+                    snap_choice=1):
     """Run end-to-end fitting of function for a single function, given as a string.
     Note that this is not guaranteed to find the optimimum representation as a tree,
     so there could be a lower description-length representation of the function
@@ -145,10 +146,11 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
             the function with variables to optimise
         :return_params (bool, default=False): whether to return the parameters of the
             maximum likelihood point
-        :use_det_I (bool, default=True): If True, use full Hessian determinant for
-            codelen. If False, use diagonal elements only.
-        :snap_choice (int, default=2): Controls parameter snapping. 0: diagonal,
-            1: eigen-informed original-space, 2: full eigenbasis.
+        :use_det_I (bool, default=True): If True, use a positive-definite full
+            Hessian determinant for codelen. If False, use the published
+            diagonal parameter-codelength formula for comparison.
+        :snap_choice (int, default=1): Controls parameter snapping. 0:
+            diagonal, 1: eigenbasis.
 
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to

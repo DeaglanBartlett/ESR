@@ -15,7 +15,8 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 
-def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed=1234):
+def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
+         seed=1234, diagnose_numerical_duplicates=False):
     """Run the generation of functions for a given complexity and set of basis functions
 
     Args:
@@ -25,6 +26,12 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         :search_tmax (float, default=60.): maximum time in seconds to run any one part of simplification procedure for a given function
         :expand_tmax (float, default=1.): maximum time in seconds to run any one part of expand/simplify procedure for a given function
         :seed (int, default=1234): seed to set random number generator for shuffling functions (used to prevent one rank having similar, hard to simplify functions)
+        :diagnose_numerical_duplicates (bool, default=False): whether to
+            write a report of expressions with matching numerical
+            fingerprints. This is diagnostic only and never removes or
+            remaps equations. Candidate groups require explicit verification
+            of variable/parameter domains, boundaries, singularities, and
+            description-length semantics before any manual catalogue change.
 
     Returns:
         None
@@ -158,14 +165,6 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
     uniq, match = utils.get_unique_indexes(all_fun)
     uniq_fun = list(uniq.keys())
 
-    # Numerical deduplication: catch duplicates that symbolic simplification misses
-    if rank == 0:
-        uniq_fun, dedup_map = simplifier.numerical_dedup(uniq_fun, max_param=max_param)
-    else:
-        dedup_map = None
-    dedup_map = comm.bcast(dedup_map, root=0)
-    uniq_fun = comm.bcast(uniq_fun, root=0)
-
     if rank == 0:
 
         #  Shuffle the unique equations
@@ -176,8 +175,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         np.random.shuffle(i)
         inv = {i[j]: j for j in range(len(i))}
         uniq_fun = [uniq_fun[ii] for ii in i]
-        # Compose mappings: all_fun -> symbolic uniq index -> numerical dedup index -> shuffled index
-        match_idx = [inv[dedup_map[match[f]]] for f in all_fun]
+        match_idx = [inv[match[f]] for f in all_fun]
 
         ntot = len(all_fun)
         del all_fun
@@ -295,6 +293,24 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         print('\nChecking Results', flush=True)
     if compl > 2:
         simplifier.check_results(dirname, compl)
+
+    if rank == 0 and diagnose_numerical_duplicates:
+        with open(dirname + '/unique_equations_%i.txt' % compl, 'r') as f:
+            final_uniq_fun = f.read().splitlines()
+        candidate_groups = simplifier.numerical_duplicate_candidates(
+            final_uniq_fun, max_param=max_param)
+        report_file = dirname + 'numerical_duplicate_candidates_%i.txt' % compl
+        with open(report_file, 'w') as f:
+            f.write('# Candidate numerical fingerprint collisions only.\n')
+            f.write('# No equations were removed or remapped by this diagnostic.\n')
+            f.write('# Verify exact equality over the required variable and '
+                    'parameter domains, including boundaries and singularities, '
+                    'before merging any expressions.\n')
+            for group_id, (fingerprint, indexes) in enumerate(candidate_groups):
+                f.write('\nGROUP %i HASH %s\n' % (group_id, fingerprint))
+                for index in indexes:
+                    f.write('%i\t%s\n' % (index, final_uniq_fun[index]))
+        print('Wrote numerical duplicate candidate report:', report_file, flush=True)
 
     sys.stdout.flush()
     comm.Barrier()

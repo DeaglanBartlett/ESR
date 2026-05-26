@@ -61,6 +61,50 @@ If you are unable to clone the repo with the above, try the https version instea
 
 	git clone https://github.com/DeaglanBartlett/ESR.git
 
+Current MDL behaviour
+=====================
+
+The fitting pipeline computes Fisher matrices after the maximum-likelihood
+fit and uses them in the parametric part of the minimum-description-length
+score. The default Fisher scoring uses the positive-definite full Hessian
+determinant with eigenbasis snapping:
+
+.. code:: python
+
+	esr.fitting.test_all_Fisher.main(comp, likelihood,
+	                                 use_det_I=True, snap_choice=1)
+
+This is the recommended setting for new runs because it accounts for
+parameter correlations and rejects non-positive-definite Hessians. The
+published diagonal Fisher approximation remains available for comparison:
+
+.. code:: python
+
+	esr.fitting.test_all_Fisher.main(comp, likelihood,
+	                                 use_det_I=False, snap_choice=0)
+
+The diagonal option reproduces the diagonal codelength formula, but runs
+through the current corrected pipeline rather than reproducing every
+historical side effect of older ESR versions.
+
+If a likelihood's ``run_sympify`` method removes or relabels parameters
+for example by normalising a generated expression, ESR builds a
+likelihood-aware catalogue automatically. It fits one representative for
+each transformed symbolic model family, then maps the result back to all
+raw expressions so their original tree complexities can still enter the
+final description length.
+
+Numerical duplicate checks are available only as an opt-in diagnostic:
+
+.. code:: python
+
+	esr.generation.duplicate_checker.main(
+	    runname, comp, diagnose_numerical_duplicates=True)
+
+The diagnostic writes candidate fingerprint collisions but does not remove
+or remap equations. Matching numerical fingerprints should be treated as
+possible missed identities, not as proof of model equivalence.
+
 Licence and Citation
 ====================
 
@@ -69,20 +113,22 @@ for which the following bibtex can be used
 
 .. code:: bibtex
 
-  @ARTICLE{2022arXiv2211.11461,
-       author = {{Bartlett}, D.~J. and {Desmond}, H. and {Ferreira}, P.~G.},
-        title = "{Exhaustive Symbolic Regression}",
-      journal = {arXiv e-prints},
-     keywords = {Astrophysics - Cosmology and Nongalactic Astrophysics},
-         year = 2022,
-        month = nov,
-          eid = {arXiv:2211.11461},
-        pages = {arXiv:2211.11461},
-  archivePrefix = {arXiv},
-       eprint = {2211.11461},
-  primaryClass = {astro-ph.CO},
-	  url = {https://arxiv.org/abs/2211.11461},
-  }
+	@ARTICLE{Bartlett_2022,
+		author={Bartlett, Deaglan J. and Desmond, Harry and Ferreira, Pedro G.},
+		journal={IEEE Transactions on Evolutionary Computation},
+		title={Exhaustive Symbolic Regression},
+		year={2024},
+		volume={28},
+		number={4},
+		pages={950-964},
+		keywords={Mathematical models;Complexity theory;Optimization;Numerical models;Biological system modeling;Standards;Search problems;Cosmology data analysis;minimum description length;model selection;symbolic regression (SR)},
+		doi={10.1109/TEVC.2023.3280250},
+		archivePrefix = "arXiv",
+		eprint = {2211.11461},
+		primaryClass = "astro-ph.CO",
+		adsurl = {https://ui.adsabs.harvard.edu/abs/2022arXiv221111461B},
+		adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+	}
 
 If the user uses the `pre-computed function sets <https://doi.org/10.5281/zenodo.7339113>`_ 
 then they must also cite
@@ -143,4 +189,3 @@ Acknowledgements
 ================
 DJB is supported by the Simons Collaboration on "Learning the Universe" and was supported by STFC and Oriel College, Oxford.
 HD is supported by a Royal Society University Research Fellowship (grant no. 211046).
-

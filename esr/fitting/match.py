@@ -3,7 +3,6 @@ import math
 import sympy
 from mpi4py import MPI
 import warnings
-import os
 import itertools
 import esr.fitting.test_all as test_all
 import esr.fitting.test_all_Fisher as test_all_Fisher
@@ -83,20 +82,19 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
             max_param = len(params)
             codelen = float(d[1])
 
-            # Evaluate the function with the stored parameters
-            k = simplifier.count_params([fcn_i], max_param)[0]
-            measured = params[:k]
-
             if 'zoo' in fcn_i:
                 # zoo functions can't be evaluated
                 continue
 
+            fcn_i, eq, integrated = likelihood.run_sympify(
+                fcn_i, tmax=tmax, try_integration=try_integration)
+            eq, active_params = test_all.canonicalize_parameter_symbols(eq)
+            k = len(active_params)
+            measured = params[:k]
+
             if np.any(np.isnan(measured)) or np.any(np.isinf(measured)):
                 # skip functions with invalid parameters
                 continue
-
-            fcn_i, eq, integrated = likelihood.run_sympify(
-                fcn_i, tmax=tmax, try_integration=try_integration)
 
             if k == 0:
                 eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
@@ -132,7 +130,7 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
     return total_nbad
 
 
-def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, use_det_I=True, snap_choice=2):
+def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, use_det_I=None, snap_choice=None):
     """Apply results of fitting the unique functions to all functions and save to file
 
     Args:
@@ -141,8 +139,12 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
         :print_frequency (int, default=1000): the status of the fits will be printed every ``print_frequency`` number of iterations
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
-        :use_det_I (bool, default=True): If True, use full Hessian determinant for codelen. If False, use diagonal elements only.
-        :snap_choice (int, default=2): Controls parameter snapping. 0: diagonal, 1: eigen-informed original-space, 2: full eigenbasis.
+        :use_det_I (bool, default=None): Fisher codelength setting. By default,
+            read the setting saved by ``test_all_Fisher.main``. A supplied
+            value must agree with that setting.
+        :snap_choice (int, default=None): Parameter snapping setting. By
+            default, read the setting saved by ``test_all_Fisher.main``.
+            Supported values are 0 (diagonal) and 1 (eigenbasis).
 
     Returns:
         None
@@ -165,12 +167,83 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         "/compl_%i/inv_subs_%i.txt" % (comp, comp)
     match_file = likelihood.fn_dir + "/compl_%i/matches_%i.txt" % (comp, comp)
 
+    test_all.ensure_likelihood_catalogue(comp, likelihood, tmax, try_integration)
     fcn_list_proc, data_start, data_end = test_all.get_functions(
         comp, likelihood, unique=False)
+
+    recorded_settings = test_all_Fisher.load_scoring_settings(comp, likelihood)
+    if recorded_settings is None:
+        if use_det_I is None or snap_choice is None:
+            raise ValueError(
+                'No saved Fisher settings found. Rerun test_all_Fisher or '
+                'supply both use_det_I and snap_choice explicitly.')
+    else:
+        if use_det_I is not None and bool(use_det_I) != recorded_settings['use_det_I']:
+            raise ValueError('match use_det_I does not agree with saved Fisher settings.')
+        if snap_choice is not None and int(snap_choice) != recorded_settings['snap_choice']:
+            raise ValueError('match snap_choice does not agree with saved Fisher settings.')
+        use_det_I = recorded_settings['use_det_I']
+        snap_choice = recorded_settings['snap_choice']
+    test_all_Fisher._validate_scoring_options(use_det_I, snap_choice)
 
     negloglike, params_meas = test_all_Fisher.load_loglike(
         comp, likelihood, data_start, data_end, split=False)
     max_param = params_meas.shape[1]
+
+    if test_all.likelihood_catalogue_active(comp, likelihood):
+        paths = test_all.likelihood_catalogue_paths(comp, likelihood)
+        with open(paths['matches'], 'r') as f:
+            matches_proc = np.fromiter(
+                (int(float(line.strip()))
+                 for line in itertools.islice(f, data_start, data_end)),
+                dtype=int
+            )
+        if len(matches_proc) != len(fcn_list_proc):
+            raise ValueError(
+                'Likelihood-aware match file is inconsistent with all-equation '
+                'catalogue. Rerun test_all.main and test_all_Fisher.main.')
+        codelen_unique = np.atleast_2d(np.genfromtxt(
+            likelihood.out_dir + '/codelen_comp' + str(comp) + '_deriv.dat'))
+        if codelen_unique.size == 0:
+            codelen_unique = np.empty((0, max_param + 2))
+        metadata = test_all._read_likelihood_catalogue_metadata(comp, likelihood)
+        expected_unique = metadata.get('n_unique') if metadata is not None else None
+        if expected_unique is not None and codelen_unique.shape[0] != expected_unique:
+            raise ValueError(
+                'Fisher output row count does not match the likelihood-aware '
+                'catalogue. Rerun test_all.main and test_all_Fisher.main with '
+                'the current catalogue/settings.')
+        codelen = np.full(len(fcn_list_proc), np.nan)
+        negloglike_all = np.full(len(fcn_list_proc), np.nan)
+        index_arr = np.zeros(len(fcn_list_proc))
+        params = np.zeros([len(fcn_list_proc), max_param])
+        for i, index in enumerate(matches_proc):
+            index_arr[i] = index
+            if index >= codelen_unique.shape[0]:
+                codelen[i] = np.inf
+                continue
+            codelen[i] = codelen_unique[index, 0]
+            negloglike_all[i] = codelen_unique[index, 1]
+            n_available = min(max_param, codelen_unique.shape[1] - 2)
+            params[i, :n_available] = codelen_unique[index, 2:2+n_available]
+
+        out_arr = np.transpose(np.vstack(
+            [negloglike_all, codelen, index_arr] + [params[:, i] for i in range(max_param)]))
+
+        np.savetxt(likelihood.temp_dir + '/codelen_matches_'+str(comp)+'_'+str(rank) +
+                   '.dat', out_arr, fmt='%.7e')
+
+        comm.Barrier()
+
+        if rank == 0:
+            test_all.combine_temp_files(
+                likelihood.temp_dir,
+                'codelen_matches_' + str(comp) + '_*.dat',
+                likelihood.out_dir + '/codelen_matches_comp' + str(comp) + '.dat')
+            print('Saved likelihood-aware matched output to', likelihood.out_dir, flush=True)
+
+        comm.Barrier()
+        return
 
     # all_inv_subs_proc = simplifier.load_subs(invsubs_file, max_param)[data_start:data_end]
     all_inv_subs_proc = simplifier.load_subs(
@@ -255,6 +328,9 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             continue
 
         if np.sum(fish_diag <= 0) > 0:
+            codelen[i] = np.inf
+            continue
+        if use_det_I and test_all_Fisher._has_negative_curvature(fish_mat):
             codelen[i] = np.inf
             continue
 
@@ -454,13 +530,10 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     comm.Barrier()
 
     if rank == 0:
-        string = 'cat `find ' + likelihood.temp_dir + '/ -name "codelen_matches_' + \
-            str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + \
-            '/codelen_matches_comp'+str(comp)+'.dat'
-        os.system(string)
-        string = 'rm ' + likelihood.temp_dir + \
-            '/codelen_matches_'+str(comp)+'_*.dat'
-        os.system(string)
+        test_all.combine_temp_files(
+            likelihood.temp_dir,
+            'codelen_matches_' + str(comp) + '_*.dat',
+            likelihood.out_dir + '/codelen_matches_comp' + str(comp) + '.dat')
 
         print('Saved output to', likelihood.out_dir, flush=True)
 

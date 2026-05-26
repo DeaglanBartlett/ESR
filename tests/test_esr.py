@@ -3,6 +3,7 @@ import os
 import sys
 import matplotlib.pyplot as plt
 import unittest
+import pytest
 
 import esr.generation.duplicate_checker
 import esr.generation.generator as generator
@@ -293,8 +294,7 @@ def test_node():
 
 
 def test_snap_choices():
-    """Test all three snap_choice modes produce finite results and
-    that snap_choice=0 with use_det_I=False matches the original ESR behaviour."""
+    """Test the supported snap modes and reject the unimplemented mode."""
 
     likelihood = MockLikelihood(320, 0.2)
     labels = ["+", "a0", "*", "a1", "pow", "x", "3"]
@@ -303,7 +303,7 @@ def test_snap_choices():
                        ["+", "*", "-", "/", "pow"]]
 
     results = {}
-    for sc in [0, 1, 2]:
+    for sc in [0, 1]:
         for det_I in [True, False]:
             nll, DL = single_function(labels, basis_functions, likelihood,
                                       verbose=False, use_det_I=det_I, snap_choice=sc)
@@ -311,14 +311,12 @@ def test_snap_choices():
             assert np.isfinite(DL), f"snap_choice={sc}, use_det_I={det_I}: DL not finite"
             results[(sc, det_I)] = (nll, DL)
 
-    # snap_choice=0, use_det_I=False should match snap_choice=1/2 use_det_I=False
-    # when eigendecomposition doesn't change the snap decision (all Nsteps >= 1)
-    # At minimum, all modes should agree on negloglike for this well-conditioned case
-    nlls = [results[(sc, True)][0] for sc in [0, 1, 2]]
+    nlls = [results[(sc, True)][0] for sc in [0, 1]]
     assert np.allclose(nlls, nlls[0], atol=1e-4), f"negloglike differs across snap_choices: {nlls}"
 
-    # When Hessian is diagonal, det(I) and diagonal should give the same codelen
-    # (this is an invariant-based test)
+    with pytest.raises(ValueError, match="snap_choice must be 0 or 1"):
+        single_function(labels, basis_functions, likelihood,
+                        verbose=False, use_det_I=True, snap_choice=-1)
 
     return
 
@@ -363,6 +361,22 @@ def test_compute_codelen():
     # Non-positive-definite: codelen should be inf
     H_bad = np.array([[100.0, 200.0], [200.0, 100.0]])  # det = -30000
     assert _compute_codelen(H_bad, diag, theta, mask, True) == np.inf
+    # A saddle can have positive determinant if it has two negative directions.
+    H_even_saddle = np.array([[1.0, 2.0, 2.0],
+                              [2.0, 1.0, 2.0],
+                              [2.0, 2.0, 1.0]])
+    assert _compute_codelen(
+        H_even_saddle, np.diag(H_even_saddle), np.ones(3),
+        np.ones(3, dtype=bool), True) == np.inf
+
+    # The determinant scorer floors unresolved parameter contributions; the
+    # explicit diagonal comparison retains the published raw formula.
+    theta_small = np.array([1.e-8])
+    assert _compute_codelen(
+        np.array([[100.0]]), np.array([100.0]), theta_small,
+        np.array([True]), True) > _compute_codelen(
+            np.array([[100.0]]), np.array([100.0]), theta_small,
+            np.array([True]), False)
 
     # Partial mask: only keep first parameter
     mask1 = np.array([True, False])
@@ -377,15 +391,15 @@ def test_compute_snap_mask():
     """Unit tests for _compute_snap_mask with known analytic cases."""
     from esr.fitting.test_all_Fisher import _compute_snap_mask
 
-    # Well-constrained 2-param case: no snapping for any mode, not degenerate
+    # Well-constrained 2-param case: no snapping for either supported mode
     H = np.array([[1000.0, 0.0], [0.0, 1000.0]])
     diag = np.array([1000.0, 1000.0])
     theta = np.array([5.0, 3.0])
     Nsteps_diag = np.abs(theta) / np.sqrt(12. / diag)  # both >> 1
-    for sc in [0, 1, 2]:
+    for sc in [0, 1]:
         result, degen = _compute_snap_mask(H, diag, theta, Nsteps_diag.copy(), sc)
         assert np.all(result >= 1), f"snap_choice={sc}: should not snap well-constrained params"
-        if sc in (1, 2):
+        if sc == 1:
             assert not degen, f"snap_choice={sc}: well-conditioned Hessian should not be degenerate"
 
     # snap_choice=0: returns input Nsteps unchanged, not degenerate
@@ -399,30 +413,134 @@ def test_compute_snap_mask():
     diag_degen = np.array([100.0, 100.0])
     theta_small = np.array([0.001, 0.001])
     Nsteps_diag_small = np.abs(theta_small) / np.sqrt(12. / diag_degen)
-    # snap_choice=1 or 2 should identify the unconstrained direction
-    for sc in [1, 2]:
-        result, degen = _compute_snap_mask(H_degen, diag_degen, theta_small, Nsteps_diag_small.copy(), sc)
-        assert np.sum(result < 1) >= 1, f"snap_choice={sc}: should snap at least one param for degenerate Hessian"
-        # eigenvalue 1 is above 199 * 1e-6 = 0.000199, so NOT degenerate by threshold
-        # (degenerate flag depends on the relative threshold, not absolute smallness)
+    result, degen = _compute_snap_mask(
+        H_degen, diag_degen, theta_small, Nsteps_diag_small.copy(), 1)
+    assert np.sum(result < 1) >= 1
 
-    # Non-positive eigenvalue: should always trigger snap and flag degenerate
+    # Negative curvature is not treated as a removable degeneracy.
     H_nonposdef = np.array([[1.0, 2.0], [2.0, 1.0]])  # eigenvalues: -1, 3
     diag_npd = np.array([1.0, 1.0])
     theta_npd = np.array([5.0, 5.0])
     Nsteps_npd = np.abs(theta_npd) / np.sqrt(12. / diag_npd)
-    for sc in [1, 2]:
-        result, degen = _compute_snap_mask(H_nonposdef, diag_npd, theta_npd, Nsteps_npd.copy(), sc)
-        assert np.sum(result < 1) >= 1, f"snap_choice={sc}: should snap for non-positive eigenvalue"
-        assert degen, f"snap_choice={sc}: non-positive eigenvalue should be flagged degenerate"
+    result, degen = _compute_snap_mask(
+        H_nonposdef, diag_npd, theta_npd, Nsteps_npd.copy(), 1)
+    assert np.allclose(result, Nsteps_npd)
+    assert not degen
+
+    with pytest.raises(ValueError, match="snap_choice must be 0 or 1"):
+        _compute_snap_mask(H, diag, theta, Nsteps_diag.copy(), -1)
 
     return
 
 
-def test_numerical_fingerprint():
-    """Unit tests for numerical_fingerprint and fingerprint_to_hash."""
+def test_reduced_parameters_are_canonicalized():
     import sympy
-    from esr.generation.simplifier import numerical_fingerprint, fingerprint_to_hash
+    from esr.fitting.sympy_symbols import x
+
+    a0, a1 = sympy.symbols('a0 a1', real=True)
+    eq, active = esr.fitting.test_all.canonicalize_parameter_symbols(
+        (a1 + x) / (a1 + 1))
+    assert [symbol.name for symbol in active] == ['a1']
+    assert {symbol.name for symbol in eq.free_symbols} == {'x', 'a0'}
+
+
+def test_fisher_settings_are_persisted(tmp_path):
+    class Likelihood:
+        out_dir = str(tmp_path)
+
+    esr.fitting.test_all_Fisher.save_scoring_settings(7, Likelihood, True, 1)
+    assert esr.fitting.test_all_Fisher.load_scoring_settings(7, Likelihood) == {
+        'use_det_I': True, 'snap_choice': 1}
+
+
+def test_likelihood_aware_catalogue_groups_transformed_models(tmp_path):
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    class NormalisingLikelihood:
+        is_mse = False
+        base_out_dir = str(tmp_path / 'out_base')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+        fn_dir = str(tmp_path / 'functions')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            eq = sympy.sympify(fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), True
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    all_functions = ['a0*(a1 + x)', 'a2 + x', 'a0*x']
+    (compl_dir / f'all_equations_{comp}.txt').write_text('\n'.join(all_functions) + '\n')
+    (compl_dir / f'unique_equations_{comp}.txt').write_text('\n'.join(all_functions) + '\n')
+
+    likelihood = NormalisingLikelihood()
+    assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5,
+                                                try_integration=False)
+    paths = test_all.likelihood_catalogue_paths(comp, likelihood)
+    with open(paths['matches']) as f:
+        matches = [int(line) for line in f]
+    assert matches[0] == matches[1]
+    assert matches[2] != matches[0]
+
+
+def test_likelihood_aware_match_uses_transformed_representatives(tmp_path):
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import match, test_all, test_all_Fisher
+
+    class NormalisingLikelihood:
+        is_mse = False
+        base_out_dir = str(tmp_path / 'out_base')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+        fn_dir = str(tmp_path / 'functions')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            eq = sympy.sympify(fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), True
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    all_functions = ['a0*(a1 + x)', 'a2 + x', 'a0*x']
+    (compl_dir / f'all_equations_{comp}.txt').write_text('\n'.join(all_functions) + '\n')
+    (compl_dir / f'unique_equations_{comp}.txt').write_text('\n'.join(all_functions) + '\n')
+
+    likelihood = NormalisingLikelihood()
+    assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5,
+                                                try_integration=False)
+    test_all_Fisher.save_scoring_settings(comp, likelihood, True, 1)
+    # match.main needs a negloglike file only to infer the parameter-column width
+    # in the likelihood-aware branch; it takes NLLs/parameters from codelen_comp.
+    np.savetxt(tmp_path / 'out' / f'negloglike_comp{comp}.dat',
+               np.array([[10.0, 2.0, 0.0, 0.0, 0.0],
+                         [20.0, 3.0, 0.0, 0.0, 0.0]]))
+    np.savetxt(tmp_path / 'out' / f'codelen_comp{comp}_deriv.dat',
+               np.array([[1.5, 10.0, 2.0, 0.0, 0.0, 0.0],
+                         [2.5, 20.0, 3.0, 0.0, 0.0, 0.0]]))
+
+    match.main(comp, likelihood)
+
+    matched = np.loadtxt(tmp_path / 'out' / f'codelen_matches_comp{comp}.dat')
+    assert matched.shape == (3, 7)
+    assert matched[0, 2] == matched[1, 2] == 0
+    assert matched[2, 2] == 1
+    np.testing.assert_allclose(matched[0, :], matched[1, :])
+    assert matched[2, 0] == 20.0
+    assert matched[2, 1] == 2.5
+
+
+def test_numerical_fingerprint():
+    """Unit tests for the numerical fingerprint diagnostic."""
+    import sympy
+    from esr.generation.simplifier import (
+        fingerprint_to_hash, numerical_duplicate_candidates,
+        numerical_fingerprint)
 
     x = sympy.Symbol('x', positive=True)
     a0, a1 = sympy.symbols('a0 a1', real=True)
@@ -467,5 +585,57 @@ def test_numerical_fingerprint():
     h2 = fingerprint_to_hash(fp)
     assert h1 == h2
     assert isinstance(h1, str) and len(h1) == 32  # MD5 hex digest
+
+    # A matching fingerprint is not proof of expression/model equivalence.
+    # These pairs agree on the positive diagnostic grid but differ at an
+    # unsampled boundary or for negative real parameter values.
+    diagnostic_only = [
+        '1 - x**2',
+        'x*(-x + 1/x)',
+        'a1/(x + Abs(a0))',
+        'Abs(a1)/(a0 + x)',
+    ]
+    groups = numerical_duplicate_candidates(diagnostic_only, max_param=2,
+                                            verbose=False)
+    grouped = [{diagnostic_only[i] for i in indexes} for _, indexes in groups]
+    assert {'1 - x**2', 'x*(-x + 1/x)'} in grouped
+    assert {'a1/(x + Abs(a0))', 'Abs(a1)/(a0 + x)'} in grouped
+    assert diagnostic_only == [
+        '1 - x**2',
+        'x*(-x + 1/x)',
+        'a1/(x + Abs(a0))',
+        'Abs(a1)/(a0 + x)',
+    ]
+
+    return
+
+
+def test_numerical_duplicate_diagnostic_does_not_change_catalogue():
+    """The optional collision report must not filter or remap equations."""
+    comp = 3
+    fn_dir = os.path.join(os.path.dirname(generator.__file__), '..',
+                          'function_library', 'core_maths',
+                          f'compl_{comp}')
+    unique_path = os.path.join(fn_dir, f'unique_equations_{comp}.txt')
+    match_path = os.path.join(fn_dir, f'matches_{comp}.txt')
+
+    esr.generation.duplicate_checker.main('core_maths', comp)
+    with open(unique_path) as f:
+        unique_default = f.read()
+    with open(match_path) as f:
+        matches_default = f.read()
+
+    esr.generation.duplicate_checker.main(
+        'core_maths', comp, diagnose_numerical_duplicates=True)
+    with open(unique_path) as f:
+        assert f.read() == unique_default
+    with open(match_path) as f:
+        assert f.read() == matches_default
+    report_path = os.path.join(
+        fn_dir, f'numerical_duplicate_candidates_{comp}.txt')
+    with open(report_path) as f:
+        report = f.read()
+    assert 'Candidate numerical fingerprint collisions only' in report
+    assert 'No equations were removed or remapped' in report
 
     return
