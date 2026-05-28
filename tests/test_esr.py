@@ -218,7 +218,7 @@ def test_gaussian_dynamic_mpi(tmp_path):
     env.setdefault('OMPI_ALLOW_RUN_AS_ROOT', '1')
     env.setdefault('OMPI_ALLOW_RUN_AS_ROOT_CONFIRM', '1')
     result = subprocess.run(
-        ['mpiexec', '-n', '3', sys.executable, str(script)],
+        ['mpiexec', '--oversubscribe', '-n', '3', sys.executable, str(script)],
         cwd=os.getcwd(),
         env=env,
         text=True,
