@@ -1,6 +1,9 @@
 import numpy as np
 import os
+import shutil
+import subprocess
 import sys
+import textwrap
 import matplotlib.pyplot as plt
 import unittest
 import pytest
@@ -146,6 +149,84 @@ def test_gaussian(monkeypatch):
     esr.fitting.match.check_match_results(comp, likelihood)
     esr.fitting.combine_DL.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
+
+    return
+
+
+def test_gaussian_dynamic_mpi(tmp_path):
+
+    if shutil.which('mpiexec') is None:
+        pytest.skip('mpiexec not available')
+    if esr.fitting.test_all.size > 1:
+        pytest.skip('do not launch nested MPI jobs')
+
+    script = tmp_path / 'dynamic_smoke.py'
+    script.write_text(textwrap.dedent("""
+        import os
+        import sys
+
+        import numpy as np
+        from mpi4py import MPI
+
+        sys.path.insert(0, os.environ['ESR_REPO'])
+
+        from esr.fitting.likelihood import GaussLikelihood
+        import esr.fitting.test_all as test_all
+
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        data_dir = os.environ['ESR_MPI_TEST_DIR']
+
+        if rank == 0:
+            x = np.linspace(0.2, 1.0, 6)
+            y = 2.0 * x
+            yerr = np.ones_like(x)
+            np.savetxt(
+                os.path.join(data_dir, 'data.txt'),
+                np.column_stack([x, y, yerr]))
+
+        comm.Barrier()
+        likelihood = GaussLikelihood(
+            'data.txt', 'dynamic_smoke', data_dir=data_dir)
+        test_all.main(
+            3,
+            likelihood,
+            tmax=1,
+            Niter_params=[1],
+            Nconv_params=[1],
+            dynamic=True,
+            print_frequency=2)
+
+        if rank == 0:
+            output = os.path.join(
+                likelihood.out_dir, 'negloglike_comp3.dat')
+            checkpoint = output.replace('.dat', '.checkpoint.dat')
+            arr = np.loadtxt(output)
+            with open(os.path.join(
+                    likelihood.fn_dir,
+                    'compl_3',
+                    'unique_equations_3.txt'), 'r') as f:
+                n_functions = sum(1 for _ in f)
+            assert arr.shape[0] == n_functions
+            assert not os.path.exists(checkpoint)
+            print('MPI_DYNAMIC_SMOKE_OK', arr.shape, flush=True)
+    """))
+
+    env = os.environ.copy()
+    env['ESR_REPO'] = os.getcwd()
+    env['ESR_MPI_TEST_DIR'] = str(tmp_path)
+    env.setdefault('OMPI_ALLOW_RUN_AS_ROOT', '1')
+    env.setdefault('OMPI_ALLOW_RUN_AS_ROOT_CONFIRM', '1')
+    result = subprocess.run(
+        ['mpiexec', '-n', '3', sys.executable, str(script)],
+        cwd=os.getcwd(),
+        env=env,
+        text=True,
+        capture_output=True,
+        timeout=120)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'Dynamic scheduling:' in result.stdout
+    assert 'MPI_DYNAMIC_SMOKE_OK' in result.stdout
 
     return
 

@@ -89,6 +89,15 @@ The various ``fitting`` functions rely on the output of the previous script, so 
 	esr.fitting.combine_DL.main(comp, likelihood)
 	esr.fitting.plot.main(comp, likelihood)
 
+For MPI runs, ``test_all.main`` uses dynamic rank-0 work dispatch by default
+when there are at least two worker ranks and more functions than ranks. This
+avoids long idle tails when different expressions take very different amounts
+of time to optimise. To reproduce the original static rank partitioning, call
+``test_all.main(comp, likelihood, dynamic=False)``. Dynamic runs write the
+same final ``negloglike_comp*.dat`` file as static runs, and also write a
+temporary ``*.checkpoint.dat`` file during long jobs; downstream stages should
+use the final file after the run completes.
+
 The Fisher stage defaults to determinant scoring with eigenbasis snapping:
 ``use_det_I=True, snap_choice=1``. It writes these choices to the output
 directory, and ``match.main`` reads them back so that matching cannot silently

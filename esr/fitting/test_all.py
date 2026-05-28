@@ -19,6 +19,10 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
+WORK_TAG = 11
+RESULT_TAG = 12
+STOP_TAG = 13
+
 
 def chi2_fcn(x, likelihood, eq_numpy, integrated, signs):
     """Compute chi2 for a function
@@ -75,6 +79,27 @@ def combine_temp_files(temp_dir, pattern, output_file, remove=True):
     if remove:
         for path in paths:
             os.remove(path)
+
+
+def write_negloglike_file(path, chi2, params, max_param):
+    out_arr = np.transpose(
+        np.vstack([chi2] + [params[:, i] for i in range(max_param)]))
+    np.savetxt(path, out_arr, fmt='%.7e')
+
+
+def function_catalogue_path(comp, likelihood, unique=True):
+    if unique and likelihood_catalogue_active(comp, likelihood):
+        return likelihood_catalogue_paths(comp, likelihood)['unique']
+    if unique:
+        return likelihood.fn_dir + \
+            "/compl_%i/unique_equations_%i.txt" % (comp, comp)
+    return likelihood.fn_dir + \
+        "/compl_%i/all_equations_%i.txt" % (comp, comp)
+
+
+def set_recursionlimit_for_comp(comp):
+    if comp >= 8:
+        sys.setrecursionlimit(2000 + 500 * (comp - 8))
 
 
 def likelihood_catalogue_paths(comp, likelihood):
@@ -237,17 +262,8 @@ def get_functions(comp, likelihood, unique=True):
 
     """
 
-    if unique and likelihood_catalogue_active(comp, likelihood):
-        unifn_file = likelihood_catalogue_paths(comp, likelihood)['unique']
-    elif unique:
-        unifn_file = likelihood.fn_dir + \
-            "/compl_%i/unique_equations_%i.txt" % (comp, comp)
-    else:
-        unifn_file = likelihood.fn_dir + \
-            "/compl_%i/all_equations_%i.txt" % (comp, comp)
-
-    if comp >= 8:
-        sys.setrecursionlimit(2000 + 500 * (comp - 8))
+    unifn_file = function_catalogue_path(comp, likelihood, unique=unique)
+    set_recursionlimit_for_comp(comp)
 
     ensure_output_dirs(likelihood)
 
@@ -295,6 +311,26 @@ def get_functions(comp, likelihood, unique=True):
     return fcn_list, data_start, data_end
 
 
+def get_all_functions(comp, likelihood, unique=True):
+    """Load all functions for dynamic MPI scheduling."""
+    unifn_file = function_catalogue_path(comp, likelihood, unique=unique)
+    set_recursionlimit_for_comp(comp)
+    with open(unifn_file, "r") as f:
+        return [line.strip() for line in f]
+
+
+def get_function_count(comp, likelihood, unique=True):
+    """Return the number of functions in the active catalogue."""
+    set_recursionlimit_for_comp(comp)
+    if rank == 0:
+        unifn_file = function_catalogue_path(comp, likelihood, unique=unique)
+        with open(unifn_file, "r") as f:
+            total_lines = sum(1 for _ in f)
+    else:
+        total_lines = None
+    return comm.bcast(total_lines, root=0)
+
+
 def canonicalize_parameter_symbols(eq):
     """Rename surviving ESR parameters to a contiguous a0, a1, ... sequence."""
     active_params = sorted(
@@ -319,6 +355,140 @@ def canonicalize_parameter_symbols(eq):
     if replacements:
         eq = eq.subs(replacements, simultaneous=True)
     return eq, active_params
+
+
+def _fit_function_with_timeout(fcn_i, likelihood, tmax, pmin, pmax, comp,
+                               try_integration, log_opt, max_param,
+                               Niter_params, Nconv_params,
+                               ignore_previous_eqns):
+    params = np.zeros(max_param)
+    chi2_i = np.nan
+    try:
+        with simplifier.time_limit(tmax):
+            try:
+                chi2_i, params = optimise_fun(
+                    fcn_i,
+                    likelihood,
+                    tmax,
+                    pmin,
+                    pmax,
+                    comp=comp,
+                    try_integration=try_integration,
+                    log_opt=log_opt,
+                    max_param=max_param,
+                    Niter_params=Niter_params,
+                    Nconv_params=Nconv_params,
+                    ignore_previous_eqns=ignore_previous_eqns)
+            except NameError:
+                if try_integration:
+                    chi2_i, params = optimise_fun(
+                        fcn_i,
+                        likelihood,
+                        tmax,
+                        pmin,
+                        pmax,
+                        comp=comp,
+                        try_integration=False,
+                        log_opt=log_opt,
+                        max_param=max_param,
+                        Niter_params=Niter_params,
+                        Nconv_params=Nconv_params,
+                        ignore_previous_eqns=ignore_previous_eqns)
+                else:
+                    raise NameError
+    except Exception as e:
+        print(e, flush=True)
+        chi2_i = np.nan
+        params[:] = 0.
+    return chi2_i, params
+
+
+def _main_dynamic(comp, likelihood, fcn_list, tmax, pmin, pmax,
+                  print_frequency, try_integration, log_opt, max_param,
+                  Niter_params, Nconv_params, ignore_previous_eqns):
+    """Run test_all with rank-0 work dispatch to avoid straggler ranks."""
+    if rank == 0:
+        n_functions = len(fcn_list)
+        n_workers = size - 1
+        print(
+            f"Dynamic scheduling: {n_functions} functions across "
+            f"{n_workers} workers",
+            flush=True)
+
+        chi2 = np.full(n_functions, np.nan)
+        params = np.zeros([n_functions, max_param])
+        checkpoint_file = (
+            likelihood.out_dir + '/negloglike_comp' + str(comp)
+            + '.checkpoint.dat')
+        output_file = (
+            likelihood.out_dir + '/negloglike_comp' + str(comp) + '.dat')
+        next_index = 0
+        active = 0
+
+        for worker in range(1, size):
+            if next_index < n_functions:
+                comm.send(
+                    (next_index, fcn_list[next_index]),
+                    dest=worker,
+                    tag=WORK_TAG)
+                next_index += 1
+                active += 1
+            else:
+                comm.send(None, dest=worker, tag=STOP_TAG)
+
+        completed = 0
+        checkpoint_frequency = max(print_frequency, 50)
+        while active:
+            status = MPI.Status()
+            index, chi2_i, params_i = comm.recv(
+                source=MPI.ANY_SOURCE, tag=RESULT_TAG, status=status)
+            worker = status.Get_source()
+            chi2[index] = chi2_i
+            params[index, :] = params_i
+            completed += 1
+            if completed == 1 or completed % print_frequency == 0:
+                print(f"{completed} of {n_functions}", flush=True)
+            if completed % checkpoint_frequency == 0:
+                write_negloglike_file(
+                    checkpoint_file, chi2, params, max_param)
+
+            if next_index < n_functions:
+                comm.send(
+                    (next_index, fcn_list[next_index]),
+                    dest=worker,
+                    tag=WORK_TAG)
+                next_index += 1
+            else:
+                comm.send(None, dest=worker, tag=STOP_TAG)
+                active -= 1
+
+        write_negloglike_file(output_file, chi2, params, max_param)
+        if os.path.exists(checkpoint_file):
+            os.remove(checkpoint_file)
+    else:
+        while True:
+            status = MPI.Status()
+            payload = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
+            if status.Get_tag() == STOP_TAG:
+                break
+            index, fcn_i = payload
+            chi2_i, params_i = _fit_function_with_timeout(
+                fcn_i,
+                likelihood,
+                tmax,
+                pmin,
+                pmax,
+                comp,
+                try_integration,
+                log_opt,
+                max_param,
+                Niter_params,
+                Nconv_params,
+                ignore_previous_eqns)
+            comm.send((index, chi2_i, params_i), dest=0, tag=RESULT_TAG)
+
+    comm.Barrier()
+    return
 
 
 def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=[40, 60], Nconv_params=[5, 20], test_success=False, ignore_previous_eqns=True):
@@ -556,7 +726,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
     return chi2_i, params
 
 
-def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=[40, 60], Nconv_params=[5, 20], ignore_previous_eqns=False):
+def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=[40, 60], Nconv_params=[5, 20], ignore_previous_eqns=False, dynamic=True):
     """Optimise all functions for a given complexity and save results to file.
 
     This can optimise in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
@@ -578,6 +748,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
         :Niter_params (list, default=[40, 60]): Parameters determining maximum number of parameter optimisation iterations to attempt.
         :Nconv_params (list, default=[-5, 20]): If we find Nconv solutions for the parameters which are within a logL of 0.5 of the best, we say we have converged and stop optimising parameters. These parameters determine Nconv.
         :ignore_previous_eqns (bool, default=False): If we have seen an equation at lower complexity, whether to ignore the equation in this routine.
+        :dynamic (bool, default=True): Use rank-0 work dispatch for MPI runs with at least two worker ranks. This avoids long idle tails when individual functions have very different runtimes. Set to False to use the original static rank partitioning.
 
     Returns:
         None
@@ -588,7 +759,6 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
         print('\nRunning fits', flush=True)
 
     ensure_likelihood_catalogue(comp, likelihood, tmax, try_integration)
-    fcn_list_proc, _, _ = get_functions(comp, likelihood)
 
     if rank == 0 and ignore_previous_eqns:
         previous_unifn_list = []
@@ -608,53 +778,52 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
     # Set max param >=4 for backwards compatibility
     max_param = int(max(4, np.floor((comp - 1) / 2)))
 
+    n_functions = get_function_count(comp, likelihood)
+    if dynamic and size >= 3 and n_functions > size:
+        fcn_list_all = get_all_functions(comp, likelihood) if rank == 0 else None
+        _main_dynamic(
+            comp,
+            likelihood,
+            fcn_list_all,
+            tmax,
+            pmin,
+            pmax,
+            print_frequency,
+            try_integration,
+            log_opt,
+            max_param,
+            Niter_params,
+            Nconv_params,
+            ignore_previous_eqns)
+        return
+
+    fcn_list_proc, _, _ = get_functions(comp, likelihood)
     chi2 = np.zeros(len(fcn_list_proc))     # This is now only for this proc
     params = np.zeros([len(fcn_list_proc), max_param])
     for i in range(len(fcn_list_proc)):           # Consider all possible complexities
         if rank == 0 and ((i == 0) or ((i+1) % print_frequency == 0)):
             print(f'{i+1} of {len(fcn_list_proc)}', flush=True)
-        try:
-            with simplifier.time_limit(tmax):
-                try:
-                    chi2[i], params[i, :] = optimise_fun(fcn_list_proc[i],
-                                                         likelihood,
-                                                         tmax,
-                                                         pmin,
-                                                         pmax,
-                                                         comp=comp,
-                                                         try_integration=try_integration,
-                                                         log_opt=log_opt,
-                                                         max_param=max_param,
-                                                         Niter_params=Niter_params,
-                                                         Nconv_params=Nconv_params,
-                                                         ignore_previous_eqns=ignore_previous_eqns)
-                except NameError:
-                    if try_integration:
-                        chi2[i], params[i, :] = optimise_fun(fcn_list_proc[i],
-                                                             likelihood,
-                                                             tmax,
-                                                             pmin,
-                                                             pmax,
-                                                             comp=comp,
-                                                             try_integration=False,
-                                                             log_opt=log_opt,
-                                                             max_param=max_param,
-                                                             Niter_params=Niter_params,
-                                                             Nconv_params=Nconv_params,
-                                                             ignore_previous_eqns=ignore_previous_eqns)
-                    else:
-                        raise NameError
-        except Exception as e:
-            print(e)
-            chi2[i] = np.nan
-            params[i, :] = 0.
-
-    out_arr = np.transpose(
-        np.vstack([chi2] + [params[:, i] for i in range(max_param)]))
+        chi2[i], params[i, :] = _fit_function_with_timeout(
+            fcn_list_proc[i],
+            likelihood,
+            tmax,
+            pmin,
+            pmax,
+            comp,
+            try_integration,
+            log_opt,
+            max_param,
+            Niter_params,
+            Nconv_params,
+            ignore_previous_eqns)
 
     # Save the data for this proc in Partial
-    np.savetxt(likelihood.temp_dir + '/chi2_comp'+str(comp) +
-               'weights_'+str(rank)+'.dat', out_arr, fmt='%.7e')
+    write_negloglike_file(
+        likelihood.temp_dir + '/chi2_comp'+str(comp) +
+        'weights_'+str(rank)+'.dat',
+        chi2,
+        params,
+        max_param)
 
     comm.Barrier()
 
