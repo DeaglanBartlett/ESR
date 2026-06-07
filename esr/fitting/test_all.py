@@ -278,23 +278,19 @@ def get_functions(comp, likelihood, unique=True):
         total_lines = None
     # Broadcast total number of lines to all processes
     total_lines = comm.bcast(total_lines, root=0)
-    # Number of lines per file for given thread
-    nLs = int(np.ceil(total_lines / float(size)))
-
-    while nLs*(size-1) > total_lines:
-        if rank == 0:
-            print("Correcting for many cores.", flush=True)
-        nLs -= 1
+    # Number of lines per file for this rank.  Keep at least one line per
+    # populated rank; otherwise small catalogues with more MPI ranks than
+    # functions put all work on the final rank and can stall at startup.
+    nLs = int(np.ceil(total_lines / float(size))) if total_lines else 0
+    if total_lines and size > total_lines and rank == 0:
+        print("Correcting for many cores.", flush=True)
 
     if rank == 0:
         print("Total number of functions: ", total_lines, flush=True)
         print("Number of test points per proc: ", nLs, flush=True)
 
-    data_start = rank*nLs
-    data_end = (rank+1)*nLs
-
-    if rank == size-1:
-        data_end = total_lines
+    data_start = min(rank * nLs, total_lines)
+    data_end = min((rank + 1) * nLs, total_lines)
 
     # Load the functions for this rank
     with open(unifn_file, "r") as f:
