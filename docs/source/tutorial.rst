@@ -109,7 +109,8 @@ formula, but still includes current fixes in expression handling and Fisher
 validation, so it is not a byte-for-byte reproduction of an older ESR run.
 
 When ``likelihood.run_sympify`` removes or relabels parameters, for example
-through model normalisation, ESR builds a likelihood-aware catalogue. Raw
+through model normalisation, ESR builds a fitted-function catalogue (named
+``likelihood_catalogue`` in code identifiers and output files). Raw
 equations are grouped by their exact symbolic transformed expression after
 canonical parameter relabelling; one raw representative is fitted for each
 transformed model family, while ``combine_DL`` still uses the raw expression's
@@ -118,7 +119,7 @@ the code will fail loudly on stale row counts rather than reusing incompatible
 ``test_all`` or Fisher outputs; rerun ``test_all.main`` and
 ``test_all_Fisher.main`` with the current likelihood/settings.
 
-Do not use the likelihood-aware catalogue for likelihoods that evaluate ESR
+Do not use the fitted-function catalogue for likelihoods that evaluate ESR
 expressions directly and whose fitted rows already correspond to the raw
 ``unique_equations`` catalogue. Such likelihoods can opt out by defining
 ``use_likelihood_catalogue = False`` on the likelihood class or instance. This

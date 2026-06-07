@@ -99,7 +99,9 @@ historical side effect of older ESR versions.
 
 If a likelihood's ``run_sympify`` method removes or relabels parameters
 for example by normalising a generated expression, ESR builds a
-likelihood-aware catalogue automatically. It fits one representative for
+fitted-function catalogue automatically: raw expressions are deduplicated
+in the space of functions as actually fitted to the data, after the
+likelihood's symbolic transformation. It fits one representative for
 each transformed symbolic model family, then maps the result back to all
 raw expressions so their original tree complexities can still enter the
 final description length.
@@ -110,6 +112,8 @@ inactive. If a custom likelihood has a ``run_sympify`` method only for parsing
 or diagnostics and its stored ``negloglike_comp*.dat`` files correspond to the
 raw unique catalogue, set ``use_likelihood_catalogue = False`` on the
 likelihood class or instance before running ``test_all_Fisher``/``match``.
+(The code identifiers and the ``likelihood_catalogue_comp*`` output files
+retain the older ``likelihood_catalogue`` name for this feature.)
 
 Numerical duplicate checks are available only as an opt-in diagnostic:
 
