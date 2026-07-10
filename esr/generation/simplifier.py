@@ -49,8 +49,11 @@ def numerical_fingerprint(expr, max_param=None):
 
     Args:
         :expr: sympy expression
-        :max_param (int or None): maximum parameter index in expression. If None,
-            auto-detected from expr.free_symbols.
+        :max_param (int or None): optional sanity bound on the parameter index.
+            Parameter symbols are always taken from expr.free_symbols; this only
+            guards against indices the fixed evaluation-point table cannot cover
+            (see _FPRINT_MAX_PARAMS). Expressions whose parameters exceed the
+            table return None (treated as un-fingerprintable) rather than raising.
 
     Returns:
         :fingerprint (tuple or None): tuple of float values, or None on failure
@@ -65,9 +68,15 @@ def numerical_fingerprint(expr, max_param=None):
     )
     has_x = _fprint_x_sym in expr.free_symbols
 
-    if max_param is not None:
-        assert max_param <= _FPRINT_MAX_PARAMS, \
-            f"max_param={max_param} exceeds _FPRINT_MAX_PARAMS={_FPRINT_MAX_PARAMS}"
+    # Fixed evaluation points only exist for a0..a{_FPRINT_MAX_PARAMS-1}. An
+    # explicit max_param over the table, or an expression whose highest a*
+    # index reaches the table size, cannot be fingerprinted: return None
+    # instead of raising a KeyError at _FPRINT_PARAM_POINTS[p.name] below.
+    # An explicit guard (not assert) keeps this valid under `python -O`.
+    if max_param is not None and max_param > _FPRINT_MAX_PARAMS:
+        return None
+    if param_symbols and int(param_symbols[-1].name[1:]) >= _FPRINT_MAX_PARAMS:
+        return None
 
     # Build lambdified function for fast numpy evaluation
     args = []
