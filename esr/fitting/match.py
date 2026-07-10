@@ -262,7 +262,9 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     if all_fish.size == 0:
         # No valid Fisher results — fill with zeros so indexing works
         # (codelen will be nan/inf for all functions)
-        n_unique = len(open(likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt" % (comp, comp)).readlines())
+        unique_path = likelihood.fn_dir + "/compl_%i/unique_equations_%i.txt" % (comp, comp)
+        with open(unique_path) as f:
+            n_unique = sum(1 for _ in f)
         all_fish = np.zeros((n_unique, int(max_param * (max_param + 1) / 2)))
 
     # Both of these are also just for this proc
