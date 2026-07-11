@@ -319,7 +319,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             else:
                 sub = {}
             p, fish_mat = simplifier.convert_params(
-                measured, fish_measured, sub, n=max_param)
+                measured, fish_measured, sub, n=max_param, full_fisher=True)
             if isinstance(p, float):
                 p = [p]
             p = np.atleast_1d(p)

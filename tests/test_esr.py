@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+from types import SimpleNamespace
 import matplotlib.pyplot as plt
 import unittest
 import pytest
@@ -668,6 +669,32 @@ def test_likelihood_aware_match_uses_transformed_representatives(tmp_path):
     assert matched[2, 1] == 2.5
 
 
+def test_convert_params_preserves_diagonal_default_and_supports_full_fisher():
+    """The correlated Fisher path is opt-in; the public default is diagonal."""
+    import sympy
+    from esr.generation.simplifier import convert_params
+
+    a0, a1 = sympy.symbols('a0 a1', real=True)
+    measured = np.array([2.0, 3.0])
+    # Flattened upper triangle of [[2, 1], [1, 3]].
+    fish_measured = np.array([2.0, 1.0, 3.0])
+    substitutions = [{a0: a0 + a1}]
+
+    p_default, fish_diagonal = convert_params(
+        measured, fish_measured, substitutions, n=2)
+    p_full, fish_full = convert_params(
+        measured, fish_measured, substitutions, n=2, full_fisher=True)
+
+    # J = [[1, 1], [0, 1]], so J^-T F J^-1 has a non-zero off diagonal.
+    expected_full = np.array([[2.0, -1.0], [-1.0, 3.0]])
+    np.testing.assert_allclose(p_default, [5.0, 3.0])
+    np.testing.assert_allclose(p_full, p_default)
+    assert fish_diagonal.shape == (2,)
+    np.testing.assert_allclose(fish_diagonal, np.diag(expected_full))
+    assert fish_full.shape == (2, 2)
+    np.testing.assert_allclose(fish_full, expected_full)
+
+
 def test_numerical_fingerprint():
     """Unit tests for the numerical fingerprint diagnostic."""
     import sympy
@@ -772,3 +799,83 @@ def test_numerical_duplicate_diagnostic_does_not_change_catalogue():
     assert 'No equations were removed or remapped' in report
 
     return
+
+
+def test_inverse_substitution_pair_mismatch_raises():
+    """Incomplete paired substitution artifacts must not be silently paired."""
+    with pytest.raises(ValueError, match='inv_idx/inv_subs length mismatch'):
+        esr.generation.duplicate_checker._validate_inverse_substitution_pairs(
+            3, np.array([2, 7]), [['a0: a1']])
+
+
+def _combine_dl_test_likelihood(tmp_path, codelen_lines, aifeyn_lines,
+                                function_lines):
+    """Create the smallest single-rank input set for ``combine_DL.main``."""
+    comp = 1
+    fn_dir = tmp_path / 'functions'
+    comp_dir = fn_dir / f'compl_{comp}'
+    comp_dir.mkdir(parents=True)
+    out_dir = tmp_path / 'out'
+    out_dir.mkdir()
+    temp_dir = tmp_path / 'temp'
+    temp_dir.mkdir()
+    (comp_dir / f'all_equations_{comp}.txt').write_text(function_lines)
+    (comp_dir / f'aifeyn_{comp}.txt').write_text(aifeyn_lines)
+    (out_dir / f'codelen_matches_comp{comp}.dat').write_text(codelen_lines)
+    return comp, SimpleNamespace(
+        is_mse=False,
+        fn_dir=str(fn_dir),
+        out_dir=str(out_dir),
+        temp_dir=str(temp_dir),
+        fnprior_prefix='aifeyn_',
+        combineDL_prefix='combineDL_',
+        final_prefix='final_',
+    )
+
+
+def test_combine_dl_warns_on_malformed_rows_and_preserves_parameter_width(
+        tmp_path, monkeypatch):
+    comp, likelihood = _combine_dl_test_likelihood(
+        tmp_path,
+        '1 2 0 10\nbad 2 1 3\n3 4 2 20 30\n',
+        '1\n1\n1\n',
+        'f0\nf1\nf2\n',
+    )
+    monkeypatch.setattr(
+        esr.fitting.combine_DL.test_all, 'get_functions',
+        lambda *args, **kwargs: ([], 0, 3))
+
+    with pytest.warns(RuntimeWarning, match='non-numeric'):
+        esr.fitting.combine_DL.main(comp, likelihood)
+
+    rows = (tmp_path / 'out' / 'final_1.dat').read_text().splitlines()
+    assert len(rows) == 2
+    parsed = [row.split(';') for row in rows]
+    assert [row[1] for row in parsed] == ['f0', 'f2']
+    assert [float(value) for value in parsed[0][-2:]] == [10.0, 0.0]
+    assert [float(value) for value in parsed[1][-2:]] == [20.0, 30.0]
+
+
+def test_combine_dl_rejects_unequal_companion_lengths(tmp_path, monkeypatch):
+    comp, likelihood = _combine_dl_test_likelihood(
+        tmp_path, '1 2 0\n', '1\n2\n', 'f0\n')
+    monkeypatch.setattr(
+        esr.fitting.combine_DL.test_all, 'get_functions',
+        lambda *args, **kwargs: ([], 0, 1))
+
+    with pytest.raises(ValueError, match='unequal line counts'):
+        esr.fitting.combine_DL.main(comp, likelihood)
+
+
+def test_combine_dl_clears_stale_final_when_no_rows_are_valid(tmp_path, monkeypatch):
+    comp, likelihood = _combine_dl_test_likelihood(
+        tmp_path, 'nan 2 0\n', '1\n', 'f0\n')
+    final_path = tmp_path / 'out' / 'final_1.dat'
+    final_path.write_text('stale result\n')
+    monkeypatch.setattr(
+        esr.fitting.combine_DL.test_all, 'get_functions',
+        lambda *args, **kwargs: ([], 0, 1))
+
+    esr.fitting.combine_DL.main(comp, likelihood)
+
+    assert final_path.read_text() == ''

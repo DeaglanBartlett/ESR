@@ -71,8 +71,8 @@ If you are unable to clone the repo with the above, try the https version instea
 
 	git clone https://github.com/DeaglanBartlett/ESR.git
 
-Current MDL behaviour
-=====================
+Fisher scoring and parameter snapping
+=====================================
 
 The fitting pipeline computes Fisher matrices after the maximum-likelihood
 fit and uses them in the parametric part of the minimum-description-length
@@ -85,26 +85,53 @@ determinant with eigenbasis snapping:
 	                                 use_det_I=True, snap_choice=1)
 
 This is the recommended setting for new runs because it accounts for
-parameter correlations and rejects non-positive-definite Hessians. The
-published diagonal Fisher approximation remains available for comparison:
+parameter correlations and rejects non-positive-definite Hessians.
+
+For the :math:`k` retained parameters, the determinant score is
+
+.. math::
+
+  L_{\mathrm{par}}=-\frac{k}{2}\ln 3+\frac{1}{2}\ln\det H+
+  \sum_i\max\left[\ln|\theta_i|,\frac{1}{2}\ln\left(\frac{12}{H_{ii}}\right)\right],
+
+where :math:`H` is the Hessian of the negative log-likelihood at the fitted
+point. The determinant is used only when the active Hessian is positive
+definite.
+
+With ``snap_choice=1``, ESR diagonalises the full Hessian, finds directions
+with fewer than one precision step, and maps each such direction back to the
+original parameter with the largest projection. The description length is
+still evaluated in the original parameter basis. With ``snap_choice=0``, the
+corresponding decision uses each diagonal element :math:`H_{ii}` independently.
+Snapping is retained only if it improves the description length, except when a
+degenerate Hessian direction makes snapping mandatory. The published diagonal
+Fisher approximation remains available for comparison:
 
 .. code:: python
 
 	esr.fitting.test_all_Fisher.main(comp, likelihood,
 	                                 use_det_I=False, snap_choice=0)
 
-The diagonal option reproduces the diagonal codelength formula, but runs
-through the current corrected pipeline rather than reproducing every
-historical side effect of older ESR versions.
+The comparison uses
+
+.. math::
+
+  L_{\mathrm{par}}=-\frac{k}{2}\ln 3+
+  \sum_i\left[\frac{1}{2}\ln H_{ii}+\ln|\theta_i|\right].
+
+It still runs through ESR's current shared fitting pipeline, so it is not a
+byte-for-byte reproduction of an older ESR run.
+
+Likelihood-aware fitted catalogue
+---------------------------------
 
 If a likelihood's ``run_sympify`` method removes or relabels parameters
-for example by normalising a generated expression, ESR builds a
-fitted-function catalogue automatically: raw expressions are deduplicated
-in the space of functions as actually fitted to the data, after the
-likelihood's symbolic transformation. It fits one representative for
-each transformed symbolic model family, then maps the result back to all
-raw expressions so their original tree complexities can still enter the
-final description length.
+or otherwise changes the symbolic expression supplied to the likelihood,
+ESR builds a fitted-function catalogue automatically. Raw expressions are
+deduplicated after that likelihood-specific symbolic transformation. ESR fits
+one representative of each transformed symbolic model family, then maps the
+result back to all raw expressions so their original tree complexities can
+still enter the final description length.
 
 Likelihoods that evaluate generated expressions directly, without changing
 their fitted model family or parameter layout, should leave this catalogue
@@ -115,12 +142,22 @@ likelihood class or instance before running ``test_all_Fisher``/``match``.
 (The code identifiers and the ``likelihood_catalogue_comp*`` output files
 retain the older ``likelihood_catalogue`` name for this feature.)
 
+Numerical duplicate diagnostic
+------------------------------
+
 Numerical duplicate checks are available only as an opt-in diagnostic:
 
 .. code:: python
 
 	esr.generation.duplicate_checker.main(
 	    runname, comp, diagnose_numerical_duplicates=True)
+
+The diagnostic evaluates each expression at 60 fixed pseudo-random points
+(``RandomState(42)``): :math:`x` is sampled from :math:`[0.2, 5]` and each
+parameter from :math:`[0.5, 3]`. It hashes the 60 results after formatting
+each finite value as ``%.10e``; a candidate collision requires exactly the
+same formatted fingerprint, including the positions of non-finite values.
+Expressions with more than 30% non-finite evaluations are not fingerprinted.
 
 The diagnostic writes candidate fingerprint collisions but does not remove
 or remap equations. Matching numerical fingerprints should be treated as

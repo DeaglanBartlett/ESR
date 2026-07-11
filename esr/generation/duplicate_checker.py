@@ -15,6 +15,20 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 
+def _validate_inverse_substitution_pairs(round_index, idx, inv):
+    """Reject incomplete paired inverse-substitution artifacts.
+
+    ``inv_idx`` and ``inv_subs`` are written from the same rank-0 list, so a
+    length mismatch means that one of the files is stale or truncated. Pairing
+    only a shared prefix could assign substitutions to the wrong equations.
+    """
+    if len(idx) != len(inv):
+        raise ValueError(
+            'inv_idx/inv_subs length mismatch in round %i: len(idx)=%i '
+            'len(inv)=%i. Delete the incomplete round artifacts and rerun '
+            'duplicate_checker.' % (round_index, len(idx), len(inv)))
+
+
 def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
          seed=1234, diagnose_numerical_duplicates=False):
     """Run the generation of functions for a given complexity and set of basis functions
@@ -247,10 +261,8 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
                 idx = []
 
         if rank == 0:
-            n_pair = min(len(idx), len(inv))
-            if len(idx) != len(inv):
-                print('WARNING: inv_idx/inv_subs length mismatch in round %i: len(idx)=%i len(inv)=%i - using first %i pairs' % (r, len(idx), len(inv), n_pair), flush=True)
-            for i in range(n_pair):
+            _validate_inverse_substitution_pairs(r, idx, inv)
+            for i in range(len(idx)):
                 all_inv_subs[idx[i]] = all_inv_subs[idx[i]] + inv[i]
             del idx, inv
             gc.collect()
@@ -299,7 +311,8 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
             final_uniq_fun = f.read().splitlines()
         candidate_groups = simplifier.numerical_duplicate_candidates(
             final_uniq_fun, max_param=max_param)
-        report_file = dirname + 'numerical_duplicate_candidates_%i.txt' % compl
+        report_file = os.path.join(
+            dirname, 'numerical_duplicate_candidates_%i.txt' % compl)
         with open(report_file, 'w') as f:
             f.write('# Candidate numerical fingerprint collisions only.\n')
             f.write('# No equations were removed or remapped by this diagnostic.\n')

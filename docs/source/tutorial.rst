@@ -30,7 +30,12 @@ set of numerical evaluation points:
 
 This writes ``numerical_duplicate_candidates_<comp>.txt`` inside the
 corresponding function-library directory. The report is exploratory only:
-it does not remove equations or change the ``matches`` mapping.
+it does not remove equations or change the ``matches`` mapping. ESR evaluates
+at 60 fixed pseudo-random points (``RandomState(42)``), with :math:`x` drawn
+from :math:`[0.2, 5]` and each parameter drawn from :math:`[0.5, 3]`. A
+candidate collision has the same 60-entry fingerprint after finite values are
+formatted as ``%.10e`` (and has non-finite values at the same entries).
+Expressions with more than 30% non-finite evaluations are skipped.
 
 Matching numerical fingerprints are useful for locating possible missed
 identities, but must not be treated as proof of duplicate models. In
@@ -40,7 +45,11 @@ description-length interpretation. Numerical candidates should be merged
 only after an application-specific exact equivalence check.
 
 
-In ``esr.generation.duplicate_checker`` we have  predefined a few sets of functions which we believe would be useful. However, one simply needs to add another option to the start of that script to define a new run:
+Choosing a function set
+~~~~~~~~~~~~~~~~~~~~~~~
+
+``esr.generation.duplicate_checker`` provides several predefined function
+sets. To define another run, add an option near the start of that script:
 
 .. code-block:: python
 
@@ -101,16 +110,22 @@ use the final file after the run completes.
 The Fisher stage defaults to determinant scoring with eigenbasis snapping:
 ``use_det_I=True, snap_choice=1``. It writes these choices to the output
 directory, and ``match.main`` reads them back so that matching cannot silently
-use different settings from the Fisher calculation. To compare against the
-published diagonal parameter-codelength formula, run
+use different settings from the Fisher calculation. This setting diagonalises
+the full Hessian, identifies directions with fewer than one precision step,
+and maps each such direction to the original parameter with the largest
+projection; the description length itself remains in the original parameter
+basis. With ``snap_choice=0``, snapping is assessed independently from each
+Hessian diagonal element. To compare against the published diagonal
+parameter-codelength formula, run
 ``test_all_Fisher.main(comp, likelihood, use_det_I=False, snap_choice=0)``
 and then ``match.main(comp, likelihood)``. This comparison uses the diagonal
-formula, but still includes current fixes in expression handling and Fisher
-validation, so it is not a byte-for-byte reproduction of an older ESR run.
+formula within ESR's current shared fitting pipeline. It is therefore not a
+byte-for-byte reproduction of an older ESR run.
 
 When ``likelihood.run_sympify`` removes or relabels parameters, for example
-through model normalisation, ESR builds a fitted-function catalogue (named
-``likelihood_catalogue`` in code identifiers and output files). Raw
+by applying a likelihood-specific symbolic transformation, ESR builds a
+fitted-function catalogue (named ``likelihood_catalogue`` in code identifiers
+and output files). Raw
 equations are grouped by their exact symbolic transformed expression after
 canonical parameter relabelling; one raw representative is fitted for each
 transformed model family, while ``combine_DL`` still uses the raw expression's

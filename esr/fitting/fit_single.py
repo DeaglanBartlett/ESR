@@ -38,11 +38,17 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
             log space
         :return_params (bool, default=False): whether to return the parameters of the
             maximum likelihood point
-        :use_det_I (bool, default=True): If True, use a positive-definite full
-            Hessian determinant for codelen. If False, use the published
-            diagonal parameter-codelength formula for comparison.
-        :snap_choice (int, default=1): Controls parameter snapping. 0:
-            diagonal, 1: eigenbasis.
+        :use_det_I (bool, default=True): If True, compute the parametric
+            codelength from the determinant of the positive-definite full
+            Hessian, retaining parameter correlations. If False, use the
+            published product-of-diagonal-elements approximation for
+            comparison.
+        :snap_choice (int, default=1): Controls candidate parameter snapping.
+            With 0, each parameter is assessed independently using its Hessian
+            diagonal element. With 1, ESR diagonalises the full Hessian to
+            identify directions with fewer than one precision step, then snaps
+            the original parameter with the largest projection onto each such
+            direction.
 
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to
@@ -146,11 +152,17 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
             the function with variables to optimise
         :return_params (bool, default=False): whether to return the parameters of the
             maximum likelihood point
-        :use_det_I (bool, default=True): If True, use a positive-definite full
-            Hessian determinant for codelen. If False, use the published
-            diagonal parameter-codelength formula for comparison.
-        :snap_choice (int, default=1): Controls parameter snapping. 0:
-            diagonal, 1: eigenbasis.
+        :use_det_I (bool, default=True): If True, compute the parametric
+            codelength from the determinant of the positive-definite full
+            Hessian, retaining parameter correlations. If False, use the
+            published product-of-diagonal-elements approximation for
+            comparison.
+        :snap_choice (int, default=1): Controls candidate parameter snapping.
+            With 0, each parameter is assessed independently using its Hessian
+            diagonal element. With 1, ESR diagonalises the full Hessian to
+            identify directions with fewer than one precision step, then snaps
+            the original parameter with the largest projection onto each such
+            direction.
 
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to

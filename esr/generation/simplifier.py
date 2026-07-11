@@ -210,7 +210,7 @@ def numerical_duplicate_candidates(uniq_fun, max_param=None, verbose=True):
               f'{n_flagged} additional expressions '
               f'({n_flagged}/{n_orig} = {100*n_flagged/max(n_orig,1):.1f}%)',
               flush=True)
-        print('\tWARNING: candidates are not removed; verify exact model '
+        print('\tNOTE: candidates are not removed; verify exact model '
               'equivalence before any catalogue change.', flush=True)
 
     return candidate_groups
@@ -1464,33 +1464,37 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
     return all_subs
 
 
-def convert_params(p_meas, fish_meas, inv_subs, n=4):
+def convert_params(p_meas, fish_meas, inv_subs, n=4, full_fisher=False):
     """Convert parameters from those in unique function to those in actual function
 
-    Transforms both the parameters and the full Hessian (Fisher) matrix via the
-    Jacobian of the parameter substitution: fish_new = J^{-T} H J^{-1}.
-
-    .. versionchanged::
-        Previously returned (p_new, diag_fish) where diag_fish was a 1D array
-        of diagonal elements. Now returns the full 2D Fisher matrix to support
-        determinant-based description length calculations.
+    Transforms the Fisher matrix via the Jacobian of the parameter
+    substitution, ``fish_new = J^{-T} H J^{-1}``.  By default this preserves
+    the legacy API and returns only its diagonal.  Callers that need parameter
+    correlations, such as determinant-based description-length scoring, must
+    request the full matrix explicitly with ``full_fisher=True``.
 
     Args:
         :p_meas (list): list of measured parameters in unique function
         :fish_meas (list): flattened upper triangle of the Hessian of -log(likelihood) at the maximum likelihood point
         :inv_subs (list): list of substitutions required to convert between all and unique functions
         :n (int, default=4): the number of dimensions of the array from which fish_meas was computed
+        :full_fisher (bool, default=False): whether to return the full
+            transformed Fisher matrix rather than its diagonal
 
     Returns:
         :p_new (list): list of parameters for the actual function
-        :fish_new (np.ndarray): the full Fisher matrix (shape: max_param x max_param) of the actual function at the maximum likelihood point
+        :fish_new (np.ndarray): the diagonal entries (shape: max_param) of
+            the transformed Fisher matrix, unless ``full_fisher=True``; then
+            the full matrix (shape: max_param x max_param)
 
     """
 
     max_param = len(p_meas)
 
     if np.nan in inv_subs:
-        return np.array([np.nan]*max_param), np.full((max_param, max_param), np.nan)
+        invalid_fish = (np.full((max_param, max_param), np.nan)
+                        if full_fisher else np.full(max_param, np.nan))
+        return np.full(max_param, np.nan), invalid_fish
 
     fish = np.zeros((n, n))
     fish[np.triu_indices(n)] = fish_meas
@@ -1520,7 +1524,9 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4):
 
     fish_new = np.dot(jinv.T, np.dot(fish, jinv))
 
-    return p_new, fish_new
+    if full_fisher:
+        return p_new, fish_new
+    return p_new, np.diag(fish_new)
 
 
 def check_results(dirname, compl, tmax=10):
