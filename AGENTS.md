@@ -9,4 +9,4 @@
 
 # Next steps
 
-1. Push the reviewed PR #57 update and resolve Deaglan's threads after confirming the GitHub replies.
+1. Await Deaglan's review of PR #57 commit `5181436`; the GitHub threads still require explicit resolution.
