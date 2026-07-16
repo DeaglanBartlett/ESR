@@ -12,7 +12,10 @@ import os
 from esr.fitting.sympy_symbols import x, a0
 import esr.generation.simplifier as simplifier
 
-warnings.filterwarnings("ignore")
+# Suppress the numpy/scipy RuntimeWarnings raised while evaluating functions for
+# plotting, but leave other categories (including ESR's own diagnostics and
+# unrelated user warnings) untouched.
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()

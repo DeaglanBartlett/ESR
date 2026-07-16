@@ -48,7 +48,9 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
             diagonal element. With 1, ESR diagonalises the full Hessian to
             identify directions with fewer than one precision step, then snaps
             the original parameter with the largest projection onto each such
-            direction.
+            direction. With 2 (projected eigenbasis), ESR zeros the weak
+            projected coordinate itself and scores the codelength in the
+            eigenbasis; this requires ``use_det_I=True``.
 
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to
@@ -162,7 +164,9 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
             diagonal element. With 1, ESR diagonalises the full Hessian to
             identify directions with fewer than one precision step, then snaps
             the original parameter with the largest projection onto each such
-            direction.
+            direction. With 2 (projected eigenbasis), ESR zeros the weak
+            projected coordinate itself and scores the codelength in the
+            eigenbasis; this requires ``use_det_I=True``.
 
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to

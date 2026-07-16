@@ -1,7 +1,6 @@
 import astropy.constants
 import astropy.units as apu
 import numpy as np
-import pandas as pd
 import scipy.integrate
 import sympy
 import os
@@ -24,10 +23,22 @@ class Likelihood:
         :run_name (str): The name to be associated with this likelihood, e.g. 'my_esr_run'
         :data_dir (str, default=None): The path containing the data and cov files
         :fn_set (str, default='core_maths'): The name of the function set to use with the likelihood. Must match one of those defined in ``generation.duplicate_checker``
+        :fn_dir (str, default=None): Directory holding the generated function catalogue this likelihood reads from. If None, the default ``function_library/<fn_set>`` is used. Pass the same path to ``duplicate_checker.main(..., fn_dir=...)`` to generate into, and fit from, a private location (e.g. an isolated test directory)
+        :base_out_dir (str, default=None): Base directory for all fitting output. If None, it is derived from ``data_dir`` (or the package location). Override to isolate the output of concurrent runs
 
     """
 
-    def __init__(self, data_file, cov_file, run_name, data_dir=None, fn_set='core_maths'):
+    # The built-in likelihoods evaluate the generated expressions directly (or,
+    # for Pantheon, integrate them) without removing or relabelling parameters,
+    # so they do not need the likelihood-aware fitted-function catalogue and opt
+    # out of building it. A custom likelihood whose ``run_sympify`` *does* change
+    # the parameter layout (e.g. a normalising transform g -> g/g(1)) must set
+    # ``use_likelihood_catalogue = True`` to enable the catalogue. See
+    # ``test_all.ensure_likelihood_catalogue``.
+    use_likelihood_catalogue = False
+
+    def __init__(self, data_file, cov_file, run_name, data_dir=None,
+                 fn_set='core_maths', fn_dir=None, base_out_dir=None):
 
         esr_dir = os.path.abspath(os.path.join(os.path.dirname(
             esr.generation.simplifier.__file__), '..', '')) + '/'
@@ -37,7 +48,14 @@ class Likelihood:
             self.data_dir = data_dir
         self.data_file = self.data_dir + '/' + data_file
         self.cov_file = self.data_dir + '/' + cov_file
-        self.fn_dir = esr_dir + "function_library/" + fn_set + "/"
+        # Directory holding the generated function catalogue this likelihood
+        # reads from. Override it (and pass the same path to
+        # ``duplicate_checker.main(..., fn_dir=...)``) to keep generation and
+        # fitting in a private location, e.g. for an isolated test.
+        if fn_dir is None:
+            self.fn_dir = esr_dir + "function_library/" + fn_set + "/"
+        else:
+            self.fn_dir = os.path.abspath(fn_dir) + '/'
         if data_dir is None:
             self.like_dir = esr_dir + "/fitting/"
         else:
@@ -48,7 +66,13 @@ class Likelihood:
         self.combineDL_prefix = "combine_DL_"
         self.final_prefix = "final_"
 
-        self.base_out_dir = self.like_dir + "/output/"
+        # Base directory for all fitting output. Override to isolate the output
+        # of concurrent runs (the built-in CC/Pantheon likelihoods otherwise
+        # share a single output directory per likelihood).
+        if base_out_dir is None:
+            self.base_out_dir = self.like_dir + "/output/"
+        else:
+            self.base_out_dir = os.path.abspath(base_out_dir) + '/'
         self.temp_dir = self.base_out_dir + "/partial_" + run_name
         self.out_dir = self.base_out_dir + "/output_" + run_name
         self.fig_dir = self.base_out_dir + "/figs_" + run_name
@@ -113,9 +137,10 @@ class CCLikelihood(Likelihood):
 
     """
 
-    def __init__(self):
+    def __init__(self, fn_dir=None, base_out_dir=None):
 
-        super().__init__('CC_Hubble.dat', 'CC_Hubble.dat', 'cc_dimful')
+        super().__init__('CC_Hubble.dat', 'CC_Hubble.dat', 'cc_dimful',
+                         fn_dir=fn_dir, base_out_dir=base_out_dir)
 
         self.Hfid = 1.
         self.ylabel = r'$H \left( z \right) \ / \ H_{\rm fid}$'  # for plotting
@@ -165,12 +190,13 @@ class CCLikelihood(Likelihood):
 class PanthLikelihood(Likelihood):
     """Likelihood class used to fit Pantheon data"""
 
-    def __init__(self):
+    def __init__(self, fn_dir=None, base_out_dir=None):
 
         super().__init__(
             '/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES.dat',
             '/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STAT+SYS.cov',
             'panth_dimful',
+            fn_dir=fn_dir, base_out_dir=base_out_dir,
         )
 
         self.Hfid = 1.0 * apu.km / apu.s / apu.Mpc
@@ -350,12 +376,13 @@ class MockLikelihood(Likelihood):
 
     """
 
-    def __init__(self, nz, yfracerr, data_dir=None):
+    def __init__(self, nz, yfracerr, data_dir=None, fn_dir=None,
+                 base_out_dir=None):
         super().__init__(
             '/mock/CC_Hubble_%i_' % nz + str(yfracerr) + '.dat',
             '/mock/CC_Hubble_%i_' % nz + str(yfracerr) + '.dat',
             'mock_%i_' % nz + str(yfracerr),
-            data_dir=data_dir
+            data_dir=data_dir, fn_dir=fn_dir, base_out_dir=base_out_dir
         )
 
         self.Hfid = 1.
@@ -414,12 +441,16 @@ class MSE(Likelihood):
         :run_name (str): The name to be associated with this likelihood, e.g. 'my_esr_run'
         :data_dir (str, default=None): The path containing the data and cov files
         :fn_set (str, default='core_maths'): The name of the function set to use with the likelihood. Must match one of those defined in ``generation.duplicate_checker``
+        :fn_dir (str, default=None): Directory holding the generated function catalogue this likelihood reads from. If None, the default ``function_library/<fn_set>`` is used. Pass the same path to ``duplicate_checker.main(..., fn_dir=...)`` to generate into, and fit from, a private location (e.g. an isolated test directory)
+        :base_out_dir (str, default=None): Base directory for all fitting output. If None, it is derived from ``data_dir`` (or the package location). Override to isolate the output of concurrent runs
 
     """
 
-    def __init__(self, data_file, run_name, data_dir=None, fn_set='core_maths'):
+    def __init__(self, data_file, run_name, data_dir=None, fn_set='core_maths',
+                 fn_dir=None, base_out_dir=None):
 
-        super().__init__(data_file, data_file, run_name, data_dir=data_dir, fn_set=fn_set)
+        super().__init__(data_file, data_file, run_name, data_dir=data_dir,
+                         fn_set=fn_set, fn_dir=fn_dir, base_out_dir=base_out_dir)
         self.ylabel = r'$y$'    # for plotting
         self.xvar, self.yvar, self.yerr = np.loadtxt(
             self.data_file, unpack=True)
@@ -459,12 +490,16 @@ class GaussLikelihood(Likelihood):
         :run_name (str): The name to be associated with this likelihood, e.g. 'my_esr_run'
         :data_dir (str, default=None): The path containing the data and cov files
         :fn_set (str, default='core_maths'): The name of the function set to use with the likelihood. Must match one of those defined in ``generation.duplicate_checker``
+        :fn_dir (str, default=None): Directory holding the generated function catalogue this likelihood reads from. If None, the default ``function_library/<fn_set>`` is used. Pass the same path to ``duplicate_checker.main(..., fn_dir=...)`` to generate into, and fit from, a private location (e.g. an isolated test directory)
+        :base_out_dir (str, default=None): Base directory for all fitting output. If None, it is derived from ``data_dir`` (or the package location). Override to isolate the output of concurrent runs
 
     """
 
-    def __init__(self, data_file, run_name, data_dir=None, fn_set='core_maths'):
+    def __init__(self, data_file, run_name, data_dir=None, fn_set='core_maths',
+                 fn_dir=None, base_out_dir=None):
 
-        super().__init__(data_file, data_file, run_name, data_dir=data_dir, fn_set=fn_set)
+        super().__init__(data_file, data_file, run_name, data_dir=data_dir,
+                         fn_set=fn_set, fn_dir=fn_dir, base_out_dir=base_out_dir)
         self.ylabel = r'$y$'    # for plotting
         self.xvar, self.yvar, self.yerr = np.loadtxt(
             self.data_file, unpack=True)
@@ -500,12 +535,16 @@ class PoissonLikelihood(Likelihood):
         :run_name (str): The name to be associated with this likelihood, e.g. 'my_esr_run'
         :data_dir (str, default=None): The path containing the data and cov files
         :fn_set (str, default='core_maths'): The name of the function set to use with the likelihood. Must match one of those defined in ``generation.duplicate_checker``
+        :fn_dir (str, default=None): Directory holding the generated function catalogue this likelihood reads from. If None, the default ``function_library/<fn_set>`` is used. Pass the same path to ``duplicate_checker.main(..., fn_dir=...)`` to generate into, and fit from, a private location (e.g. an isolated test directory)
+        :base_out_dir (str, default=None): Base directory for all fitting output. If None, it is derived from ``data_dir`` (or the package location). Override to isolate the output of concurrent runs
 
     """
 
-    def __init__(self, data_file, run_name, data_dir=None, fn_set='core_maths'):
+    def __init__(self, data_file, run_name, data_dir=None, fn_set='core_maths',
+                 fn_dir=None, base_out_dir=None):
 
-        super().__init__(data_file, data_file, run_name, data_dir=data_dir, fn_set=fn_set)
+        super().__init__(data_file, data_file, run_name, data_dir=data_dir,
+                         fn_set=fn_set, fn_dir=fn_dir, base_out_dir=base_out_dir)
         self.ylabel = r'$y$'    # for plotting
         self.xvar, self.yvar = np.loadtxt(self.data_file, unpack=True)
         self.yerr = np.sqrt(self.yvar)

@@ -30,7 +30,7 @@ def _validate_inverse_substitution_pairs(round_index, idx, inv):
 
 
 def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
-         seed=1234, diagnose_numerical_duplicates=False):
+         seed=1234, diagnose_numerical_duplicates=False, fn_dir=None):
     """Run the generation of functions for a given complexity and set of basis functions
 
     Args:
@@ -46,6 +46,12 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
             remaps equations. Candidate groups require explicit verification
             of variable/parameter domains, boundaries, singularities, and
             description-length semantics before any manual catalogue change.
+        :fn_dir (str, default=None): directory in which to store the generated
+            catalogue for this run (the ``compl_<compl>`` subdirectory is created
+            inside it). If None, the default ``function_library/<runname>`` is
+            used. Pass ``likelihood.fn_dir`` here to generate straight into the
+            location a likelihood object reads from (e.g. an isolated directory
+            for a test), keeping generation and fitting consistent.
 
     Returns:
         None
@@ -77,24 +83,24 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
                            ["inv", "exp", "log_abs"],  # type1
                            ["+", "*", "-", "/", "pow"]]  # type2
 
-    dirname = os.path.abspath(os.path.join(os.path.dirname(
-        generator.__file__), '..', 'function_library'))
-    if (not os.path.isdir(dirname)) and (rank == 0):
-        os.mkdir(dirname)
-    dirname += '/' + runname + '/'
-    if (not os.path.isdir(dirname)) and (rank == 0):
-        os.mkdir(dirname)
-
+    if fn_dir is None:
+        dirname = os.path.abspath(os.path.join(os.path.dirname(
+            generator.__file__), '..', 'function_library'))
+        if (not os.path.isdir(dirname)) and (rank == 0):
+            os.makedirs(dirname, exist_ok=True)
+        dirname += '/' + runname + '/'
+    else:
+        dirname = os.path.abspath(fn_dir) + '/'
     if (rank == 0) and (not os.path.isdir(dirname)):
         print('Making output directory:', dirname)
-        os.mkdir(dirname)
+        os.makedirs(dirname, exist_ok=True)
     sys.stdout.flush()
     comm.Barrier()
 
     dirname += 'compl_%i/' % compl
     if (rank == 0) and (not os.path.isdir(dirname)):
         print('Making output directory:', dirname)
-        os.mkdir(dirname)
+        os.makedirs(dirname, exist_ok=True)
     sys.stdout.flush()
     comm.Barrier()
 
@@ -148,7 +154,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
     if rank == 0:
         print('\nSaving all equations')
         sys.stdout.flush()
-        with open(dirname + '/all_equations_%i.txt' % compl, "w") as f:
+        with utils.atomic_write(dirname + '/all_equations_%i.txt' % compl) as f:
             w = 80
             pp = pprint.PrettyPrinter(width=w, stream=f)
             for s in all_fun:
@@ -217,7 +223,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
         sys.stdout.flush()
 
         print('\tUnique equations')
-        with open(dirname + '/unique_equations_%i.txt' % compl, "w") as f:
+        with utils.atomic_write(dirname + '/unique_equations_%i.txt' % compl) as f:
             w = 80
             pp = pprint.PrettyPrinter(width=w, stream=f)
             for s in uniq_fun:
@@ -229,7 +235,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
         gc.collect()
 
         print('\tMatches')
-        with open(dirname + '/matches_%i.txt' % compl, "w") as f:
+        with utils.atomic_write(dirname + '/matches_%i.txt' % compl) as f:
             for i in range(len(match_idx)):
                 print(match_idx[i], file=f)
         del match_idx
@@ -284,7 +290,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
         for i in range(len(all_inv_subs)):
             if all_inv_subs[i] is None:
                 all_inv_subs[i] = []
-        with open(dirname + '/inv_subs_%i.txt' % compl, "w") as f:
+        with utils.atomic_write(dirname + '/inv_subs_%i.txt' % compl) as f:
             writer = csv.writer(f, delimiter=';')
             writer.writerows(all_inv_subs)
 
@@ -313,7 +319,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
             final_uniq_fun, max_param=max_param)
         report_file = os.path.join(
             dirname, 'numerical_duplicate_candidates_%i.txt' % compl)
-        with open(report_file, 'w') as f:
+        with utils.atomic_write(report_file) as f:
             f.write('# Candidate numerical fingerprint collisions only.\n')
             f.write('# No equations were removed or remapped by this diagnostic.\n')
             f.write('# Verify exact equality over the required variable and '

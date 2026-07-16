@@ -77,6 +77,17 @@ determinant with eigenbasis snapping:
 This is the recommended setting for new runs because it accounts for
 parameter correlations and rejects non-positive-definite Hessians.
 
+This full-Hessian determinant encoding (in place of the diagonal Fisher
+approximation of the original ESR paper) and the eigenbasis treatment of
+weakly constrained directions are motivated by the rotated-Fisher
+description-length approach of Kronberger, Olivetti de França, Bartlett,
+Desmond & Ferreira (2026),
+`"Guiding Multi-Objective Genetic Programming with Description Length Improves
+Symbolic Regression Solutions" <https://arxiv.org/abs/2605.22374>`_. ESR's
+explicit zero-and-re-evaluate snapping is not a byte-for-byte reproduction of
+that paper's derivation, but uses the same rotated-Fisher idea; we refer to it
+for the underlying motivation.
+
 For the :math:`k` retained parameters, the determinant score is
 
 .. math::
@@ -94,7 +105,29 @@ original parameter with the largest projection. The description length is
 still evaluated in the original parameter basis. With ``snap_choice=0``, the
 corresponding decision uses each diagonal element :math:`H_{ii}` independently.
 Snapping is retained only if it improves the description length, except when a
-degenerate Hessian direction makes snapping mandatory. The published diagonal
+degenerate Hessian direction makes snapping mandatory.
+
+With ``snap_choice=2`` (projected eigenbasis), ESR instead zeros the weak
+*projected* coordinate :math:`b_j=(V^{\top}\theta)_j` itself and transforms the
+retained vector back with :math:`\theta'=Vb`. The likelihood is then re-evaluated
+at :math:`\theta'` **in the original parameterisation** (the back-transform is
+what makes the snapped point comparable to the unsnapped fit); only the *snap
+decision* and the *codelength* are expressed in the eigenbasis of :math:`H`.
+There the Hessian is diagonal (its eigenvalues :math:`\lambda_j`), so the volume
+term becomes :math:`\frac{1}{2}\sum_j\ln\lambda_j` and the precision floor uses
+:math:`\frac{1}{2}\ln\left(12/\lambda_j\right)` against :math:`|b_j|`. The snap
+and the codelength are therefore expressed in the same basis, in contrast to
+``snap_choice=1``, which keeps the floor term in the original :math:`H_{ii}`
+coordinates. This mode requires ``use_det_I=True``. Because the eigenvectors of
+a repeated (or nearly repeated) eigenvalue are not unique, both the retained
+directions and the ``snap_choice=2`` codelength become basis-sensitive when
+:math:`H` has clustered eigenvalues; ESR emits a warning in that case. This is
+not unique to mode 2 -- the per-coordinate precision floor makes every snap mode
+coordinate-dependent, so ``snap_choice=1`` is not strictly
+re-parameterisation-invariant either, but it is always evaluated in the fixed
+original basis and so is the more predictable choice for clustered spectra.
+
+The published diagonal
 Fisher approximation remains available for comparison:
 
 .. code:: python
@@ -117,20 +150,31 @@ Likelihood-aware fitted catalogue
 
 If a likelihood's ``run_sympify`` method removes or relabels parameters
 or otherwise changes the symbolic expression supplied to the likelihood,
-ESR builds a fitted-function catalogue automatically. Raw expressions are
-deduplicated after that likelihood-specific symbolic transformation. ESR fits
-one representative of each transformed symbolic model family, then maps the
-result back to all raw expressions so their original tree complexities can
-still enter the final description length.
+ESR can build a fitted-function catalogue. Raw expressions are deduplicated
+after that likelihood-specific symbolic transformation; ESR fits one
+representative of each transformed symbolic model family, then maps the result
+back to all raw expressions so their original tree complexities can still enter
+the final description length.
 
-Likelihoods that evaluate generated expressions directly, without changing
-their fitted model family or parameter layout, should leave this catalogue
-inactive. If a custom likelihood has a ``run_sympify`` method only for parsing
-or diagnostics and its stored ``negloglike_comp*.dat`` files correspond to the
-raw unique catalogue, set ``use_likelihood_catalogue = False`` on the
-likelihood class or instance before running ``test_all_Fisher``/``match``.
-(The code identifiers and the ``likelihood_catalogue_comp*`` output files
-retain the older ``likelihood_catalogue`` name for this feature.)
+This catalogue is opt-in. The built-in likelihoods evaluate the generated
+expressions directly (or, for Pantheon, integrate them) without changing the
+parameter layout, so they set ``use_likelihood_catalogue = False`` and skip
+building it -- which also avoids a one-time, all-equations transformation pass
+that becomes expensive at high complexity. A custom likelihood whose
+``run_sympify`` genuinely removes or relabels parameters must set
+``use_likelihood_catalogue = True`` (on the class or instance) to enable the
+catalogue; otherwise ESR fits the raw expressions with the wrong parameter
+count. (The code identifiers and the ``likelihood_catalogue_comp*`` output
+files retain the older ``likelihood_catalogue`` name for this feature.)
+
+The built catalogue is cached, keyed on the equation set and a best-effort
+fingerprint of the transform evaluated on a few fixed probe expressions. That
+fingerprint can miss a transform change that only affects expressions unlike the
+probes, so for **guaranteed** cache invalidation set a
+``catalogue_transform_version`` attribute on the likelihood and change it
+whenever you change ``run_sympify``. A transforming likelihood that supplies no
+``catalogue_transform_version`` is not cached at all -- it is rebuilt on every
+call (and ESR warns) rather than risk reusing a stale mapping.
 
 Numerical duplicate diagnostic
 ------------------------------

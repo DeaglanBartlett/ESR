@@ -45,7 +45,7 @@ examples/data.txt
 esr/function_library
 esr.egg-info/PKG-INFO
 tests/fitting/
-fitting/
+/fitting/
 coverage.xml
 .coverage
 data.txt

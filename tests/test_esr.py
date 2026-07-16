@@ -160,6 +160,8 @@ def test_gaussian_dynamic_mpi(tmp_path):
         pytest.skip('mpiexec not available')
     if esr.fitting.test_all.size > 1:
         pytest.skip('do not launch nested MPI jobs')
+    if (os.cpu_count() or 1) < 3 and not os.environ.get('ESR_RUN_MPI_TESTS'):
+        pytest.skip('launches 3 ranks; needs >=3 cores or ESR_RUN_MPI_TESTS=1')
 
     script = tmp_path / 'dynamic_smoke.py'
     script.write_text(textwrap.dedent("""
@@ -228,6 +230,118 @@ def test_gaussian_dynamic_mpi(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'Dynamic scheduling:' in result.stdout
     assert 'MPI_DYNAMIC_SMOKE_OK' in result.stdout
+
+    return
+
+
+def test_likelihood_catalogue_parallel_matches_serial(tmp_path):
+    """The MPI-parallel catalogue build must reproduce the serial result.
+
+    Uses a parameter-removing likelihood on an input whose transformed-model
+    collisions span the rank slices, then checks that an ``mpiexec -n 3`` build
+    writes byte-identical ``unique``/``matches`` files to an in-process serial
+    build.
+    """
+    if shutil.which('mpiexec') is None:
+        pytest.skip('mpiexec not available')
+    if esr.fitting.test_all.size > 1:
+        pytest.skip('do not launch nested MPI jobs')
+    if (os.cpu_count() or 1) < 3 and not os.environ.get('ESR_RUN_MPI_TESTS'):
+        pytest.skip('launches 3 ranks; needs >=3 cores or ESR_RUN_MPI_TESTS=1')
+
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    comp = 5
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    # Even indices collide to one transformed model (the scale a0 is removed);
+    # odd indices are all distinct. Interleaving makes collisions cross the
+    # contiguous rank slices.
+    all_functions = []
+    for k in range(1, 13):
+        all_functions.append(f'{k}*a0*(a1 + a2*x)')
+        all_functions.append(f'a0 + {k}*a1*x')
+    (compl_dir / f'all_equations_{comp}.txt').write_text(
+        '\n'.join(all_functions) + '\n')
+    (compl_dir / f'unique_equations_{comp}.txt').write_text(
+        '\n'.join(all_functions) + '\n')
+
+    class NormalisingLikelihood:
+        use_likelihood_catalogue = True
+
+        def __init__(self, out_name):
+            self.fn_dir = str(tmp_path / 'functions')
+            self.base_out_dir = str(tmp_path / out_name)
+            self.out_dir = str(tmp_path / out_name / 'out')
+            self.temp_dir = str(tmp_path / out_name / 'tmp')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            eq = sympy.sympify(
+                fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), False
+
+    # Serial reference (this process, size == 1).
+    serial = NormalisingLikelihood('serial')
+    assert test_all.ensure_likelihood_catalogue(comp, serial, tmax=5)
+    serial_paths = test_all.likelihood_catalogue_paths(comp, serial)
+    serial_unique = open(serial_paths['unique']).read()
+    serial_matches = open(serial_paths['matches']).read()
+
+    # Parallel build under mpiexec -n 3, writing to a separate output dir.
+    script = tmp_path / 'parallel_build.py'
+    script.write_text(textwrap.dedent(f"""
+        import os, sys
+        sys.path.insert(0, os.environ['ESR_REPO'])
+        import sympy
+        from esr.fitting.sympy_symbols import x
+        from esr.fitting import test_all
+
+        class NormalisingLikelihood:
+            use_likelihood_catalogue = True
+            fn_dir = {str(tmp_path / 'functions')!r}
+            base_out_dir = {str(tmp_path / 'parallel')!r}
+            out_dir = {str(tmp_path / 'parallel' / 'out')!r}
+            temp_dir = {str(tmp_path / 'parallel' / 'tmp')!r}
+            def run_sympify(self, fcn_i, **kwargs):
+                a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+                eq = sympy.sympify(
+                    fcn_i, locals={{'x': x, 'a0': a0, 'a1': a1, 'a2': a2}})
+                return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), False
+
+        active = test_all.ensure_likelihood_catalogue(
+            {comp}, NormalisingLikelihood(), tmax=5)
+        if test_all.rank == 0:
+            assert active
+            print('PARALLEL_BUILD_OK', flush=True)
+    """))
+
+    env = os.environ.copy()
+    env['ESR_REPO'] = os.getcwd()
+    env.setdefault('OMPI_ALLOW_RUN_AS_ROOT', '1')
+    env.setdefault('OMPI_ALLOW_RUN_AS_ROOT_CONFIRM', '1')
+    result = subprocess.run(
+        ['mpiexec', '--oversubscribe', '-n', '3', sys.executable, str(script)],
+        cwd=os.getcwd(), env=env, text=True, capture_output=True, timeout=180)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'PARALLEL_BUILD_OK' in result.stdout
+
+    parallel = NormalisingLikelihood('parallel')
+    parallel_paths = test_all.likelihood_catalogue_paths(comp, parallel)
+    assert open(parallel_paths['unique']).read() == serial_unique
+    assert open(parallel_paths['matches']).read() == serial_matches
+
+    # Dedup happened but did not collapse everything, and the first equation's
+    # transformed group genuinely spans all three rank slices (per = ceil(24/3)
+    # = 8), so the cross-rank gather/merge is really exercised.
+    assert 1 < len(serial_unique.splitlines()) < len(all_functions)
+    match_lines = [int(m) for m in serial_matches.split()]
+    group0 = [i for i, m in enumerate(match_lines) if m == match_lines[0]]
+    assert any(i < 8 for i in group0)
+    assert any(8 <= i < 16 for i in group0)
+    assert any(i >= 16 for i in group0)
 
     return
 
@@ -376,7 +490,7 @@ def test_node():
 
 
 def test_snap_choices():
-    """Test the supported snap modes and reject the unimplemented mode."""
+    """Test the supported snap modes and reject unsupported combinations."""
 
     likelihood = MockLikelihood(320, 0.2)
     labels = ["+", "a0", "*", "a1", "pow", "x", "3"]
@@ -385,18 +499,25 @@ def test_snap_choices():
                        ["+", "*", "-", "/", "pow"]]
 
     results = {}
-    for sc in [0, 1]:
+    for sc in [0, 1, 2]:
         for det_I in [True, False]:
+            if sc == 2 and not det_I:
+                # The projected eigenbasis is only defined with det(I) scoring.
+                with pytest.raises(ValueError, match="requires use_det_I=True"):
+                    single_function(labels, basis_functions, likelihood,
+                                    verbose=False, use_det_I=det_I, snap_choice=sc)
+                continue
             nll, DL = single_function(labels, basis_functions, likelihood,
                                       verbose=False, use_det_I=det_I, snap_choice=sc)
             assert np.isfinite(nll), f"snap_choice={sc}, use_det_I={det_I}: nll not finite"
             assert np.isfinite(DL), f"snap_choice={sc}, use_det_I={det_I}: DL not finite"
             results[(sc, det_I)] = (nll, DL)
 
-    nlls = [results[(sc, True)][0] for sc in [0, 1]]
+    # A well-constrained fit is not snapped in any mode, so the likelihood agrees.
+    nlls = [results[(sc, True)][0] for sc in [0, 1, 2]]
     assert np.allclose(nlls, nlls[0], atol=1e-4), f"negloglike differs across snap_choices: {nlls}"
 
-    with pytest.raises(ValueError, match="snap_choice must be 0 or 1"):
+    with pytest.raises(ValueError, match="snap_choice must be 0, 1 or 2"):
         single_function(labels, basis_functions, likelihood,
                         verbose=False, use_det_I=True, snap_choice=-1)
 
@@ -509,7 +630,7 @@ def test_compute_snap_mask():
     assert np.allclose(result, Nsteps_npd)
     assert not degen
 
-    with pytest.raises(ValueError, match="snap_choice must be 0 or 1"):
+    with pytest.raises(ValueError, match="snap_choice must be 0, 1 or 2"):
         _compute_snap_mask(H, diag, theta, Nsteps_diag.copy(), -1)
 
     return
@@ -541,6 +662,7 @@ def test_likelihood_aware_catalogue_groups_transformed_models(tmp_path):
     from esr.fitting import test_all
 
     class NormalisingLikelihood:
+        use_likelihood_catalogue = True
         is_mse = False
         base_out_dir = str(tmp_path / 'out_base')
         out_dir = str(tmp_path / 'out')
@@ -627,6 +749,7 @@ def test_likelihood_aware_match_uses_transformed_representatives(tmp_path):
     from esr.fitting import match, test_all, test_all_Fisher
 
     class NormalisingLikelihood:
+        use_likelihood_catalogue = True
         is_mse = False
         base_out_dir = str(tmp_path / 'out_base')
         out_dir = str(tmp_path / 'out')
@@ -879,3 +1002,1020 @@ def test_combine_dl_clears_stale_final_when_no_rows_are_valid(tmp_path, monkeypa
     esr.fitting.combine_DL.main(comp, likelihood)
 
     assert final_path.read_text() == ''
+
+
+def _hessian_from_deriv(deriv, nparam, max_param):
+    """Rebuild a symmetric Hessian from ``test_all_Fisher``'s flattened upper
+    triangle (the ``deriv`` row it writes per function)."""
+    H = np.zeros((nparam, nparam))
+    for i in range(nparam):
+        start = int(i * max_param - (i - 1) * i / 2)
+        row = deriv[start:start + nparam - i]
+        H[i, i:] = row
+        H[i:, i] = row
+    return H
+
+
+def _gaussian_design_hessian(basis_cols, yerr):
+    """Analytic Hessian of a Gaussian -log(L) for a model linear in its params.
+
+    For ``f(x) = sum_j theta_j g_j(x)`` the Hessian of the Gaussian negative
+    log-likelihood is the design-matrix Gram matrix
+    ``H_jk = sum_i g_j(x_i) g_k(x_i) / sigma_i^2``, independent of the data y.
+    """
+    w = 1.0 / np.asarray(yerr) ** 2
+    G = np.column_stack(basis_cols)
+    return (G * w[:, None]).T @ G
+
+
+def test_convert_params_reconstructs_known_hessian_from_data(tmp_path):
+    """convert_params must recover a known Hessian computed from data.
+
+    Deaglan asked for a check that the Hmat itself is correctly computed from
+    data (most snapping tests instead assume a hand-set Hmat). We use a Gaussian
+    likelihood with a model linear in its parameters, whose Hessian is the
+    analytic design-matrix Gram matrix.
+    """
+    import sympy
+    from esr.fitting import test_all_Fisher
+    from esr.fitting.sympy_symbols import x as xsym
+
+    rng = np.random.default_rng(0)
+    xvar = np.linspace(0.5, 3.0, 60)
+    yerr = np.full_like(xvar, 0.5)
+    yvar = 1.0 + 2.0 * xvar + rng.normal(0.0, 0.5, xvar.size)
+    np.savetxt(tmp_path / 'data.txt', np.column_stack([xvar, yvar, yerr]))
+
+    likelihood = GaussLikelihood('data.txt', 'known_hessian',
+                                 data_dir=str(tmp_path))
+
+    a0s, a1s = sympy.symbols('a0 a1', real=True)
+    eq = a0s + a1s * xsym
+
+    # Analytic Gram/Hessian and exact least-squares MLE for the linear model.
+    basis = [np.ones_like(xvar), xvar]
+    Gram = _gaussian_design_hessian(basis, yerr)
+    w = 1.0 / yerr ** 2
+    rhs = np.array([np.sum(w * yvar), np.sum(w * xvar * yvar)])
+    theta_mle = np.linalg.solve(Gram, rhs)
+
+    eq_numpy = sympy.lambdify([xsym, a0s, a1s], eq, 'numpy')
+    nll = likelihood.negloglike(theta_mle, eq_numpy)
+
+    params, nll_out, deriv, codelen = test_all_Fisher.convert_params(
+        'a0 + a1*x', eq, False, np.pad(theta_mle, (0, 2)), likelihood, nll,
+        max_param=4, use_det_I=True, snap_choice=1)
+
+    H = _hessian_from_deriv(deriv, 2, 4)
+    np.testing.assert_allclose(H, Gram, rtol=1e-3)
+    assert np.isfinite(codelen)
+    expected = test_all_Fisher._compute_codelen(
+        Gram, np.diag(Gram), theta_mle, np.ones(2, dtype=bool), True)
+    assert np.isclose(codelen, expected, rtol=1e-3)
+    # Well-constrained fit: no parameter should have been snapped away.
+    np.testing.assert_allclose(params[:2], theta_mle, rtol=1e-3)
+
+
+def test_determinant_survives_parameter_removal(tmp_path):
+    """The determinant score keeps working when canonicalisation drops or
+    relabels a removed parameter of a 3- or 4-parameter model.
+
+    Each case supplies an expression with a gap in its parameter indices (as if
+    a parameter had been removed upstream); canonicalisation must relabel it to
+    a contiguous set, and the full-Hessian determinant codelen must remain
+    finite and match an independent computation over the reduced parameters.
+    """
+    import sympy
+    from esr.fitting import test_all_Fisher
+    from esr.fitting.sympy_symbols import x as xsym
+
+    rng = np.random.default_rng(1)
+    xvar = np.linspace(0.4, 3.0, 80)
+    yerr = np.full_like(xvar, 0.4)
+
+    cases = [
+        (sympy.symbols('a0 a1 a3', real=True),
+         [np.ones_like(xvar), xvar, xvar ** 2], [1.0, 2.0, 0.5]),
+        (sympy.symbols('a0 a1 a3 a5', real=True),
+         [np.ones_like(xvar), xvar, xvar ** 2, xvar ** 3], [1.0, 2.0, 0.5, -0.3]),
+    ]
+
+    for syms, basis, coeffs in cases:
+        nparam = len(syms)
+        # eq with non-contiguous parameter labels (a3, a5 stand in for the
+        # removed parameters); the canonical model is a plain polynomial.
+        eq = sum(sym * xsym ** k for k, sym in enumerate(syms))
+        G = np.column_stack(basis)
+        yvar = G @ np.array(coeffs) + rng.normal(0.0, 0.4, xvar.size)
+        np.savetxt(tmp_path / 'data.txt', np.column_stack([xvar, yvar, yerr]))
+        likelihood = GaussLikelihood('data.txt', f'removal_{nparam}',
+                                     data_dir=str(tmp_path))
+
+        Gram = _gaussian_design_hessian(basis, yerr)
+        w = 1.0 / yerr ** 2
+        theta_mle = np.linalg.solve(Gram, (G * w[:, None]).T @ yvar)
+
+        eq_numpy = sympy.lambdify([xsym, *syms], eq, 'numpy')
+        nll = likelihood.negloglike(theta_mle, eq_numpy)
+
+        params, nll_out, deriv, codelen = test_all_Fisher.convert_params(
+            'reduced', eq, False, np.pad(theta_mle, (0, 4 - nparam)),
+            likelihood, nll, max_param=4, use_det_I=True, snap_choice=1)
+
+        H = _hessian_from_deriv(deriv, nparam, 4)
+        np.testing.assert_allclose(H, Gram, rtol=1e-2)
+        assert np.isfinite(codelen), f'{nparam}-param determinant codelen not finite'
+        expected = test_all_Fisher._compute_codelen(
+            Gram, np.diag(Gram), theta_mle, np.ones(nparam, dtype=bool), True)
+        assert np.isclose(codelen, expected, rtol=1e-2)
+        # Canonicalisation collapses the gapped labels to exactly nparam params.
+        np.testing.assert_allclose(params[:nparam], theta_mle, rtol=1e-2)
+
+
+def test_determinant_scoring_and_matching_with_parameter_removal(
+        tmp_path, monkeypatch):
+    """End-to-end determinant scoring and matching when the likelihood transform
+    removes a parameter from 3-parameter models.
+
+    This also exercises the likelihood-aware early return in ``match.main``:
+    two raw expressions that collapse to the same transformed model must inherit
+    the representative's determinant codelen/negloglike/params verbatim, with no
+    second (inverse-substitution) transformation applied.
+    """
+    import sympy
+    from esr.fitting import test_all, test_all_Fisher, match
+    from esr.fitting.sympy_symbols import x as xsym
+
+    if monkeypatch is not None:
+        monkeypatch.setattr(plt, 'show', lambda: None)
+
+    rng = np.random.default_rng(3)
+    xvar = np.linspace(0.4, 3.0, 60)
+    yerr = np.full_like(xvar, 0.4)
+    yvar = 1.5 + 0.8 * xvar + 0.3 * xvar ** 2 + rng.normal(0.0, 0.4, xvar.size)
+    np.savetxt(tmp_path / 'data.txt', np.column_stack([xvar, yvar, yerr]))
+
+    class OffsetRemovingGauss(GaussLikelihood):
+        # Subtract the value at x=1, removing the constant (a0) term of
+        # a0 + g(x). This changes the parameter layout, so we opt back in to the
+        # likelihood-aware catalogue (the built-in GaussLikelihood opts out).
+        use_likelihood_catalogue = True
+
+        def run_sympify(self, fcn_i, **kwargs):
+            fcn_i, eq, _ = super().run_sympify(fcn_i, **kwargs)
+            return fcn_i, sympy.expand(eq - eq.subs(xsym, 1)), False
+
+    likelihood = OffsetRemovingGauss('data.txt', 'det_removal',
+                                     data_dir=str(tmp_path))
+    likelihood.fn_dir = str(tmp_path / 'functions')
+
+    comp = 5
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    all_functions = [
+        'a0 + a1*x + a2*pow(x, 2)',
+        '2*a0 + a1*x + a2*pow(x, 2)',   # same transformed model as the first
+        'a0 + a1*x',
+    ]
+    (compl_dir / f'all_equations_{comp}.txt').write_text(
+        '\n'.join(all_functions) + '\n')
+    (compl_dir / f'unique_equations_{comp}.txt').write_text(
+        '\n'.join(all_functions) + '\n')
+
+    assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
+    test_all.main(comp, likelihood, Niter_params=[4], Nconv_params=[2])
+    test_all_Fisher.main(comp, likelihood, use_det_I=True, snap_choice=1)
+    match.main(comp, likelihood)
+
+    matched = np.atleast_2d(np.loadtxt(
+        os.path.join(likelihood.out_dir, f'codelen_matches_comp{comp}.dat')))
+    # Columns are [negloglike_all, codelen, index, params...].
+    assert matched.shape[0] == len(all_functions)
+    # The first two raw expressions collapse to the same representative.
+    assert matched[0, 2] == matched[1, 2]
+    assert matched[2, 2] != matched[0, 2]
+    # Inheritance is a straight copy: no second, inverse transformation.
+    np.testing.assert_allclose(matched[0, :], matched[1, :])
+    # Determinant scoring produced a finite codelen for the reduced models.
+    assert np.isfinite(matched[0, 1])
+    assert np.isfinite(matched[2, 1])
+
+    # The match output must reproduce the likelihoods it claims.
+    assert match.check_match_results(comp, likelihood) == 0
+
+
+def test_legacy_diagonal_settings_reproduce_published_values(
+        monkeypatch, tmp_path):
+    """The published (old-method) cosmic-chronometer values are reproduced when
+    the pipeline is run with the pre-det(I) settings.
+
+    Running the hard-coded CC dataset with ``use_det_I=False, snap_choice=0``
+    must recover the Table-1 values of arXiv:2211.11461 for the best function,
+    every function's stored likelihood must still re-evaluate correctly, and the
+    old-method description lengths must be finite and correctly ranked across the
+    whole range of complexity-3 functions, not just the best row. (Complexity 3
+    contains only 0- and 1-parameter functions; the genuinely multi-parameter
+    old-method check lives in
+    ``test_old_method_codelen_matches_diagonal_formula_from_data``.)
+    """
+    if monkeypatch is not None:
+        monkeypatch.setattr(plt, 'show', lambda: None)
+
+    comp = 3
+    # Isolated catalogue + output directories, so this test is safe to run
+    # concurrently with others (e.g. under pytest-xdist).
+    likelihood = CCLikelihood(fn_dir=str(tmp_path / 'functions'),
+                              base_out_dir=str(tmp_path / 'output'))
+    esr.generation.duplicate_checker.main(
+        'core_maths', comp, fn_dir=likelihood.fn_dir)
+
+    esr.fitting.test_all.main(comp, likelihood)
+    esr.fitting.test_all_Fisher.main(
+        comp, likelihood, use_det_I=False, snap_choice=0)
+    esr.fitting.match.main(comp, likelihood)
+    assert esr.fitting.match.check_match_results(comp, likelihood) == 0
+    esr.fitting.combine_DL.main(comp, likelihood)
+
+    settings = esr.fitting.test_all_Fisher.load_scoring_settings(comp, likelihood)
+    assert settings == {'use_det_I': False, 'snap_choice': 0}
+
+    # final_<comp>.dat columns are: rank; function; total DL; rel. probability;
+    # negloglike; parameter codelength; function codelength; params...
+    fname = os.path.join(likelihood.out_dir, f'final_{comp}.dat')
+    with open(fname, 'r') as f:
+        best = f.readline().split(';')
+    # Same published Table-1 values as test_cc, now via the old-method settings.
+    assert best[1] == 'a0*x'
+    assert np.isclose(float(best[2]), 29.959725666004328, atol=2e-2)  # total DL
+    assert np.isclose(float(best[4]), 24.138886, atol=2e-2)           # negloglike
+    assert np.isclose(float(best[5]), 2.5250028, atol=2e-2)           # param codelen
+    assert np.isclose(float(best[6]), 3.295836866004329, atol=2e-2)   # func codelen
+    assert np.isclose(float(best[7]), 5638.4157, atol=10)             # best-fit a0
+    assert np.all(np.array(best[8:], dtype=float) == 0)
+    # DL is the sum of its three published components.
+    assert np.isclose(
+        float(best[2]), float(best[4]) + float(best[5]) + float(best[6]),
+        atol=2e-2)
+
+    # Range check: the old-method scoring must produce finite, correctly-ranked
+    # description lengths across all complexity-3 functions, not merely the best
+    # row. (Complexity 3 only contains 0- and 1-parameter functions, for which
+    # the diagonal and det(I) codelengths coincide; the genuinely multi-parameter
+    # old-vs-new comparison is covered by
+    # ``test_old_method_codelen_matches_diagonal_formula_from_data``.)
+    with open(fname, 'r') as f:
+        rows = [line.rstrip('\n').split(';') for line in f if line.strip()]
+    assert len(rows) > 5
+    dl = np.array([float(r[2]) for r in rows])   # column 2 is already the total DL
+    assert np.all(np.isfinite(dl))
+    assert np.all(np.diff(dl) >= -1e-6)          # combine_DL ranks by ascending DL
+    old_dl = {r[1]: float(r[2]) for r in rows}
+
+    # Cross-check the whole range against the current method: complexity 3 has
+    # only 0/1-parameter functions, where the diagonal and det(I) codelengths
+    # coincide, so re-scoring the same fits with the new settings must reproduce
+    # the old-method DL of *every* function -- not just the best row. This is an
+    # internal consistency check between two current code paths (old-method vs
+    # det(I) settings), not a comparison against independently fixed historical
+    # values: only the best row (above) is tied to published Table-1 numbers.
+    esr.fitting.test_all_Fisher.main(
+        comp, likelihood, use_det_I=True, snap_choice=1)
+    esr.fitting.match.main(comp, likelihood)
+    esr.fitting.combine_DL.main(comp, likelihood)
+    with open(fname, 'r') as f:
+        new_rows = [line.rstrip('\n').split(';') for line in f if line.strip()]
+    new_dl = {r[1]: float(r[2]) for r in new_rows}
+    assert set(new_dl) == set(old_dl)
+    for fcn, value in old_dl.items():
+        assert np.isclose(value, new_dl[fcn], atol=2e-2), fcn
+
+
+def test_projected_eigenbasis_codelen_is_eigenbasis_consistent():
+    """snap_choice=2 scores in the Hessian eigenbasis.
+
+    For a well-constrained (unsnapped) fit the codelength equals
+    ``_compute_codelen`` evaluated with the diagonalised Hessian and the rotated
+    parameters, and it differs from the original-basis (snap_choice=0/1) score
+    because the precision floor is taken in the eigenbasis rather than against
+    the original H_ii -- the point of Deaglan's README question.
+    """
+    from esr.fitting.test_all_Fisher import (
+        _score_projected_eigenbasis, _compute_codelen)
+
+    H = np.array([[100.0, 40.0], [40.0, 60.0]])
+    theta = np.array([20.0, 20.0])
+    eigvals, V = np.linalg.eigh(H)
+    b = V.T @ theta
+
+    theta_f, nll_f, k, cl = _score_projected_eigenbasis(
+        H, theta, 7.0, True, lambda t: 7.0)
+
+    assert k == 2                       # nothing snapped
+    np.testing.assert_allclose(theta_f, theta)
+    assert nll_f == 7.0
+
+    expected_eig = _compute_codelen(
+        np.diag(eigvals), eigvals, b, np.ones(2, dtype=bool), True)
+    assert np.isclose(cl, expected_eig)
+
+    # The determinant/volume term is basis-invariant, but the floor term is not,
+    # so the eigenbasis score differs from the original-basis score.
+    orig = _compute_codelen(H, np.diag(H), theta, np.ones(2, dtype=bool), True)
+    assert not np.isclose(cl, orig)
+
+
+def test_projected_eigenbasis_snaps_weak_direction():
+    """A weakly-constrained projected coordinate is zeroed and the codelength is
+    scored over the retained eigendirections only."""
+    from esr.fitting.test_all_Fisher import _score_projected_eigenbasis
+
+    c = 1.0 / np.sqrt(2.0)
+    V = np.array([[c, -c], [c, c]])            # 45-degree rotation
+    eigvals = np.array([1.0e6, 1.0])           # second direction weak but resolved
+    H = V @ np.diag(eigvals) @ V.T
+    b = np.array([3.0, 1.0e-3])                # tiny projection on the weak axis
+    theta = V @ b
+
+    calls = []
+
+    def eval_nll(t):
+        calls.append(np.asarray(t))
+        return 12.0
+
+    theta_f, nll_f, k, cl = _score_projected_eigenbasis(
+        H, theta, 12.0, True, eval_nll)
+
+    assert k == 1                              # weak eigendirection dropped
+    assert len(calls) == 1                     # likelihood re-evaluated once
+    assert nll_f == 12.0
+    assert np.isfinite(cl)
+    np.testing.assert_allclose(theta_f, V @ np.array([b[0], 0.0]))
+
+
+def test_projected_eigenbasis_handles_exact_flat_direction():
+    """An exact flat direction (zero eigenvalue / zero Hessian diagonal) is
+    projected out by snap_choice=2 with a finite codelength.
+
+    The diagonal ``Fisher_diag <= 0`` rejection used by modes 0/1 would discard
+    such a fit outright; the projected-eigenbasis branch runs before that check
+    so it can legitimately remove the flat coordinate instead.
+    """
+    from esr.fitting.test_all_Fisher import _score_projected_eigenbasis
+
+    # Zero diagonal element (flat direction aligned with the second parameter).
+    H = np.diag([100.0, 0.0])
+    theta = np.array([2.0, 3.0])
+    theta_f, nll_f, k, cl = _score_projected_eigenbasis(
+        H, theta, 8.0, True, lambda t: 8.0)
+    assert k == 1                              # the flat direction is removed
+    assert np.isfinite(cl)
+    np.testing.assert_allclose(theta_f, [2.0, 0.0])
+
+
+def test_snap_choice_2_requires_determinant(tmp_path):
+    """snap_choice=2 is rejected without det(I) scoring, and persists otherwise."""
+    from esr.fitting import test_all_Fisher as F
+
+    class Likelihood:
+        out_dir = str(tmp_path)
+
+    with pytest.raises(ValueError, match="requires use_det_I=True"):
+        F.save_scoring_settings(3, Likelihood, False, 2)
+
+    F.save_scoring_settings(3, Likelihood, True, 2)
+    assert F.load_scoring_settings(3, Likelihood) == {
+        'use_det_I': True, 'snap_choice': 2}
+
+
+def test_snap_choice_2_end_to_end(monkeypatch, tmp_path):
+    """The projected-eigenbasis mode runs through the whole pipeline, including
+    the matching step, and reproduces the (1-parameter) best function exactly
+    -- for a single parameter the eigenbasis and original-basis scores agree."""
+    if monkeypatch is not None:
+        monkeypatch.setattr(plt, 'show', lambda: None)
+
+    comp = 3
+    # Isolated catalogue + output directories (safe under concurrent runs).
+    likelihood = CCLikelihood(fn_dir=str(tmp_path / 'functions'),
+                              base_out_dir=str(tmp_path / 'output'))
+    esr.generation.duplicate_checker.main(
+        'core_maths', comp, fn_dir=likelihood.fn_dir)
+
+    esr.fitting.test_all.main(comp, likelihood)
+    esr.fitting.test_all_Fisher.main(
+        comp, likelihood, use_det_I=True, snap_choice=2)
+    esr.fitting.match.main(comp, likelihood)
+    assert esr.fitting.match.check_match_results(comp, likelihood) == 0
+    esr.fitting.combine_DL.main(comp, likelihood)
+
+    assert esr.fitting.test_all_Fisher.load_scoring_settings(comp, likelihood) == {
+        'use_det_I': True, 'snap_choice': 2}
+
+    fname = os.path.join(likelihood.out_dir, f'final_{comp}.dat')
+    with open(fname, 'r') as f:
+        best = f.readline().split(';')
+    assert best[1] == 'a0*x'
+    assert np.isclose(float(best[2]), 29.959725666004328, atol=2e-2)   # total DL
+    # 1-parameter: eigenbasis and original-basis codelengths coincide.
+    assert np.isclose(float(best[6]), 3.295836866004329, atol=2e-2)    # func codelen
+
+
+def test_snap_choice_2_match_multiparam_end_to_end(monkeypatch, tmp_path):
+    """Genuine end-to-end exercise of snap_choice=2 through ``match.main`` on
+    multi-parameter (rotatable) functions.
+
+    Complexity 5 core_maths contains 2-parameter functions, whose Hessians are
+    genuinely rotated relative to the parameter axes -- unlike the 1-parameter
+    complexity-3 best function. This generates that catalogue into an isolated
+    directory, fits a Gaussian likelihood, scores with the projected eigenbasis,
+    matches, and checks that multi-parameter functions receive a finite mode-2
+    codelength and that every stored likelihood re-evaluates correctly.
+    """
+    if monkeypatch is not None:
+        monkeypatch.setattr(plt, 'show', lambda: None)
+
+    np.random.seed(321)
+    xvar = np.random.uniform(0.5, 3.0, 60)
+    yvar = 1.0 + 2.0 * xvar + 0.5 * xvar ** 2 + np.random.normal(0, 0.3, xvar.size)
+    yerr = np.full_like(xvar, 0.3)
+    np.savetxt(tmp_path / 'data.txt', np.column_stack([xvar, yvar, yerr]))
+
+    comp = 5
+    likelihood = GaussLikelihood(
+        'data.txt', 'snap2_mp', data_dir=str(tmp_path),
+        fn_dir=str(tmp_path / 'functions'),
+        base_out_dir=str(tmp_path / 'output'))
+    esr.generation.duplicate_checker.main(
+        'core_maths', comp, fn_dir=likelihood.fn_dir)
+    esr.fitting.test_all.main(
+        comp, likelihood, Niter_params=[4], Nconv_params=[2])
+
+    # Spy on the snap-callback so we can assert the projected snap path (which
+    # zeros a coordinate and re-evaluates the likelihood) actually ran on a
+    # genuinely rotatable (multi-parameter) function. Counting any call is not
+    # enough: 1-parameter functions also re-evaluate, but their Hessian is not
+    # rotated relative to the parameter axis, so they do not exercise the
+    # projection. We record the largest parameter-vector length seen.
+    calls = {'n': 0, 'multi': 0}
+    original = esr.fitting.match._variant_negloglike
+
+    def counting(likelihood, fcn_i, theta_vec, *args, **kwargs):
+        calls['n'] += 1
+        if np.size(theta_vec) >= 2:
+            calls['multi'] += 1
+        return original(likelihood, fcn_i, theta_vec, *args, **kwargs)
+    monkeypatch.setattr(esr.fitting.match, '_variant_negloglike', counting)
+
+    esr.fitting.test_all_Fisher.main(
+        comp, likelihood, use_det_I=True, snap_choice=2)
+    esr.fitting.match.main(comp, likelihood)
+    assert esr.fitting.match.check_match_results(comp, likelihood) == 0
+    esr.fitting.combine_DL.main(comp, likelihood)
+
+    assert calls['multi'] > 0  # a multi-parameter function's projected coordinate was re-evaluated
+
+    # codelen_matches columns: negloglike; codelen; index; params...
+    matched = np.atleast_2d(np.loadtxt(
+        os.path.join(likelihood.out_dir, f'codelen_matches_comp{comp}.dat')))
+    nparam = np.sum(matched[:, 3:] != 0, axis=1)
+    finite = np.isfinite(matched[:, 1])
+    assert np.any(nparam >= 2)                 # 2-parameter functions are present
+    assert np.any(finite & (nparam >= 2))      # and got a finite mode-2 codelen
+
+
+def test_projected_eigenbasis_correlated_scoring(tmp_path):
+    """snap_choice=2 on a genuinely correlated two-parameter model scores in the
+    rotated eigenbasis and differs from the original-basis snap_choice=1 score.
+
+    This is a focused ``convert_params``-level check (not an end-to-end run; the
+    multi-parameter match path is covered by
+    ``test_snap_choice_2_match_multiparam_end_to_end``): with an off-diagonal
+    Hessian the eigenbasis is genuinely rotated relative to the parameter axes,
+    the case the projected scorer must handle. It fits from data in a temporary
+    directory.
+    """
+    import sympy
+    from esr.fitting import test_all_Fisher
+    from esr.fitting.sympy_symbols import x as xsym
+
+    rng = np.random.default_rng(7)
+    xvar = np.linspace(0.5, 3.0, 60)
+    yerr = np.full_like(xvar, 0.3)
+    # x and x**2 are strongly correlated over this range, so the Hessian has
+    # large off-diagonal terms and the eigenbasis differs from the (a0, a1) axes.
+    yvar = 1.2 * xvar + 0.7 * xvar ** 2 + rng.normal(0.0, 0.3, xvar.size)
+    np.savetxt(tmp_path / 'data.txt', np.column_stack([xvar, yvar, yerr]))
+    likelihood = GaussLikelihood('data.txt', 'proj_corr', data_dir=str(tmp_path))
+
+    a0s, a1s = sympy.symbols('a0 a1', real=True)
+    eq = a0s * xsym + a1s * xsym ** 2
+    basis = [xvar, xvar ** 2]
+    Gram = _gaussian_design_hessian(basis, yerr)
+    w = 1.0 / yerr ** 2
+    theta_mle = np.linalg.solve(
+        Gram, (np.column_stack(basis) * w[:, None]).T @ yvar)
+    eq_numpy = sympy.lambdify([xsym, a0s, a1s], eq, 'numpy')
+    nll = likelihood.negloglike(theta_mle, eq_numpy)
+
+    common = ('a0*x + a1*x**2', eq, False, np.pad(theta_mle, (0, 2)),
+              likelihood, nll)
+    _, _, _, cl2 = test_all_Fisher.convert_params(
+        *common, max_param=4, use_det_I=True, snap_choice=2)
+    _, _, _, cl1 = test_all_Fisher.convert_params(
+        *common, max_param=4, use_det_I=True, snap_choice=1)
+
+    eigvals, V = np.linalg.eigh(Gram)
+    b = V.T @ theta_mle
+    expected2 = test_all_Fisher._compute_codelen(
+        np.diag(eigvals), eigvals, b, np.ones(2, dtype=bool), True)
+    assert np.isfinite(cl2)
+    assert np.isclose(cl2, expected2, rtol=1e-2)
+    # The rotation genuinely matters: the eigenbasis floor differs from the
+    # original-basis floor, so mode 2 and mode 1 disagree here.
+    assert not np.isclose(cl2, cl1, rtol=1e-3)
+
+
+def test_old_method_codelen_matches_diagonal_formula_from_data(tmp_path):
+    """The pre-det(I) settings reproduce the published diagonal codelength,
+    computed from data, for a range of genuinely multi-parameter functions --
+    and differ from the det(I) score when the Hessian is correlated.
+
+    Complexity-3 functions have at most one parameter, where the two scores
+    coincide, so this isolated test covers the 2- and 3-parameter case that
+    ``test_legacy_diagonal_settings_reproduce_published_values`` cannot.
+    """
+    import sympy
+    from esr.fitting import test_all_Fisher
+    from esr.fitting.sympy_symbols import x as xsym
+
+    rng = np.random.default_rng(11)
+    xvar = np.linspace(0.4, 3.0, 80)
+    yerr = np.full_like(xvar, 0.3)
+
+    cases = [
+        (sympy.symbols('a0 a1', real=True),
+         [xsym, xsym ** 2], [xvar, xvar ** 2], [1.0, 0.5]),
+        (sympy.symbols('a0 a1 a2', real=True),
+         [sympy.Integer(1), xsym, xsym ** 2],
+         [np.ones_like(xvar), xvar, xvar ** 2], [1.0, 2.0, 0.5]),
+    ]
+    for syms, basis_expr, basis_cols, coeffs in cases:
+        nparam = len(syms)
+        eq = sum(s * be for s, be in zip(syms, basis_expr))
+        G = np.column_stack(basis_cols)
+        yvar = G @ np.array(coeffs) + rng.normal(0.0, 0.3, xvar.size)
+        np.savetxt(tmp_path / 'data.txt', np.column_stack([xvar, yvar, yerr]))
+        likelihood = GaussLikelihood(
+            'data.txt', f'old_method_{nparam}', data_dir=str(tmp_path))
+
+        Gram = _gaussian_design_hessian(basis_cols, yerr)
+        w = 1.0 / yerr ** 2
+        theta = np.linalg.solve(Gram, (G * w[:, None]).T @ yvar)
+        eqn = sympy.lambdify([xsym, *syms], eq, 'numpy')
+        nll = likelihood.negloglike(theta, eqn)
+
+        common = ('f', eq, False, np.pad(theta, (0, 4 - nparam)), likelihood, nll)
+        _, _, _, cl_old = test_all_Fisher.convert_params(
+            *common, max_param=4, use_det_I=False, snap_choice=0)
+        _, _, _, cl_new = test_all_Fisher.convert_params(
+            *common, max_param=4, use_det_I=True, snap_choice=1)
+
+        expected_diag = test_all_Fisher._compute_codelen(
+            Gram, np.diag(Gram), theta, np.ones(nparam, dtype=bool), False)
+        assert np.isfinite(cl_old)
+        assert np.isclose(cl_old, expected_diag, rtol=1e-2)
+        # det(H) < prod(diag) for a correlated Hessian, so the det(I) codelength
+        # is strictly smaller -- the two methods genuinely differ here.
+        assert cl_new < cl_old
+
+
+def test_likelihood_catalogue_cache_invalidates_on_equation_change(tmp_path):
+    """Editing all_equations must rebuild the catalogue, not reuse a stale
+    matches file (which could associate equations with the wrong representative).
+
+    Runs isolated in temporary directories.
+    """
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    class NormalisingLikelihood:
+        use_likelihood_catalogue = True
+        catalogue_transform_version = 'v1'
+        is_mse = False
+        base_out_dir = str(tmp_path / 'out_base')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+        fn_dir = str(tmp_path / 'functions')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            eq = sympy.sympify(
+                fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), True
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+
+    def write(funcs):
+        (compl_dir / f'all_equations_{comp}.txt').write_text(
+            '\n'.join(funcs) + '\n')
+        (compl_dir / f'unique_equations_{comp}.txt').write_text(
+            '\n'.join(funcs) + '\n')
+
+    likelihood = NormalisingLikelihood()
+    write(['a0*(a1 + x)', 'a2 + x'])
+    assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
+    paths = test_all.likelihood_catalogue_paths(comp, likelihood)
+    assert len(open(paths['matches']).read().splitlines()) == 2
+
+    # Append an equation. Without a content-aware cache key the old two-line
+    # matches file would be reused; it must rebuild instead.
+    write(['a0*(a1 + x)', 'a2 + x', 'a0*x'])
+    assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
+    assert len(open(paths['matches']).read().splitlines()) == 3
+    metadata = test_all._read_likelihood_catalogue_metadata(comp, likelihood)
+    assert metadata['n_all'] == 3
+    assert metadata['settings']['all_equations_hash'] is not None
+
+
+def test_likelihood_catalogue_versioned_cache_hit_skips_rebuild(tmp_path, monkeypatch):
+    """An unchanged, explicitly versioned catalogue is reused, not rebuilt.
+
+    The invalidation tests prove the cache is *discarded* when its inputs change.
+    This proves the complementary property: a second call with identical
+    equations, transform and ``catalogue_transform_version`` takes the cache-hit
+    path and does not repeat the expensive per-equation transform pass. Without
+    this, an implementation that always rebuilt would still pass every other
+    catalogue test.
+    """
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    class NormalisingLikelihood:
+        use_likelihood_catalogue = True
+        catalogue_transform_version = 'v1'
+        is_mse = False
+        base_out_dir = str(tmp_path / 'out_base')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+        fn_dir = str(tmp_path / 'functions')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            eq = sympy.sympify(
+                fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), True
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    funcs = ['a0*(a1 + x)', 'a2 + x']
+    for name in (f'all_equations_{comp}.txt', f'unique_equations_{comp}.txt'):
+        (compl_dir / name).write_text('\n'.join(funcs) + '\n')
+
+    likelihood = NormalisingLikelihood()
+
+    # _transformed_keys_for_slice runs only on a genuine (re)build, never on a
+    # cache hit, so counting its calls distinguishes the two paths.
+    builds = {'n': 0}
+    original = test_all._transformed_keys_for_slice
+
+    def counting(*args, **kwargs):
+        builds['n'] += 1
+        return original(*args, **kwargs)
+    monkeypatch.setattr(test_all, '_transformed_keys_for_slice', counting)
+
+    active_first = test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
+    assert active_first is True          # normalising removes a0 -> active catalogue
+    assert builds['n'] == 1              # first call built it
+    matches_before = open(
+        test_all.likelihood_catalogue_paths(comp, likelihood)['matches']).read()
+
+    # Nothing changed: identical equations, transform and version.
+    active_second = test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
+    assert active_second is True         # same active state returned
+    assert builds['n'] == 1              # second call reused the cache, no rebuild
+
+    matches_after = open(
+        test_all.likelihood_catalogue_paths(comp, likelihood)['matches']).read()
+    assert matches_after == matches_before
+
+
+def test_likelihood_catalogue_warns_on_failed_transforms(tmp_path):
+    """Transformation failures during the build are surfaced with a warning
+    rather than silently cached (a programming error -- e.g. an invalid tmax --
+    would otherwise produce a quietly incomplete catalogue)."""
+    from esr.fitting import test_all
+
+    class BrokenLikelihood:
+        use_likelihood_catalogue = True
+        is_mse = False
+        base_out_dir = str(tmp_path / 'out_base')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+        fn_dir = str(tmp_path / 'functions')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            raise RuntimeError('deliberate transform failure')
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    funcs = ['a0*x', 'a0 + x']
+    (compl_dir / f'all_equations_{comp}.txt').write_text('\n'.join(funcs) + '\n')
+    (compl_dir / f'unique_equations_{comp}.txt').write_text(
+        '\n'.join(funcs) + '\n')
+
+    likelihood = BrokenLikelihood()
+    with pytest.warns(test_all.LikelihoodCatalogueWarning, match='failed to'):
+        test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
+    metadata = test_all._read_likelihood_catalogue_metadata(comp, likelihood)
+    assert metadata['failed_count'] == 2
+
+
+def test_duplicate_checker_and_likelihood_share_custom_fn_dir(tmp_path):
+    """duplicate_checker.main writes into a caller-supplied fn_dir, and a
+    likelihood built with the same fn_dir reads that catalogue -- so generation
+    and fitting can run in a private, isolated location rather than the shared
+    package function_library (the fix for concurrent/xdist-safe runs)."""
+    from esr.fitting.likelihood import CCLikelihood
+    from esr.fitting import test_all
+
+    fn_dir = str(tmp_path / 'lib')
+    likelihood = CCLikelihood(fn_dir=fn_dir, base_out_dir=str(tmp_path / 'out'))
+    # Both the catalogue and the output now live under tmp_path.
+    assert os.path.abspath(fn_dir) in likelihood.fn_dir
+    assert str(tmp_path) in likelihood.out_dir
+
+    esr.generation.duplicate_checker.main(
+        'core_maths', 3, fn_dir=likelihood.fn_dir)
+
+    raw = test_all.raw_catalogue_paths(3, likelihood)
+    assert os.path.exists(raw['all'])
+    assert os.path.exists(raw['unique'])
+    # The files really landed under the custom fn_dir, not the package library.
+    assert os.path.abspath(fn_dir) in os.path.abspath(raw['all'])
+    assert sum(1 for _ in open(raw['all'])) == 24   # core_maths complexity 3
+
+
+def test_convert_params_snap2_flat_direction_from_pipeline(monkeypatch, tmp_path):
+    """An exact flat (zero-diagonal) direction is projected out by snap_choice=2
+    through the real ``convert_params`` entry point, not just the private scorer.
+
+    The diagonal retry/rejection loop would otherwise discard a zero-diagonal
+    Hessian and return nan (the auditor's H=diag(1,0) case); the mode-2 branch
+    must run before it.
+    """
+    import sympy
+    from esr.fitting import test_all_Fisher
+    from esr.fitting.sympy_symbols import x as xsym
+
+    xvar = np.linspace(0.5, 3.0, 40)
+    yerr = np.full_like(xvar, 0.5)
+    yvar = 2.0 * xvar + 0.5
+    np.savetxt(tmp_path / 'data.txt', np.column_stack([xvar, yvar, yerr]))
+    likelihood = GaussLikelihood('data.txt', 'flat', data_dir=str(tmp_path))
+
+    a0s, a1s = sympy.symbols('a0 a1', real=True)
+    eq = a0s * xsym + a1s
+
+    # Force the numerically-computed Hessian to be exactly diag(100, 0): a0
+    # constrained, a1 an exact flat direction.
+    monkeypatch.setattr(
+        test_all_Fisher.nd, 'Hessian',
+        lambda *a, **k: (lambda th: np.array([[100.0, 0.0], [0.0, 0.0]])))
+
+    params, nll, deriv, codelen = test_all_Fisher.convert_params(
+        'a0*x + a1', eq, False, np.array([2.0, 0.5, 0.0, 0.0]), likelihood, 5.0,
+        max_param=4, use_det_I=True, snap_choice=2)
+    assert np.isfinite(codelen)          # was nan before the fix
+    assert params[1] == 0.0              # flat direction a1 projected out
+
+
+def test_likelihood_catalogue_cache_invalidates_on_transform_change(tmp_path):
+    """Changing the run_sympify transform (same equations and output directory)
+    must invalidate the cache rather than reuse the previous transform's
+    catalogue -- caught by the probe-based transform fingerprint."""
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    funcs = ['a0*(a1 + x)', 'a2 + x']
+    for name in (f'all_equations_{comp}.txt', f'unique_equations_{comp}.txt'):
+        (compl_dir / name).write_text('\n'.join(funcs) + '\n')
+
+    class Base:
+        is_mse = False
+        use_likelihood_catalogue = True
+        catalogue_transform_version = 'v1'
+        fn_dir = str(tmp_path / 'functions')
+        base_out_dir = str(tmp_path / 'out_base')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+
+    class Normalising(Base):
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            eq = sympy.sympify(
+                fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), True
+
+    class Identity(Base):
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            return fcn_i, sympy.sympify(
+                fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2}), False
+
+    test_all.ensure_likelihood_catalogue(comp, Normalising(), tmax=5)
+    md_norm = test_all._read_likelihood_catalogue_metadata(comp, Normalising())
+
+    # Same equations + output directory, different transform: must rebuild.
+    test_all.ensure_likelihood_catalogue(comp, Identity(), tmax=5)
+    md_id = test_all._read_likelihood_catalogue_metadata(comp, Identity())
+
+    fp_norm = md_norm['settings']['transform_fingerprint']
+    fp_id = md_id['settings']['transform_fingerprint']
+    assert fp_norm is not None and fp_id is not None
+    assert fp_norm != fp_id                       # different transform -> different key
+    assert md_id['n_unique'] != md_norm['n_unique']   # genuinely rebuilt
+
+
+def test_variant_negloglike_reevaluates_correctly(tmp_path):
+    """match._variant_negloglike rebuilds a variant's numpy function and returns
+    the correct -log(L) -- the callback the snap_choice=2 match path invokes when
+    a projected coordinate is snapped."""
+    import sympy
+    from esr.fitting import match
+    from esr.fitting.sympy_symbols import x as xsym
+
+    xvar = np.linspace(0.5, 3.0, 40)
+    yerr = np.full_like(xvar, 0.5)
+    np.savetxt(tmp_path / 'data.txt',
+               np.column_stack([xvar, 1.0 + 2.0 * xvar, yerr]))
+    likelihood = GaussLikelihood('data.txt', 'variant', data_dir=str(tmp_path))
+
+    theta = np.array([1.5, 2.5])
+    got = match._variant_negloglike(
+        likelihood, 'a0 + a1*x', theta, tmax=5, try_integration=False)
+    a0s, a1s = sympy.symbols('a0 a1', real=True)
+    eqn = sympy.lambdify([xsym, a0s, a1s], a0s + a1s * xsym, 'numpy')
+    assert np.isclose(got, likelihood.negloglike(theta, eqn))
+    # single-parameter form also works
+    got1 = match._variant_negloglike(
+        likelihood, 'a0*x', np.array([2.0]), tmax=5, try_integration=False)
+    eqn1 = sympy.lambdify([xsym, a0s], a0s * xsym, 'numpy')
+    assert np.isclose(got1, likelihood.negloglike([2.0], eqn1))
+
+
+def test_likelihood_catalogue_retries_after_failed_transforms(tmp_path):
+    """A cached catalogue with failed_count > 0 is not reused: the build (and its
+    warning) is repeated so failures are not silently cached."""
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    funcs = ['a0*(a1 + x)', 'a2 + x']
+    for name in (f'all_equations_{comp}.txt', f'unique_equations_{comp}.txt'):
+        (compl_dir / name).write_text('\n'.join(funcs) + '\n')
+
+    class SometimesFail:
+        is_mse = False
+        use_likelihood_catalogue = True
+        catalogue_transform_version = 'v1'
+        fn_dir = str(tmp_path / 'functions')
+        base_out_dir = str(tmp_path / 'ob')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            if fcn_i.startswith('a2'):
+                raise RuntimeError('deliberate failure')
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            eq = sympy.sympify(
+                fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), True
+
+    lik = SometimesFail()
+    with pytest.warns(test_all.LikelihoodCatalogueWarning, match='failed to'):
+        test_all.ensure_likelihood_catalogue(comp, lik, tmax=5)
+    assert test_all._read_likelihood_catalogue_metadata(
+        comp, lik)['failed_count'] == 1
+    # Second call must not reuse the failed cache: it warns again (rebuilds).
+    with pytest.warns(test_all.LikelihoodCatalogueWarning, match='failed to'):
+        test_all.ensure_likelihood_catalogue(comp, lik, tmax=5)
+
+
+def test_projected_eigenbasis_warns_on_degenerate_hessian():
+    """snap_choice=2 warns for (near-)degenerate Hessian eigenvalues, where the
+    eigenbasis -- and hence the codelength -- is ambiguous."""
+    from esr.fitting.test_all_Fisher import (
+        _score_projected_eigenbasis, ProjectedEigenbasisWarning)
+
+    with pytest.warns(ProjectedEigenbasisWarning, match='degenerate'):
+        _score_projected_eigenbasis(
+            np.diag([100.0, 100.0]), np.array([3.0, 5.0]), 7.0, True,
+            lambda t: 7.0)
+
+
+def test_transform_version_tuple_does_not_force_rebuild():
+    """A tuple catalogue_transform_version survives the JSON round-trip, so the
+    freshly-built settings still compare equal to the stored copy (otherwise the
+    cache would be rebuilt on every call)."""
+    import json
+    from esr.fitting import test_all
+
+    s = test_all._likelihood_catalogue_settings(5, False, 'h', ('a', 1), 'fp')
+    assert s == json.loads(json.dumps(s))            # stable across load
+    assert isinstance(s['transform_version'], list)  # tuple normalised to list
+
+
+def test_likelihood_catalogue_activates_on_transformed_collision(tmp_path):
+    """The catalogue activates when a transform collapses raw-distinct
+    expressions onto the same transformed model (a dedup benefit), even with no
+    parameter-layout change -- not only on layout changes."""
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    funcs = ['a0 + x', 'a0 - x', 'a0*x']
+    for name in (f'all_equations_{comp}.txt', f'unique_equations_{comp}.txt'):
+        (compl_dir / name).write_text('\n'.join(funcs) + '\n')
+
+    class Merging:
+        is_mse = False
+        use_likelihood_catalogue = True
+        catalogue_transform_version = 'v1'
+        fn_dir = str(tmp_path / 'functions')
+        base_out_dir = str(tmp_path / 'ob')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            eq = sympy.sympify(
+                fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2})
+            # eq * eq(x -> -x) maps a0+x and a0-x both onto a0**2 - x**2.
+            return fcn_i, sympy.expand(eq * eq.subs(x, -x)), False
+
+    lik = Merging()
+    assert test_all.ensure_likelihood_catalogue(comp, lik, tmax=5)
+    md = test_all._read_likelihood_catalogue_metadata(comp, lik)
+    assert md['changed_layout_count'] == 0            # no parameter removed/relabelled
+    assert md['n_unique'] < md['raw_unique_count']    # but a transformed-model collision
+
+
+def test_versionless_transform_is_not_cached(tmp_path, monkeypatch):
+    """A transforming likelihood without catalogue_transform_version is rebuilt on
+    every call (its cache is never reused) and warns, so a stale mapping cannot
+    survive a transform change the probes miss."""
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    funcs = ['a0*(a1 + x)', 'a2 + x']
+    for name in (f'all_equations_{comp}.txt', f'unique_equations_{comp}.txt'):
+        (compl_dir / name).write_text('\n'.join(funcs) + '\n')
+
+    class Versionless:
+        is_mse = False
+        use_likelihood_catalogue = True   # opt in, but no catalogue_transform_version
+        fn_dir = str(tmp_path / 'functions')
+        base_out_dir = str(tmp_path / 'ob')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            eq = sympy.sympify(
+                fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), True
+
+    builds = {'n': 0}
+    original = test_all._transformed_keys_for_slice
+
+    def counting(*args, **kwargs):
+        builds['n'] += 1
+        return original(*args, **kwargs)
+    monkeypatch.setattr(test_all, '_transformed_keys_for_slice', counting)
+
+    lik = Versionless()
+    with pytest.warns(test_all.LikelihoodCatalogueWarning,
+                      match='catalogue_transform_version'):
+        test_all.ensure_likelihood_catalogue(comp, lik, tmax=5)
+    test_all.ensure_likelihood_catalogue(comp, lik, tmax=5)  # nothing changed
+    assert builds['n'] == 2   # rebuilt both times (cache not reused without a version)

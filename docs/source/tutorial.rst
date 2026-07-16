@@ -114,7 +114,13 @@ use different settings from the Fisher calculation. This setting diagonalises
 the full Hessian, identifies directions with fewer than one precision step,
 and maps each such direction to the original parameter with the largest
 projection; the description length itself remains in the original parameter
-basis. With ``snap_choice=0``, snapping is assessed independently from each
+basis. With ``snap_choice=2`` (projected eigenbasis), ESR instead zeros the weak
+projected coordinate itself, transforms the retained vector back, and
+re-evaluates the likelihood at that point *in the original parameterisation*;
+only the snap decision and the description length are expressed in the Hessian
+eigenbasis, so the snap and the codelength share a basis. This mode requires
+``use_det_I=True``. With
+``snap_choice=0``, snapping is assessed independently from each
 Hessian diagonal element. To compare against the published diagonal
 parameter-codelength formula, run
 ``test_all_Fisher.main(comp, likelihood, use_det_I=False, snap_choice=0)``
@@ -123,7 +129,7 @@ formula within ESR's current shared fitting pipeline. It is therefore not a
 byte-for-byte reproduction of an older ESR run.
 
 When ``likelihood.run_sympify`` removes or relabels parameters, for example
-by applying a likelihood-specific symbolic transformation, ESR builds a
+by applying a likelihood-specific symbolic transformation, ESR can build a
 fitted-function catalogue (named ``likelihood_catalogue`` in code identifiers
 and output files). Raw
 equations are grouped by their exact symbolic transformed expression after
@@ -134,12 +140,21 @@ the code will fail loudly on stale row counts rather than reusing incompatible
 ``test_all`` or Fisher outputs; rerun ``test_all.main`` and
 ``test_all_Fisher.main`` with the current likelihood/settings.
 
-Do not use the fitted-function catalogue for likelihoods that evaluate ESR
-expressions directly and whose fitted rows already correspond to the raw
-``unique_equations`` catalogue. Such likelihoods can opt out by defining
-``use_likelihood_catalogue = False`` on the likelihood class or instance. This
-is appropriate when ``run_sympify`` parses the expression but does not change
-which model family was fitted or how its parameters are laid out.
+Building this catalogue is **opt-in**: ``use_likelihood_catalogue`` defaults to
+``False`` on ``Likelihood``, so the built-in likelihoods (which do not change the
+parameter layout) skip the build entirely, avoiding an expensive all-equations
+transformation pass at high complexity. A likelihood whose ``run_sympify``
+genuinely removes or relabels parameters should set
+``use_likelihood_catalogue = True`` on its class or instance. Such a likelihood
+should also set a ``catalogue_transform_version`` string (bumped whenever
+``run_sympify`` changes): the catalogue is cached across runs only when a version
+is present, because ESR otherwise cannot prove from its best-effort probe
+fingerprint that the transformation is unchanged, and so rebuilds every time to
+stay correct. A rebuild is also forced when the equation set changes, the
+transformation version or fingerprint changes, ``tmax`` or the integration
+setting changes, or the cached build had transform failures. (The catalogue does
+not depend on the Fisher scoring options ``use_det_I``/``snap_choice``, so
+changing those does not rebuild it.)
 
 Once you have run this for many complexities, you can plot the pareto front and save it to file using the following function.
 

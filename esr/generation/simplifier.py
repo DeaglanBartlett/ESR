@@ -239,11 +239,13 @@ def time_limit(seconds):
     def signal_handler(signum, frame):
         raise TimeoutException("Timed out")
     signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(seconds)
+    # Use setitimer (not alarm) so a float ``seconds`` such as 5.0 works;
+    # signal.alarm requires an integer and would raise TypeError otherwise.
+    signal.setitimer(signal.ITIMER_REAL, float(seconds))
     try:
         yield
     finally:
-        signal.alarm(0)
+        signal.setitimer(signal.ITIMER_REAL, 0)
 
 
 def get_max_param(all_fun, verbose=True):

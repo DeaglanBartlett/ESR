@@ -1,9 +1,46 @@
 import numpy as np
+import os
 import sys
+import tempfile
+from contextlib import contextmanager
 from pympler import asizeof
 import psutil
 from psutil._common import bytes2human
 from collections import OrderedDict
+
+
+@contextmanager
+def atomic_write(path, mode='w', **kwargs):
+    """Write to a temporary file then atomically rename it over ``path``.
+
+    Prevents a concurrent reader -- for example a separate process or a
+    pytest-xdist worker -- from ever observing a half-written catalogue file.
+    The temporary file is created in the same directory as ``path`` so the final
+    ``os.replace`` is a same-filesystem atomic rename. If the body raises, the
+    temporary file is removed and ``path`` is left untouched.
+
+    Args:
+        :path (str): destination path to write atomically
+        :mode (str, default='w'): write mode for the file handle
+        :kwargs: forwarded to ``os.fdopen`` (e.g. ``encoding``, ``newline``)
+
+    Yields:
+        :f: a writable file handle for the temporary file
+    """
+    directory = os.path.dirname(os.path.abspath(path))
+    fd, tmp = tempfile.mkstemp(dir=directory, prefix='.tmp_', suffix='.part')
+    try:
+        with os.fdopen(fd, mode, **kwargs) as f:
+            yield f
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def split_idx(Ntotal, r, indices_or_sections):
