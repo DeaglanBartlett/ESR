@@ -1,13 +1,13 @@
 """Generic file/IO and environment helpers shared across the fitting pipeline.
 
-These utilities are not specific to any likelihood or catalogue: they handle
-natural-sort ordering, concatenating rank-local temporary files, writing the
-negative-log-likelihood output table, and raising Python's recursion limit for
-deep expression trees. They live here (rather than in ``test_all``) so that
+These utilities are shared by the fitting stages: they define the common file
+paths, handle natural-sort ordering and rank-local file concatenation, write the
+negative-log-likelihood output table, and raise Python's recursion limit for deep
+expression trees. They live here (rather than in ``test_all``) so that
 ``test_all``, ``test_all_Fisher``, ``match`` and downstream code can reuse them
-without importing the fitting driver. ``test_all`` re-exports them for backwards
-compatibility, so existing ``test_all.combine_temp_files``-style calls continue
-to work.
+without importing the fitting driver. ``test_all`` re-exports the established
+helpers for backwards compatibility, while ESR's own modules import them from
+this module directly.
 """
 import glob
 import os
@@ -20,6 +20,119 @@ import numpy as np
 # Re-exported so fitting code can write catalogue/output files atomically
 # without importing the generation layer directly.
 from esr.generation.utils import atomic_write  # noqa: F401
+
+
+def raw_catalogue_paths(comp, likelihood):
+    """Return paths to the raw generated catalogue for one complexity.
+
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object providing ``fn_dir`` and
+            optionally ``fnprior_prefix``
+
+    Returns:
+        :paths (dict): paths for the all/unique equation catalogues, matching and
+            inverse-substitution files, lower-complexity exclusions and function
+            prior
+    """
+    base = os.path.join(likelihood.fn_dir, f'compl_{comp}')
+    fnprior_prefix = getattr(likelihood, 'fnprior_prefix', 'aifeyn_')
+    return {
+        'all': os.path.join(base, f'all_equations_{comp}.txt'),
+        'unique': os.path.join(base, f'unique_equations_{comp}.txt'),
+        'matches': os.path.join(base, f'matches_{comp}.txt'),
+        'previous': os.path.join(base, f'previous_eqns_{comp}.txt'),
+        'inv_subs': os.path.join(base, f'inv_subs_{comp}.txt'),
+        'fnprior': os.path.join(base, f'{fnprior_prefix}{comp}.txt'),
+    }
+
+
+def likelihood_catalogue_paths(comp, likelihood):
+    """Return paths to the transformed likelihood-aware catalogue.
+
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object providing ``out_dir``
+
+    Returns:
+        :paths (dict): paths for the transformed unique equations, match indices
+            and cache metadata
+    """
+    prefix = os.path.join(
+        likelihood.out_dir, f'likelihood_catalogue_comp{comp}')
+    return {
+        'unique': prefix + '_unique_equations.txt',
+        'matches': prefix + '_matches.txt',
+        'metadata': prefix + '_metadata.json',
+    }
+
+
+def fitting_paths(comp, likelihood, rank=None):
+    """Return shared fitting input, temporary and output paths.
+
+    This is the single filename definition used by the fitting, Fisher, matching,
+    combination and plotting stages. Rank-local entries are included when
+    ``rank`` is supplied; glob patterns are relative to ``likelihood.temp_dir``
+    for direct use with :func:`combine_temp_files`.
+
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object providing ``out_dir`` and
+            ``temp_dir`` and optionally the combination/final filename prefixes
+        :rank (int or None): MPI rank for rank-local files
+
+    Returns:
+        :paths (dict): semantic mapping of fitting filenames and glob patterns
+    """
+    combine_prefix = getattr(likelihood, 'combineDL_prefix', 'combine_DL_')
+    final_prefix = getattr(likelihood, 'final_prefix', 'final_')
+    out_dir = likelihood.out_dir
+    temp_dir = getattr(likelihood, 'temp_dir', None)
+
+    paths = {
+        'negloglike': os.path.join(out_dir, f'negloglike_comp{comp}.dat'),
+        'negloglike_checkpoint': os.path.join(
+            out_dir, f'negloglike_comp{comp}.checkpoint.dat'),
+        'fisher_settings': os.path.join(
+            out_dir, f'fisher_settings_comp{comp}.json'),
+        'codelen': os.path.join(out_dir, f'codelen_comp{comp}_deriv.dat'),
+        'derivs': os.path.join(out_dir, f'derivs_comp{comp}.dat'),
+        'codelen_matches': os.path.join(
+            out_dir, f'codelen_matches_comp{comp}.dat'),
+        'combined': os.path.join(
+            out_dir, f'{combine_prefix}comp{comp}.dat'),
+        'combined_functions': os.path.join(
+            out_dir, f'{combine_prefix}fcn_comp{comp}.dat'),
+        'final': os.path.join(out_dir, f'{final_prefix}{comp}.dat'),
+        'results_pretty': os.path.join(
+            out_dir, f'results_pretty_{comp}.txt'),
+        'negloglike_rank_pattern': f'chi2_comp{comp}weights_*.dat',
+        'codelen_rank_pattern': f'codelen_deriv_{comp}_*.dat',
+        'derivs_rank_pattern': f'derivs_{comp}_*.dat',
+        'codelen_matches_rank_pattern': f'codelen_matches_{comp}_*.dat',
+        'combined_rank_pattern': f'{combine_prefix}{comp}_*.dat',
+        'combined_functions_rank_pattern': (
+            f'{combine_prefix}fcn_{comp}_*.dat'),
+    }
+    if rank is not None:
+        if temp_dir is None:
+            raise AttributeError(
+                'likelihood.temp_dir is required for rank-local fitting paths')
+        paths.update({
+            'negloglike_rank': os.path.join(
+                temp_dir, f'chi2_comp{comp}weights_{rank}.dat'),
+            'codelen_rank': os.path.join(
+                temp_dir, f'codelen_deriv_{comp}_{rank}.dat'),
+            'derivs_rank': os.path.join(
+                temp_dir, f'derivs_{comp}_{rank}.dat'),
+            'codelen_matches_rank': os.path.join(
+                temp_dir, f'codelen_matches_{comp}_{rank}.dat'),
+            'combined_rank': os.path.join(
+                temp_dir, f'{combine_prefix}{comp}_{rank}.dat'),
+            'combined_functions_rank': os.path.join(
+                temp_dir, f'{combine_prefix}fcn_{comp}_{rank}.dat'),
+        })
+    return paths
 
 
 def emit_diagnostic_warning(message, category):

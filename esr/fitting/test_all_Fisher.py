@@ -3,14 +3,15 @@ import math
 import sympy
 from mpi4py import MPI
 import warnings
-import os
 import itertools
 import json
 import numdifftools as nd
 from scipy.stats import mode
 
 import esr.fitting.test_all as test_all
-from esr.fitting.utils import emit_diagnostic_warning
+from esr.fitting.utils import (
+    combine_temp_files, emit_diagnostic_warning, fitting_paths,
+    set_recursionlimit_for_comp)
 from esr.fitting.sympy_symbols import x, a0
 
 
@@ -52,12 +53,15 @@ def _validate_scoring_options(snap_choice):
 
     ``snap_choice`` selects the snapping strategy: 0 = diagonal, 1 = eigenbasis
     identification with original-parameter zeroing, 2 = projected eigenbasis.
+    See :func:`convert_params` for the full definitions.
     The ``use_det_I``/``snap_choice`` *combination* is validated separately by
     ``_validate_snap_and_det`` where both are available, so this range check can
     be used on its own (for example in ``_compute_snap_mask``).
 
     Args:
-        :snap_choice (int): the snapping mode to validate
+        :snap_choice (int): snapping mode: 0 = diagonal, 1 = eigenbasis
+            identification with original-parameter zeroing, 2 = projected
+            eigenbasis. See :func:`convert_params` for details
     """
     if snap_choice not in (0, 1, 2):
         raise ValueError("snap_choice must be 0, 1 or 2.")
@@ -73,7 +77,9 @@ def _validate_snap_and_det(use_det_I, snap_choice):
 
     Args:
         :use_det_I (bool): whether the determinant codelength is in use
-        :snap_choice (int): the snapping mode (0, 1 or 2)
+        :snap_choice (int): snapping mode: 0 = diagonal, 1 = eigenbasis
+            identification with original-parameter zeroing, 2 = projected
+            eigenbasis. See :func:`convert_params` for details
     """
     _validate_scoring_options(snap_choice)
     if snap_choice == 2 and not use_det_I:
@@ -124,19 +130,6 @@ def _has_negative_curvature(Hmat):
     return np.min(eigenvalues) < -scale * EIGENVALUE_REL_THRESHOLD
 
 
-def _settings_file(comp, likelihood):
-    """Path of the JSON file recording the Fisher scoring settings.
-
-    Args:
-        :comp (int): complexity of functions to consider
-        :likelihood (fitting.likelihood object): object providing ``out_dir``
-
-    Returns:
-        :path (str): path of the ``fisher_settings_comp<comp>.json`` file
-    """
-    return os.path.join(likelihood.out_dir, 'fisher_settings_comp' + str(comp) + '.json')
-
-
 def save_scoring_settings(comp, likelihood, use_det_I, snap_choice):
     """Record Fisher scoring settings so matching cannot silently change them.
 
@@ -144,10 +137,12 @@ def save_scoring_settings(comp, likelihood, use_det_I, snap_choice):
         :comp (int): complexity of functions to consider
         :likelihood (fitting.likelihood object): object providing ``out_dir``
         :use_det_I (bool): whether the determinant codelength is in use
-        :snap_choice (int): the parameter-snapping mode (0, 1 or 2)
+        :snap_choice (int): snapping mode: 0 = diagonal, 1 = eigenbasis
+            identification with original-parameter zeroing, 2 = projected
+            eigenbasis. See :func:`convert_params` for details
     """
     _validate_snap_and_det(use_det_I, snap_choice)
-    with open(_settings_file(comp, likelihood), 'w') as f:
+    with open(fitting_paths(comp, likelihood)['fisher_settings'], 'w') as f:
         json.dump({'use_det_I': bool(use_det_I), 'snap_choice': int(snap_choice)}, f)
 
 
@@ -163,7 +158,7 @@ def load_scoring_settings(comp, likelihood):
             None if no settings file has been written
     """
     try:
-        with open(_settings_file(comp, likelihood), 'r') as f:
+        with open(fitting_paths(comp, likelihood)['fisher_settings'], 'r') as f:
             return json.load(f)
     except FileNotFoundError:
         return None
@@ -215,16 +210,20 @@ def _compute_codelen(Hmat, Fisher_diag, theta, kept_mask, use_det_I):
 def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
     """Compute which parameters to snap to zero based on snap_choice.
 
-    For snap_choice 1, eigendecomposes Hmat to identify unconstrained
-    directions, then maps them back to original parameters.
+    With ``snap_choice=0`` the supplied diagonal mask is returned unchanged.
+    With ``snap_choice=1`` this eigendecomposes ``Hmat`` to identify weak
+    directions, then maps them back to original parameters. ``snap_choice=2`` is
+    handled by :func:`_score_projected_eigenbasis` before this helper is reached
+    in the fitting pipeline. See :func:`convert_params` for all three modes.
 
     Args:
         :Hmat (np.ndarray): full Hessian matrix (nparam x nparam)
         :Fisher_diag (np.ndarray): diagonal of the Hessian (nparam,)
         :theta (np.ndarray): parameter values (nparam,)
         :Nsteps (np.ndarray): diagonal-based Nsteps (used for snap_choice=0 and as fallback)
-        :snap_choice (int): 0=diagonal, 1=full eigenbasis (uses rotated
-            theta for Nsteps).
+        :snap_choice (int): 0 = diagonal, 1 = eigenbasis identification with
+            original-parameter zeroing, 2 = projected eigenbasis (handled by
+            :func:`_score_projected_eigenbasis` in the fitting pipeline)
 
     Returns:
         :Nsteps (np.ndarray): updated Nsteps array (values < 1 indicate parameters to snap)
@@ -429,7 +428,7 @@ def load_loglike(comp, likelihood, data_start, data_end, split=True):
         :params (np.ndarray): list of parameters at maximum likelihood points. Shape = (nfun, nparam).
 
     """
-    fname = likelihood.out_dir + "/negloglike_comp" + str(comp) + ".dat"
+    fname = fitting_paths(comp, likelihood)['negloglike']
     if rank == 0:
         print(fname, flush=True)
     if split:
@@ -740,7 +739,8 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
             1: eigenbasis (zeros the original parameter with the largest
             projection onto each weak direction), 2: projected eigenbasis (zeros
             the weak projected coordinate and scores in the eigenbasis; requires
-            ``use_det_I=True``).
+            ``use_det_I=True``). See :func:`convert_params` for the detailed
+            definitions.
 
     Returns:
         None
@@ -754,7 +754,7 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
     if rank == 0:
         print('\nComputing Fisher', flush=True)
 
-    test_all.set_recursionlimit_for_comp(comp)
+    set_recursionlimit_for_comp(comp)
 
     test_all.ensure_likelihood_catalogue(comp, likelihood, tmax, try_integration)
     fcn_list_proc, data_start, data_end = test_all.get_functions(
@@ -821,22 +821,21 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
     else:
         out_arr_deriv = np.empty((len(codelen), 0))
 
-    np.savetxt(likelihood.temp_dir + '/codelen_deriv_' +
-               str(comp)+'_'+str(rank)+'.dat', out_arr, fmt='%.7e')
-    np.savetxt(likelihood.temp_dir + '/derivs_'+str(comp) +
-               '_'+str(rank)+'.dat', out_arr_deriv, fmt='%.7e')
+    paths = fitting_paths(comp, likelihood, rank=rank)
+    np.savetxt(paths['codelen_rank'], out_arr, fmt='%.7e')
+    np.savetxt(paths['derivs_rank'], out_arr_deriv, fmt='%.7e')
 
     comm.Barrier()
 
     if rank == 0:
-        test_all.combine_temp_files(
+        combine_temp_files(
             likelihood.temp_dir,
-            'codelen_deriv_' + str(comp) + '_*.dat',
-            likelihood.out_dir + '/codelen_comp' + str(comp) + '_deriv.dat')
-        test_all.combine_temp_files(
+            paths['codelen_rank_pattern'],
+            paths['codelen'])
+        combine_temp_files(
             likelihood.temp_dir,
-            'derivs_' + str(comp) + '_*.dat',
-            likelihood.out_dir + '/derivs_comp' + str(comp) + '.dat')
+            paths['derivs_rank_pattern'],
+            paths['derivs'])
 
     comm.Barrier()
 

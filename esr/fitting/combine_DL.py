@@ -8,6 +8,7 @@ import warnings
 from collections import defaultdict
 
 import esr.fitting.test_all as test_all
+from esr.fitting.utils import combine_temp_files, fitting_paths, raw_catalogue_paths
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -32,10 +33,10 @@ def main(comp, likelihood, print_frequency=1000):
     if rank == 0:
         print('\nComputing description lengths', flush=True)
 
-    allfn_file = likelihood.fn_dir + \
-        "/compl_%i/all_equations_%i.txt" % (comp, comp)
-    aifeyn_file = likelihood.fn_dir + \
-        "/compl_%i/%s%i.txt" % (comp, likelihood.fnprior_prefix, comp)
+    raw_paths = raw_catalogue_paths(comp, likelihood)
+    fit_paths = fitting_paths(comp, likelihood, rank=rank)
+    allfn_file = raw_paths['all']
+    aifeyn_file = raw_paths['fnprior']
 
     _, data_start, data_end = test_all.get_functions(comp, likelihood)
 
@@ -44,7 +45,7 @@ def main(comp, likelihood, print_frequency=1000):
     results = defaultdict(list)
     results_fcn = {}
 
-    codelen_file = Path(likelihood.out_dir) / f"codelen_matches_comp{comp}.dat"
+    codelen_file = Path(fit_paths['codelen_matches'])
     companion_files = {
         "codelen matches": codelen_file,
         "AIFeyn": Path(aifeyn_file),
@@ -117,12 +118,8 @@ def main(comp, likelihood, print_frequency=1000):
     num_params = comm.allreduce(num_params, op=MPI.MAX)
     num_cols = num_params + 4
 
-    prefix = likelihood.combineDL_prefix
-
-    output_file = likelihood.temp_dir + '/' + \
-        prefix + str(comp) + '_' + str(rank) + '.dat'
-    output_file_fcn = likelihood.temp_dir + '/' + \
-        prefix+'fcn_'+str(comp)+'_'+str(rank)+'.dat'
+    output_file = fit_paths['combined_rank']
+    output_file_fcn = fit_paths['combined_functions_rank']
     with open(output_file, 'w') as fout, \
             open(output_file_fcn, 'w') as fout_fcn:
         for idx in range(data_start, data_end):
@@ -144,18 +141,18 @@ def main(comp, likelihood, print_frequency=1000):
     comm.Barrier()
 
     if rank == 0:
-        test_all.combine_temp_files(
+        combine_temp_files(
             likelihood.temp_dir,
-            prefix + str(comp) + '_*.dat',
-            likelihood.out_dir + '/' + prefix + 'comp' + str(comp) + '.dat')
-        test_all.combine_temp_files(
+            fit_paths['combined_rank_pattern'],
+            fit_paths['combined'])
+        combine_temp_files(
             likelihood.temp_dir,
-            prefix + 'fcn_' + str(comp) + '_*.dat',
-            likelihood.out_dir + '/' + prefix + 'fcn_comp' + str(comp) + '.dat')
+            fit_paths['combined_functions_rank_pattern'],
+            fit_paths['combined_functions'])
         data_entries = []
         num_params = 0
-        with open(likelihood.out_dir + '/'+prefix+'comp'+str(comp)+'.dat', 'r') as f, \
-                open(likelihood.out_dir + '/'+prefix+'fcn_comp'+str(comp)+'.dat', "r") as fcn_f:
+        with open(fit_paths['combined'], 'r') as f, \
+                open(fit_paths['combined_functions'], "r") as fcn_f:
             for i, (line, fcn_line) in enumerate(zip(f, fcn_f)):
                 parts = line.strip().split()
                 if not parts:
@@ -175,7 +172,7 @@ def main(comp, likelihood, print_frequency=1000):
         #  Get relative probabilities
         if len(data_entries) == 0:
             print("(no valid functions at this complexity)", flush=True)
-            path = Path(likelihood.out_dir) / f"{likelihood.final_prefix}{comp}.dat"
+            path = Path(fit_paths['final'])
             path.write_text("")
             comm.Barrier()
             return
@@ -196,9 +193,8 @@ def main(comp, likelihood, print_frequency=1000):
         Nfuncs = 10
 
         # Start this file from scratch here
-        if os.path.exists(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat'):
-            os.remove(likelihood.out_dir + '/' +
-                      likelihood.final_prefix+str(comp)+'.dat')
+        if os.path.exists(fit_paths['final']):
+            os.remove(fit_paths['final'])
 
         for i, d in enumerate(data_entries):  # Only print the top 10 functions
             if i < Nfuncs:
@@ -217,7 +213,7 @@ def main(comp, likelihood, print_frequency=1000):
                 ptab.add_row([i+1, fcn, '%.2f' % DL, '%.2e' % Prel[i], '%.2f' % negloglike,
                              '%.2f' % codelen, '%.2e' % aifeyn] + ['%.2e' % p for p in params])
 
-            with open(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat', 'a') as f:
+            with open(fit_paths['final'], 'a') as f:
                 writer = csv.writer(f, delimiter=';')
                 # Pad params to num_params for consistent column count
                 row_params = list(d[1][:-3])
@@ -235,7 +231,7 @@ def main(comp, likelihood, print_frequency=1000):
 
         print(ptab)
 
-        with open(likelihood.out_dir + '/results_pretty_'+str(comp)+'.txt', 'w') as f:
+        with open(fit_paths['results_pretty'], 'w') as f:
             print(ptab, file=f)
 
     comm.Barrier()

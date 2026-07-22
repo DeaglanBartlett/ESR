@@ -11,6 +11,7 @@ import itertools
 from esr.fitting.sympy_symbols import x, a0
 from esr.fitting.utils import (
     atomic_write, combine_temp_files, emit_diagnostic_warning,
+    fitting_paths, likelihood_catalogue_paths, raw_catalogue_paths,
     set_recursionlimit_for_comp, write_negloglike_file)
 import esr.generation.simplifier as simplifier
 
@@ -106,56 +107,6 @@ def function_catalogue_path(comp, likelihood, unique=True):
     return raw['unique'] if unique else raw['all']
 
 
-def raw_catalogue_paths(comp, likelihood):
-    """Paths to the raw generated equation catalogue for a complexity.
-
-    These are the files produced by the generation stage (before any
-    likelihood-specific transformation), under ``likelihood.fn_dir``. This is
-    distinct from ``likelihood_catalogue_paths``, which points at the
-    transformed fitted-function catalogue written under ``likelihood.out_dir``.
-
-    Args:
-        :comp (int): complexity of functions to consider
-        :likelihood (fitting.likelihood object): object providing ``fn_dir``
-
-    Returns:
-        :paths (dict): mapping with keys ``'all'``, ``'unique'``, ``'matches'``,
-            ``'previous'`` and ``'inv_subs'`` giving the corresponding raw
-            catalogue file paths
-    """
-    base = os.path.join(likelihood.fn_dir, 'compl_%i' % comp)
-    return {
-        'all': os.path.join(base, 'all_equations_%i.txt' % comp),
-        'unique': os.path.join(base, 'unique_equations_%i.txt' % comp),
-        'matches': os.path.join(base, 'matches_%i.txt' % comp),
-        'previous': os.path.join(base, 'previous_eqns_%i.txt' % comp),
-        'inv_subs': os.path.join(base, 'inv_subs_%i.txt' % comp),
-    }
-
-
-def likelihood_catalogue_paths(comp, likelihood):
-    """Paths to the transformed (likelihood-aware) catalogue for a complexity.
-
-    These files live under ``likelihood.out_dir`` and are written by
-    ``ensure_likelihood_catalogue``. Distinct from ``raw_catalogue_paths``,
-    which points at the raw generated catalogue under ``likelihood.fn_dir``.
-
-    Args:
-        :comp (int): complexity of functions to consider
-        :likelihood (fitting.likelihood object): object providing ``out_dir``
-
-    Returns:
-        :paths (dict): mapping with keys ``'unique'``, ``'matches'`` and
-            ``'metadata'`` giving the transformed-catalogue file paths
-    """
-    prefix = os.path.join(likelihood.out_dir, 'likelihood_catalogue_comp' + str(comp))
-    return {
-        'unique': prefix + '_unique_equations.txt',
-        'matches': prefix + '_matches.txt',
-        'metadata': prefix + '_metadata.json',
-    }
-
-
 def _likelihood_catalogue_settings(tmax, try_integration,
                                    all_equations_hash=None,
                                    transform_version=None,
@@ -207,7 +158,7 @@ def _likelihood_catalogue_settings(tmax, try_integration,
         :settings (dict): JSON-serialisable settings fingerprint
     """
     settings = {
-        'cache_schema_version': 5,
+        'cache_schema_version': 0,
         'tmax': float(tmax),
         'try_integration': bool(try_integration),
         'all_equations_hash': all_equations_hash,
@@ -849,7 +800,7 @@ def _fit_function_with_timeout(fcn_i, likelihood, tmax, pmin, pmax, comp,
 def _main_dynamic(comp, likelihood, fcn_list, tmax, pmin, pmax,
                   print_frequency, try_integration, log_opt, max_param,
                   Niter_params, Nconv_params, ignore_previous_eqns):
-    """Fit all functions using a rank-0 master/worker (dynamic) MPI schedule.
+    """Fit all functions using a rank-0 coordinator/worker MPI schedule.
 
     The static partitioning in ``main`` gives each rank a fixed contiguous
     slice of the catalogue. Because individual fits vary enormously in cost,
@@ -900,11 +851,9 @@ def _main_dynamic(comp, likelihood, fcn_list, tmax, pmin, pmax,
 
         chi2 = np.full(n_functions, np.nan)
         params = np.zeros([n_functions, max_param])
-        checkpoint_file = (
-            likelihood.out_dir + '/negloglike_comp' + str(comp)
-            + '.checkpoint.dat')
-        output_file = (
-            likelihood.out_dir + '/negloglike_comp' + str(comp) + '.dat')
+        paths = fitting_paths(comp, likelihood)
+        checkpoint_file = paths['negloglike_checkpoint']
+        output_file = paths['negloglike']
         next_index = 0
         active = 0
 
@@ -1008,8 +957,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
     params = np.zeros(max_param)
 
     if comp > 1 and ignore_previous_eqns:
-        previous_fns_file = likelihood.fn_dir + "/compl_" + \
-            str(comp)+"/previous_eqns_"+str(comp)+".txt"
+        previous_fns_file = raw_catalogue_paths(comp, likelihood)['previous']
         with open(previous_fns_file, "r") as f:
             previous_fns = f.readlines()
         # discard repeat of lower complexity (e.g. [inv, inv, ...])
@@ -1247,14 +1195,16 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
         previous_unifn_list = []
         if comp > 1:
             for compl in range(1, comp):
-                unifn_file_i = likelihood.fn_dir + \
-                    "/compl_%i/unique_equations_%i.txt" % (compl, compl)
+                unifn_file_i = raw_catalogue_paths(
+                    compl, likelihood)['unique']
                 with open(unifn_file_i, "r") as f:
                     fcn_list_i = f.readlines()
                 previous_unifn_list += fcn_list_i
         previous_unifn_list = np.array(previous_unifn_list)
-        np.savetxt(likelihood.fn_dir + "/compl_"+str(comp) +
-                   "/previous_eqns_"+str(comp)+".txt", previous_unifn_list, fmt='%s')
+        np.savetxt(
+            raw_catalogue_paths(comp, likelihood)['previous'],
+            previous_unifn_list,
+            fmt='%s')
 
     comm.Barrier()
 
@@ -1301,20 +1251,16 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
             ignore_previous_eqns)
 
     # Save the data for this proc in Partial
-    write_negloglike_file(
-        likelihood.temp_dir + '/chi2_comp'+str(comp) +
-        'weights_'+str(rank)+'.dat',
-        chi2,
-        params,
-        max_param)
+    paths = fitting_paths(comp, likelihood, rank=rank)
+    write_negloglike_file(paths['negloglike_rank'], chi2, params, max_param)
 
     comm.Barrier()
 
     if rank == 0:
         combine_temp_files(
             likelihood.temp_dir,
-            'chi2_comp' + str(comp) + 'weights_*.dat',
-            likelihood.out_dir + '/negloglike_comp' + str(comp) + '.dat')
+            paths['negloglike_rank_pattern'],
+            paths['negloglike'])
 
     comm.Barrier()
 

@@ -5,6 +5,9 @@ import warnings
 import itertools
 import esr.fitting.test_all as test_all
 import esr.fitting.test_all_Fisher as test_all_Fisher
+from esr.fitting.utils import (
+    combine_temp_files, fitting_paths, likelihood_catalogue_paths,
+    raw_catalogue_paths)
 from esr.fitting.sympy_symbols import x, a0
 import esr.generation.simplifier as simplifier
 
@@ -77,9 +80,11 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
 
     # Output was [negloglike_all, codelen, index_arr] + [params[:, i] for i in range(max_param)])]
 
+    fit_paths = fitting_paths(comp, likelihood)
+    matched_file = fit_paths['codelen_matches']
     # Stream read through codelen_matches_comp*.dat file
     if rank == 0:
-        with open(likelihood.out_dir + "/codelen_matches_comp" + str(comp) + ".dat", 'r') as f:
+        with open(matched_file, 'r') as f:
             num_lines = sum(1 for _ in f)  # Count total lines in the file
     else:
         num_lines = None
@@ -98,11 +103,11 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
     print(f"Rank {rank} processing lines {start_line} to {end_line-1} of {num_lines}", flush=True)
     comm.Barrier()
 
-    allfn_file = test_all.raw_catalogue_paths(comp, likelihood)['all']
+    allfn_file = raw_catalogue_paths(comp, likelihood)['all']
 
     nbad = 0
 
-    with open(likelihood.out_dir + "/codelen_matches_comp" + str(comp) + ".dat", 'r') as f, \
+    with open(matched_file, 'r') as f, \
             open(allfn_file, 'r') as allfn_f:
         
         for i, (line, line_fcn) in enumerate(zip(f, allfn_f)):
@@ -190,7 +195,8 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             largest projection onto each such direction. With 2 (projected
             eigenbasis), ESR zeros the weak projected coordinate itself and
             scores the codelength in the eigenbasis; this requires
-            ``use_det_I=True``.
+            ``use_det_I=True``. See ``test_all_Fisher.convert_params`` for the
+            detailed definitions.
 
     Returns:
         None
@@ -209,7 +215,8 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     if rank == 0:
         print('\nMatching', flush=True)
 
-    raw_paths = test_all.raw_catalogue_paths(comp, likelihood)
+    raw_paths = raw_catalogue_paths(comp, likelihood)
+    fit_paths = fitting_paths(comp, likelihood, rank=rank)
     invsubs_file = raw_paths['inv_subs']
     match_file = raw_paths['matches']
 
@@ -246,12 +253,10 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     # scored in the canonical parameterisation used for the likelihood, so each
     # all-equation simply inherits its representative's codelen/negloglike/params
     # directly. Re-applying the raw inverse substitutions here would be a second,
-    # incorrect transformation on top of that. The end-to-end tests in
-    # tests/test_esr.py exercise this branch with a parameter-removing likelihood
-    # to confirm the inherited values are correct.
+    # incorrect transformation on top of that.
     if test_all.likelihood_catalogue_active(comp, likelihood):
-        paths = test_all.likelihood_catalogue_paths(comp, likelihood)
-        with open(paths['matches'], 'r') as f:
+        catalogue_paths = likelihood_catalogue_paths(comp, likelihood)
+        with open(catalogue_paths['matches'], 'r') as f:
             matches_proc = np.fromiter(
                 (int(float(line.strip()))
                  for line in itertools.islice(f, data_start, data_end)),
@@ -261,8 +266,8 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             raise ValueError(
                 'Likelihood-aware match file is inconsistent with all-equation '
                 'catalogue. Rerun test_all.main and test_all_Fisher.main.')
-        codelen_unique = np.atleast_2d(np.genfromtxt(
-            likelihood.out_dir + '/codelen_comp' + str(comp) + '_deriv.dat'))
+        codelen_unique = np.atleast_2d(
+            np.genfromtxt(fit_paths['codelen']))
         if codelen_unique.size == 0:
             codelen_unique = np.empty((0, max_param + 2))
         metadata = test_all._read_likelihood_catalogue_metadata(comp, likelihood)
@@ -289,16 +294,15 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         out_arr = np.transpose(np.vstack(
             [negloglike_all, codelen, index_arr] + [params[:, i] for i in range(max_param)]))
 
-        np.savetxt(likelihood.temp_dir + '/codelen_matches_'+str(comp)+'_'+str(rank) +
-                   '.dat', out_arr, fmt='%.7e')
+        np.savetxt(fit_paths['codelen_matches_rank'], out_arr, fmt='%.7e')
 
         comm.Barrier()
 
         if rank == 0:
-            test_all.combine_temp_files(
+            combine_temp_files(
                 likelihood.temp_dir,
-                'codelen_matches_' + str(comp) + '_*.dat',
-                likelihood.out_dir + '/codelen_matches_comp' + str(comp) + '.dat')
+                fit_paths['codelen_matches_rank_pattern'],
+                fit_paths['codelen_matches'])
             print('Saved likelihood-aware matched output to', likelihood.out_dir, flush=True)
 
         comm.Barrier()
@@ -316,12 +320,12 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         )
 
     # 2D array of shape (# unique fcns, 10)
-    all_fish = np.loadtxt(likelihood.out_dir + '/derivs_comp'+str(comp)+'.dat')
+    all_fish = np.loadtxt(fit_paths['derivs'])
     all_fish = np.atleast_2d(all_fish)
     if all_fish.size == 0:
         # No valid Fisher results — fill with zeros so indexing works
         # (codelen will be nan/inf for all functions)
-        unique_path = test_all.raw_catalogue_paths(comp, likelihood)['unique']
+        unique_path = raw_catalogue_paths(comp, likelihood)['unique']
         with open(unique_path) as f:
             n_unique = sum(1 for _ in f)
         all_fish = np.zeros((n_unique, int(max_param * (max_param + 1) / 2)))
@@ -612,16 +616,17 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     out_arr = np.transpose(np.vstack(
         [negloglike_all, codelen, index_arr] + [params[:, i] for i in range(max_param)]))
 
-    np.savetxt(likelihood.temp_dir + '/codelen_matches_'+str(comp)+'_'+str(rank) +
-               '.dat', out_arr, fmt='%.7e')        # Save the data for this proc in Partial
+    np.savetxt(
+        fit_paths['codelen_matches_rank'], out_arr,
+        fmt='%.7e')        # Save the data for this proc in Partial
 
     comm.Barrier()
 
     if rank == 0:
-        test_all.combine_temp_files(
+        combine_temp_files(
             likelihood.temp_dir,
-            'codelen_matches_' + str(comp) + '_*.dat',
-            likelihood.out_dir + '/codelen_matches_comp' + str(comp) + '.dat')
+            fit_paths['codelen_matches_rank_pattern'],
+            fit_paths['codelen_matches'])
 
         print('Saved output to', likelihood.out_dir, flush=True)
 

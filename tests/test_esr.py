@@ -20,6 +20,8 @@ from esr.fitting.likelihood import (
     CCLikelihood, PanthLikelihood, GaussLikelihood,
     PoissonLikelihood, MockLikelihood, MSE)
 from esr.fitting.fit_single import single_function, fit_from_string, tree_to_aifeyn, string_to_aifeyn
+from esr.fitting.utils import (
+    fitting_paths, likelihood_catalogue_paths, raw_catalogue_paths)
 import esr.plotting.plot
 
 
@@ -286,7 +288,7 @@ def test_likelihood_catalogue_parallel_matches_serial(tmp_path):
     # Serial reference (this process, size == 1).
     serial = NormalisingLikelihood('serial')
     assert test_all.ensure_likelihood_catalogue(comp, serial, tmax=5)
-    serial_paths = test_all.likelihood_catalogue_paths(comp, serial)
+    serial_paths = likelihood_catalogue_paths(comp, serial)
     serial_unique = open(serial_paths['unique']).read()
     serial_matches = open(serial_paths['matches']).read()
 
@@ -329,7 +331,7 @@ def test_likelihood_catalogue_parallel_matches_serial(tmp_path):
     assert 'PARALLEL_BUILD_OK' in result.stdout
 
     parallel = NormalisingLikelihood('parallel')
-    parallel_paths = test_all.likelihood_catalogue_paths(comp, parallel)
+    parallel_paths = likelihood_catalogue_paths(comp, parallel)
     assert open(parallel_paths['unique']).read() == serial_unique
     assert open(parallel_paths['matches']).read() == serial_matches
 
@@ -656,6 +658,73 @@ def test_fisher_settings_are_persisted(tmp_path):
         'use_det_I': True, 'snap_choice': 1}
 
 
+def test_fitting_path_helpers_centralize_shared_filenames(tmp_path):
+    """Every fitting stage obtains shared filenames from the utility helpers."""
+    likelihood = SimpleNamespace(
+        fn_dir=str(tmp_path / 'functions'),
+        out_dir=str(tmp_path / 'output'),
+        temp_dir=str(tmp_path / 'partial'),
+        fnprior_prefix='prior_',
+        combineDL_prefix='combined_',
+        final_prefix='ranked_',
+    )
+    comp = 6
+    rank = 3
+
+    raw = raw_catalogue_paths(comp, likelihood)
+    raw_base = tmp_path / 'functions' / 'compl_6'
+    assert raw == {
+        'all': str(raw_base / 'all_equations_6.txt'),
+        'unique': str(raw_base / 'unique_equations_6.txt'),
+        'matches': str(raw_base / 'matches_6.txt'),
+        'previous': str(raw_base / 'previous_eqns_6.txt'),
+        'inv_subs': str(raw_base / 'inv_subs_6.txt'),
+        'fnprior': str(raw_base / 'prior_6.txt'),
+    }
+
+    catalogue = likelihood_catalogue_paths(comp, likelihood)
+    prefix = tmp_path / 'output' / 'likelihood_catalogue_comp6'
+    assert catalogue == {
+        'unique': str(prefix) + '_unique_equations.txt',
+        'matches': str(prefix) + '_matches.txt',
+        'metadata': str(prefix) + '_metadata.json',
+    }
+
+    paths = fitting_paths(comp, likelihood, rank=rank)
+    assert paths['negloglike'] == str(
+        tmp_path / 'output' / 'negloglike_comp6.dat')
+    assert paths['negloglike_checkpoint'] == str(
+        tmp_path / 'output' / 'negloglike_comp6.checkpoint.dat')
+    assert paths['fisher_settings'] == str(
+        tmp_path / 'output' / 'fisher_settings_comp6.json')
+    assert paths['codelen'] == str(
+        tmp_path / 'output' / 'codelen_comp6_deriv.dat')
+    assert paths['derivs'] == str(
+        tmp_path / 'output' / 'derivs_comp6.dat')
+    assert paths['codelen_matches'] == str(
+        tmp_path / 'output' / 'codelen_matches_comp6.dat')
+    assert paths['combined'] == str(
+        tmp_path / 'output' / 'combined_comp6.dat')
+    assert paths['combined_functions'] == str(
+        tmp_path / 'output' / 'combined_fcn_comp6.dat')
+    assert paths['final'] == str(
+        tmp_path / 'output' / 'ranked_6.dat')
+    assert paths['results_pretty'] == str(
+        tmp_path / 'output' / 'results_pretty_6.txt')
+    assert paths['negloglike_rank'] == str(
+        tmp_path / 'partial' / 'chi2_comp6weights_3.dat')
+    assert paths['codelen_rank'] == str(
+        tmp_path / 'partial' / 'codelen_deriv_6_3.dat')
+    assert paths['derivs_rank'] == str(
+        tmp_path / 'partial' / 'derivs_6_3.dat')
+    assert paths['codelen_matches_rank'] == str(
+        tmp_path / 'partial' / 'codelen_matches_6_3.dat')
+    assert paths['combined_rank'] == str(
+        tmp_path / 'partial' / 'combined_6_3.dat')
+    assert paths['combined_functions_rank'] == str(
+        tmp_path / 'partial' / 'combined_fcn_6_3.dat')
+
+
 def test_likelihood_aware_catalogue_groups_transformed_models(tmp_path):
     import sympy
     from esr.fitting.sympy_symbols import x
@@ -684,7 +753,7 @@ def test_likelihood_aware_catalogue_groups_transformed_models(tmp_path):
     likelihood = NormalisingLikelihood()
     assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5,
                                                 try_integration=False)
-    paths = test_all.likelihood_catalogue_paths(comp, likelihood)
+    paths = likelihood_catalogue_paths(comp, likelihood)
     with open(paths['matches']) as f:
         matches = [int(line) for line in f]
     assert matches[0] == matches[1]
@@ -724,7 +793,7 @@ def test_likelihood_can_disable_likelihood_aware_catalogue(tmp_path):
 
     likelihood = DirectLikelihood()
     os.makedirs(likelihood.out_dir)
-    paths = test_all.likelihood_catalogue_paths(comp, likelihood)
+    paths = likelihood_catalogue_paths(comp, likelihood)
     for key in ('unique', 'matches'):
         with open(paths[key], 'w') as f:
             f.write('stale\n')
@@ -1627,7 +1696,7 @@ def test_likelihood_catalogue_cache_invalidates_on_equation_change(tmp_path):
     likelihood = NormalisingLikelihood()
     write(['a0*(a1 + x)', 'a2 + x'])
     assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
-    paths = test_all.likelihood_catalogue_paths(comp, likelihood)
+    paths = likelihood_catalogue_paths(comp, likelihood)
     assert len(open(paths['matches']).read().splitlines()) == 2
 
     # Append an equation. Without a content-aware cache key the old two-line
@@ -1692,7 +1761,7 @@ def test_likelihood_catalogue_versioned_cache_hit_skips_rebuild(tmp_path, monkey
     assert active_first is True          # normalising removes a0 -> active catalogue
     assert builds['n'] == 1              # first call built it
     matches_before = open(
-        test_all.likelihood_catalogue_paths(comp, likelihood)['matches']).read()
+        likelihood_catalogue_paths(comp, likelihood)['matches']).read()
 
     # Nothing changed: identical equations, transform and version.
     active_second = test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
@@ -1700,7 +1769,7 @@ def test_likelihood_catalogue_versioned_cache_hit_skips_rebuild(tmp_path, monkey
     assert builds['n'] == 1              # second call reused the cache, no rebuild
 
     matches_after = open(
-        test_all.likelihood_catalogue_paths(comp, likelihood)['matches']).read()
+        likelihood_catalogue_paths(comp, likelihood)['matches']).read()
     assert matches_after == matches_before
 
 
@@ -1742,7 +1811,6 @@ def test_duplicate_checker_and_likelihood_share_custom_fn_dir(tmp_path):
     and fitting can run in a private, isolated location rather than the shared
     package function_library (the fix for concurrent/xdist-safe runs)."""
     from esr.fitting.likelihood import CCLikelihood
-    from esr.fitting import test_all
 
     fn_dir = str(tmp_path / 'lib')
     likelihood = CCLikelihood(fn_dir=fn_dir, base_out_dir=str(tmp_path / 'out'))
@@ -1753,7 +1821,7 @@ def test_duplicate_checker_and_likelihood_share_custom_fn_dir(tmp_path):
     esr.generation.duplicate_checker.main(
         'core_maths', 3, fn_dir=likelihood.fn_dir)
 
-    raw = test_all.raw_catalogue_paths(3, likelihood)
+    raw = raw_catalogue_paths(3, likelihood)
     assert os.path.exists(raw['all'])
     assert os.path.exists(raw['unique'])
     # The files really landed under the custom fn_dir, not the package library.
@@ -1934,6 +2002,7 @@ def test_transform_version_tuple_does_not_force_rebuild():
     from esr.fitting import test_all
 
     s = test_all._likelihood_catalogue_settings(5, False, 'h', ('a', 1), 'fp')
+    assert s['cache_schema_version'] == 0  # initial public cache schema
     assert s == json.loads(json.dumps(s))            # stable across load
     assert isinstance(s['transform_version'], list)  # tuple normalised to list
 
