@@ -6,6 +6,7 @@ import warnings
 import itertools
 import json
 import numdifftools as nd
+from scipy.optimize import minimize
 from scipy.stats import mode
 
 import esr.fitting.test_all as test_all
@@ -25,6 +26,11 @@ class ProjectedEigenbasisWarning(UserWarning):
     likelihood re-evaluation raised an unexpected exception."""
 
 
+class DiagonalSnapDeterminantWarning(UserWarning):
+    """Diagnostic warning that determinant scoring has been paired with diagonal
+    snapping, which cannot remove an unconstrained direction from det(H)."""
+
+
 # A consecutive pair of positive eigenvalues is treated as (near-)degenerate for
 # snap_choice=2 -- where the eigenbasis is then ambiguous -- when their gap
 # relative to the larger of the pair falls below this. 1e-3 is a heuristic
@@ -42,10 +48,31 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 use_relative_dx = True              # CHANGE
 
-# Eigenvalues below this fraction of the largest are treated as degenerate
-# (unconstrained direction in parameter space). This prevents det(H)→0
-# from corrupting the codelen when parameters are structurally redundant.
-EIGENVALUE_REL_THRESHOLD = 1e-10
+# An eigenvalue of the *correlation-normalised* Hessian below this is treated as
+# a degenerate (unconstrained) direction in parameter space. This prevents
+# det(H)→0 from corrupting the codelen when parameters are structurally
+# redundant. See :func:`_correlation_eigenvalues` for why the test is applied to
+# the normalised matrix rather than to the raw eigenvalues.
+#
+# On the raw eigenvalues no threshold works, because lambda_min/lambda_max
+# depends on the units the parameters happen to be measured in as much as on
+# whether the model is degenerate. Measured across the fitting likelihoods, a
+# structurally redundant parameterisation and a well determined but badly scaled
+# one both land around 1e-8 of the largest eigenvalue, and cannot be told apart.
+# After normalisation they separate cleanly: redundant parameterisations and
+# genuinely unresolvable parameters sit at 1e-5 and below, while well determined
+# fits -- including strongly correlated ones such as the Pantheon exponentials,
+# at 2e-3 -- stay far above. 1e-4 sits in that gap, and corresponds to a
+# parameter combination determined some 1e4 times less well than the individual
+# parameter scales.
+#
+# The same threshold serves both the degeneracy test and the negative-curvature
+# (saddle) test. A mathematically flat direction comes out of finite
+# differencing as a small positive or a small negative number at random, so if
+# the two tests disagreed about it the sign of numerical noise would decide
+# whether a degenerate parameterisation is rejected outright or kept and
+# rewarded with a short determinant codelength.
+EIGENVALUE_REL_THRESHOLD = 1e-4
 
 
 def _validate_scoring_options(snap_choice):
@@ -75,6 +102,14 @@ def _validate_snap_and_det(use_det_I, snap_choice):
     it is therefore permitted only with ``use_det_I=True``, not the
     basis-dependent diagonal hybrid.
 
+    ``use_det_I=True`` with ``snap_choice=0`` is allowed but warned about. It is
+    a useful comparison setting -- holding the published snapping rule fixed is
+    the only way to attribute a change to the determinant alone -- but it is not
+    safe for ranking a catalogue, because diagonal snapping cannot remove an
+    unconstrained direction and the determinant then rewards one. The warning is
+    emitted through :func:`emit_diagnostic_warning`, so it appears once per run
+    and can be silenced by the caller.
+
     Args:
         :use_det_I (bool): whether the determinant codelength is in use
         :snap_choice (int): snapping mode: 0 = diagonal, 1 = eigenbasis
@@ -85,6 +120,17 @@ def _validate_snap_and_det(use_det_I, snap_choice):
     if snap_choice == 2 and not use_det_I:
         raise ValueError(
             "snap_choice=2 (projected eigenbasis) requires use_det_I=True.")
+    if use_det_I and snap_choice == 0:
+        emit_diagnostic_warning(
+            'use_det_I=True with snap_choice=0: diagonal snapping tests one '
+            'parameter axis at a time, so it cannot remove an unconstrained '
+            'direction lying between the axes. That direction stays in det(H), '
+            'where the smaller its eigenvalue the shorter the codelength, so a '
+            'redundant parameterisation can score better than the model it is a '
+            'redundant copy of. Use this pairing to isolate the effect of the '
+            'determinant in comparison runs, not to rank a catalogue; '
+            'snap_choice=1 is the setting for that.',
+            DiagonalSnapDeterminantWarning)
 
 
 def _symmetrized_hessian(Hmat):
@@ -100,6 +146,73 @@ def _symmetrized_hessian(Hmat):
     return 0.5 * (Hmat + Hmat.T)
 
 
+def _correlation_eigenvalues(Hmat):
+    """Eigenvalues of the Hessian normalised by its own diagonal.
+
+    ``D^-1/2 H D^-1/2`` for ``D = diag(H)`` is the correlation matrix of the
+    Fisher information. Rescaling a parameter (a change of units, or writing
+    ``2*a0`` for ``a0``) rescales a row and column of ``H`` and leaves this
+    matrix unchanged, so its smallest eigenvalue measures how degenerate the fit
+    is and nothing else. The raw eigenvalues do not: a well determined fit whose
+    parameters differ in magnitude by a few orders of magnitude has a raw
+    ``lambda_min/lambda_max`` as small as a genuinely redundant parameterisation,
+    so the two cannot be separated by any threshold on the raw spectrum.
+
+    A parameter with zero curvature of its own has no scale to normalise by. It
+    is an exactly flat direction, so it is reported as a zero eigenvalue --
+    degenerate, but not a saddle. A parameter with *negative* curvature along its
+    own axis is a saddle, and is reported through the second return value rather
+    than being normalised.
+
+    Args:
+        :Hmat (np.ndarray): Hessian of the negative log-likelihood
+            (nparam x nparam); symmetrised internally
+
+    Returns:
+        :eigenvalues (np.ndarray or None): eigenvalues of the normalised matrix
+            in ascending order, with one zero for each exactly flat parameter
+            direction, or None if the spectrum is unusable
+        :unusable (bool): True if the Hessian is non-finite, has negative
+            curvature along a parameter axis, or cannot be decomposed. The fit
+            is then a saddle (or broken) rather than merely degenerate
+    """
+    Hsym = _symmetrized_hessian(Hmat)
+    if not np.all(np.isfinite(Hsym)):
+        return None, True
+    diagonal = np.diag(Hsym)
+    if np.any(diagonal < 0):
+        return None, True
+    constrained = diagonal > 0
+    n_flat = int(np.sum(~constrained))
+    if not np.any(constrained):
+        return np.zeros(len(diagonal)), False
+    block = Hsym[np.ix_(constrained, constrained)]
+    block_diagonal = np.diag(block)
+    try:
+        eigenvalues = np.linalg.eigvalsh(
+            block / np.sqrt(np.outer(block_diagonal, block_diagonal)))
+    except np.linalg.LinAlgError:
+        return None, True
+    return np.concatenate([np.zeros(n_flat), eigenvalues]), False
+
+
+def _is_saddle(eigenvalues, unusable):
+    """Whether a correlation-normalised spectrum indicates a saddle.
+
+    Args:
+        :eigenvalues (np.ndarray or None): as returned by
+            :func:`_correlation_eigenvalues`
+        :unusable (bool): as returned by :func:`_correlation_eigenvalues`
+
+    Returns:
+        :is_saddle (bool): True for resolved negative curvature or an unusable
+            Hessian, False for a minimum (however degenerate)
+    """
+    if unusable or eigenvalues is None:
+        return True
+    return bool(np.min(eigenvalues) < -EIGENVALUE_REL_THRESHOLD)
+
+
 def _has_negative_curvature(Hmat):
     """Return True if the Hessian has a genuinely negative eigendirection.
 
@@ -110,9 +223,11 @@ def _has_negative_curvature(Hmat):
     unconstrained directions) or tiny and positive routinely come out as small
     negative numbers from numerical noise. Flagging those as negative curvature
     would spuriously reject well-behaved fits that merely have a redundant
-    parameter. Instead an eigenvalue counts as negative only if it falls below a
-    small negative tolerance scaled by the largest-magnitude eigenvalue, so
-    genuine downward curvature is caught while numerical zeros are not.
+    parameter. A direction counts as negative only if it falls below
+    ``-EIGENVALUE_REL_THRESHOLD`` in the correlation-normalised spectrum, which
+    is the same scale on which degeneracy is judged: below it the sign carries
+    no information, and the direction is left for the snapping modes to remove
+    as an unconstrained one rather than being read as a saddle.
 
     Args:
         :Hmat (np.ndarray): Hessian of the negative log-likelihood
@@ -120,14 +235,9 @@ def _has_negative_curvature(Hmat):
 
     Returns:
         :has_negative (bool): True if a resolved negative eigendirection exists
-            (or the eigendecomposition fails), False otherwise
+            (or the normalised spectrum is undefined), False otherwise
     """
-    try:
-        eigenvalues = np.linalg.eigvalsh(_symmetrized_hessian(Hmat))
-    except np.linalg.LinAlgError:
-        return True
-    scale = max(np.max(np.abs(eigenvalues)), 1.0)
-    return np.min(eigenvalues) < -scale * EIGENVALUE_REL_THRESHOLD
+    return _is_saddle(*_correlation_eigenvalues(Hmat))
 
 
 def save_scoring_settings(comp, likelihood, use_det_I, snap_choice):
@@ -227,8 +337,9 @@ def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
 
     Returns:
         :Nsteps (np.ndarray): updated Nsteps array (values < 1 indicate parameters to snap)
-        :has_degenerate_eig (bool): True if any eigenvalue is below EIGENVALUE_REL_THRESHOLD
-            relative to the largest. Used to decide whether snap is mandatory.
+        :has_degenerate_eig (bool): True if any eigenvalue is unresolved
+            (below EIGENVALUE_REL_THRESHOLD relative to the largest), so that the
+            unsnapped determinant cannot be trusted and the snap is mandatory.
     """
     nparam = len(theta)
     has_degenerate_eig = False
@@ -240,17 +351,26 @@ def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
     try:
         eigenvalues, eigenvectors = np.linalg.eigh(
             _symmetrized_hessian(Hmat[:nparam, :nparam]))
-        scale = max(np.max(np.abs(eigenvalues)), 1.0)
-        if np.min(eigenvalues) < -scale * EIGENVALUE_REL_THRESHOLD:
+        # Degeneracy and negative curvature are judged on the correlation-
+        # normalised spectrum, which does not depend on how the parameters are
+        # scaled; the snap itself still uses the eigenvectors of the Hessian, so
+        # that the parameter it zeros is the one that actually carries the
+        # unconstrained direction.
+        scaled, unusable = _correlation_eigenvalues(Hmat[:nparam, :nparam])
+        if _is_saddle(scaled, unusable):
             return Nsteps, has_degenerate_eig
         theta_rot = eigenvectors.T @ theta
-        # Eigenvalues that are non-positive OR negligibly small relative to the
-        # largest indicate degenerate/unconstrained directions. Use a relative
-        # threshold to catch near-zero eigenvalues from parameter redundancies
-        # (e.g. g and c*g having the same f_DE = g/g(1)).
-        eig_threshold = max(eigenvalues.max(), 1.0) * EIGENVALUE_REL_THRESHOLD
-        good_eig = eigenvalues > eig_threshold
-        has_degenerate_eig = not np.all(good_eig)
+        # An unconstrained direction (e.g. g and c*g having the same
+        # f_DE = g/g(1)) leaves the unsnapped determinant untrustworthy: the
+        # smaller its eigenvalue comes out, the shorter the code it produces. So
+        # the snap is mandatory and the caller must not fall back on the
+        # unsnapped score. A *resolved* but weakly occupied direction (small
+        # theta_rot, healthy eigenvalue) is an ordinary snap candidate and stays
+        # subject to the description-length comparison in convert_params.
+        has_degenerate_eig = bool(np.min(scaled) < EIGENVALUE_REL_THRESHOLD)
+        #  Only guards the 12/lambda division below; a tiny positive eigenvalue
+        #  gives a huge precision step and so is flagged by the one-step test.
+        good_eig = eigenvalues > 0
         Nsteps_rot = np.zeros(nparam)
         Nsteps_rot[good_eig] = np.abs(theta_rot[good_eig]) / np.sqrt(12. / eigenvalues[good_eig])
         # Map unconstrained eigendirections back to original parameters:
@@ -266,6 +386,52 @@ def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
         has_degenerate_eig = True  # can't decompose — treat as degenerate
 
     return Nsteps, has_degenerate_eig
+
+
+def _refit_after_snap(fop, theta, kept_mask):
+    """Re-optimise the retained parameters with the snapped ones held at zero.
+
+    Snapping removes a parameter, so the point to encode is the maximum
+    likelihood of the *reduced* model, not the full model's fit with one entry
+    overwritten by zero. Without this re-optimisation a snap can wreck the
+    likelihood -- zeroing an intercept is not the same as removing it, since the
+    slope was fitted alongside it -- and the description-length comparison then
+    rejects a snap that was in fact the right move.
+
+    The search starts from the snapped vector and keeps the result only if it is
+    finite and no worse, so this can only improve the reduced fit. Nelder-Mead is
+    used because the fitting likelihoods contain kinks (``Abs``, ``pow``) that
+    make gradient-based refinement unreliable this close to a boundary.
+
+    Args:
+        :fop (callable): maps a full-length parameter vector to its -log(L)
+        :theta (np.ndarray): parameter vector with the snapped entries already
+            set to zero (nparam,)
+        :kept_mask (np.ndarray): boolean mask of the parameters left free
+
+    Returns:
+        :theta (np.ndarray): the re-optimised vector, snapped entries still zero
+        :negloglike (float): -log(L) at that vector
+    """
+    theta = np.asarray(theta, dtype=float).copy()
+    negloglike = fop(theta)
+    if not np.any(kept_mask):
+        return theta, negloglike
+
+    def objective(free):
+        full = np.zeros_like(theta)
+        full[kept_mask] = free
+        return fop(full)
+
+    try:
+        result = minimize(objective, theta[kept_mask], method='Nelder-Mead',
+                          options={'maxiter': 2000})
+    except Exception:
+        return theta, negloglike
+    if np.isfinite(result.fun) and not (result.fun > negloglike):
+        theta[kept_mask] = result.x
+        negloglike = float(result.fun)
+    return theta, negloglike
 
 
 def _score_projected_eigenbasis(Hmat, theta, negloglike, use_det_I,
@@ -326,15 +492,20 @@ def _score_projected_eigenbasis(Hmat, theta, negloglike, use_det_I,
     except np.linalg.LinAlgError:
         return theta, negloglike, nparam, np.inf
 
-    scale = max(np.max(np.abs(eigenvalues)), 1.0)
-    if np.min(eigenvalues) < -scale * EIGENVALUE_REL_THRESHOLD:
-        # Resolved negative curvature: a saddle, not a fitted minimum.
+    #  As in _compute_snap_mask, both verdicts come from the correlation-
+    #  normalised spectrum so that they do not depend on the parameter scaling,
+    #  while the projection itself uses the Hessian's own eigenbasis.
+    scaled, unusable = _correlation_eigenvalues(Hmat)
+    if _is_saddle(scaled, unusable):
+        # Resolved negative curvature: a saddle, not a fitted minimum. Curvature
+        # smaller than this is not resolved by finite differencing at all, so it
+        # falls through to be projected out below rather than having the sign of
+        # numerical noise decide whether the function is scored or discarded.
         return theta, negloglike, nparam, np.inf
 
     b = V.T @ theta
-    eig_threshold = max(eigenvalues.max(), 1.0) * EIGENVALUE_REL_THRESHOLD
-    good = eigenvalues > eig_threshold
-    has_degenerate = not np.all(good)
+    good = eigenvalues > 0
+    has_degenerate = bool(np.min(scaled) < EIGENVALUE_REL_THRESHOLD)
 
     # (Near-)degenerate positive eigenvalues make the eigenbasis ill-conditioned:
     # any rotation within a near-equal subspace is an equally valid eigenbasis,
@@ -652,7 +823,16 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         # First try setting any parameter to 0 that doesn't have at least
         # one precision step, and recompute -log(L).
         theta_ML[Nsteps < 1] = 0.
-        negloglike = fop(theta_ML)
+        if snap_choice == 0:
+            #  Published diagonal behaviour: score at the zeroed vector itself
+            negloglike = fop(theta_ML)
+        else:
+            #  The eigenbasis modes snap a parameter chosen from a rotated
+            #  direction, so the remaining parameters are generally no longer at
+            #  their own optimum once it is removed. Re-fit them, or an
+            #  unresolved direction gets rejected purely because the reduced
+            #  model was evaluated at the wrong point.
+            theta_ML, negloglike = _refit_after_snap(fop, theta_ML, Nsteps >= 1)
 
         # For the codelen, we effectively don't have the parameter that had Nsteps<1
         if np.isfinite(negloglike):
@@ -677,20 +857,31 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
                 theta_ML = theta_ML_orig
                 negloglike = negloglike_orig
                 k = nparam
+                if has_degenerate_eig:
+                    # No way of removing the unconstrained direction leaves a
+                    # usable likelihood, and the unsnapped determinant still
+                    # contains that direction, so there is no codelength here
+                    # that can be trusted. Reverting silently would hand the
+                    # function the very score the mandatory snap exists to
+                    # prevent.
+                    params[:] = np.pad(
+                        theta_ML_orig, (0, max_param - len(theta_ML_orig)))
+                    return params, negloglike_orig, deriv, np.inf
 
         if k < 0:
             print("This shouldn't have happened", flush=True)
             quit()
 
-        # Compute snapped codelen and compare DL.
-        # If Hessian has degenerate eigenvalues (detected by _compute_snap_mask),
-        # snap is mandatory — reverting would allow det(H)→0 to give
-        # artificially low codelen.
-        codelen_snap = _compute_codelen(Hmat_best, Fisher_diag, theta_ML_orig, kept_mask, use_det_I)
+        # Compute snapped codelen and compare DL. theta_ML is theta_ML_orig with
+        # the snapped entries zeroed, plus any re-fit of the retained ones, and
+        # _compute_codelen reads only the retained entries.
+        codelen_snap = _compute_codelen(Hmat_best, Fisher_diag, theta_ML, kept_mask, use_det_I)
         DL_snap = negloglike + codelen_snap
 
         if has_degenerate_eig:
-            # Mandatory snap — Hessian is degenerate, don't trust DL comparison
+            # Mandatory snap — an unresolved direction is still in the unsnapped
+            # determinant, where the smaller its eigenvalue the shorter the code
+            # it produces, so the DL comparison cannot be trusted here.
             pass
         elif k == 0 or DL_snap >= DL_nosnap:
             # Well-conditioned Hessian but snapping didn't help — revert
@@ -714,11 +905,13 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         except np.linalg.LinAlgError:
             pass
 
-    # Compute final codelen
-    codelen = _compute_codelen(Hmat_best, Fisher_diag, theta_ML_orig, kept_mask, use_det_I)
+    # Compute final codelen. theta_ML holds the reverted, snapped or re-fitted
+    # vector depending on which branch above was taken, so the encoded
+    # parameters and the reported ones are the same numbers.
+    codelen = _compute_codelen(Hmat_best, Fisher_diag, theta_ML, kept_mask, use_det_I)
 
     # New params after the setting to 0, padded to length max_param as always
-    theta_ML = theta_ML_orig
+    theta_ML = np.asarray(theta_ML, dtype=float).copy()
     theta_ML[~kept_mask] = 0.
     params[:] = np.pad(theta_ML, (0, max_param-len(theta_ML)))
 

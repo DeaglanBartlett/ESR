@@ -76,6 +76,9 @@ determinant with eigenbasis snapping:
 
 This is the recommended setting for new runs because it accounts for
 parameter correlations and rejects non-positive-definite Hessians.
+``examples/fisher_scoring_options.py`` runs a small catalogue under each
+setting and shows what changes; see "Comparing the Fisher scoring options"
+in the tutorial for its output.
 
 This full-Hessian determinant encoding (in place of the diagonal Fisher
 approximation of the original ESR paper) and the eigenbasis treatment of
@@ -127,6 +130,18 @@ coordinate-dependent, so ``snap_choice=1`` is not strictly
 re-parameterisation-invariant either, but it is always evaluated in the fixed
 original basis and so is the more predictable choice for clustered spectra.
 
+``use_det_I=True`` may also be paired with ``snap_choice=0``, which holds the
+published snapping rule fixed and so isolates the effect of the determinant on
+its own. ESR warns when it is used (``DiagonalSnapDeterminantWarning``), because
+it is not safe for ranking a catalogue: diagonal snapping tests one parameter
+axis at a time and so cannot remove an unconstrained direction lying between the
+axes. Such a direction stays in :math:`\det H`, where the smaller its eigenvalue
+the shorter the codelength, so a redundant parameterisation can score better than
+the model it is a redundant copy of. Fitting ``x**(a0*a1)`` -- which is just
+``x**a0`` written with a spare parameter -- gives a description length of 17.08
+under this pairing against 19.43 for ``x**a0`` itself, while the published
+diagonal formula correctly charges it 28.12 and the default settings drop it.
+
 The published diagonal
 Fisher approximation remains available for comparison:
 
@@ -150,22 +165,31 @@ Likelihood-aware fitted catalogue
 
 If a likelihood's ``run_sympify`` method removes or relabels parameters
 or otherwise changes the symbolic expression supplied to the likelihood,
-ESR can build a fitted-function catalogue. Raw expressions are deduplicated
-after that likelihood-specific symbolic transformation; ESR fits one
-representative of each transformed symbolic model family, then maps the result
-back to all raw expressions so their original tree complexities can still enter
-the final description length.
+ESR can build a fitted-function catalogue. The simplifier's unique equations
+are deduplicated again after that likelihood-specific symbolic transformation;
+ESR fits one representative of each transformed symbolic model family, then maps
+the result back to all generated expressions so their original tree complexities
+can still enter the final description length. It refines the simplifier's own
+grouping rather than redoing it from every generated tree: a transformation
+cannot split one of those families (their members differ only by a parameter
+redefinition, which it carries through with them), it can only merge them
+further, and starting from every tree would re-admit the redundant
+parameterisations the simplifier had already removed.
 
 This catalogue is opt-in. The built-in likelihoods evaluate the generated
 expressions directly (or, for Pantheon, integrate them) without changing the
 parameter layout, so they set ``use_likelihood_catalogue = False`` and skip
-building it -- which also avoids a one-time, all-equations transformation pass
-that becomes expensive at high complexity. A custom likelihood whose
+building it -- which also avoids a one-time transformation pass over the unique
+equations that becomes expensive at high complexity. A custom likelihood whose
 ``run_sympify`` genuinely removes or relabels parameters must set
 ``use_likelihood_catalogue = True`` (on the class or instance) to enable the
 catalogue; otherwise ESR fits the raw expressions with the wrong parameter
 count. (The code identifiers and the ``likelihood_catalogue_comp*`` output
 files retain the older ``likelihood_catalogue`` name for this feature.)
+
+``examples/likelihood_catalogue.py`` is a worked example, and
+``examples/fisher_scoring_options.py`` covers the Fisher scoring options; see
+the tutorial for their output.
 
 The built catalogue is cached, keyed on the equation set and a best-effort
 fingerprint of the transform evaluated on a few fixed probe expressions. That

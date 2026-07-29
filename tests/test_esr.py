@@ -7,6 +7,7 @@ import textwrap
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
 import unittest
+import warnings
 import pytest
 
 import esr.generation.duplicate_checker
@@ -269,6 +270,8 @@ def test_likelihood_catalogue_parallel_matches_serial(tmp_path):
         '\n'.join(all_functions) + '\n')
     (compl_dir / f'unique_equations_{comp}.txt').write_text(
         '\n'.join(all_functions) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(all_functions))) + '\n')
 
     class NormalisingLikelihood:
         use_likelihood_catalogue = True
@@ -749,6 +752,8 @@ def test_likelihood_aware_catalogue_groups_transformed_models(tmp_path):
     all_functions = ['a0*(a1 + x)', 'a2 + x', 'a0*x']
     (compl_dir / f'all_equations_{comp}.txt').write_text('\n'.join(all_functions) + '\n')
     (compl_dir / f'unique_equations_{comp}.txt').write_text('\n'.join(all_functions) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(all_functions))) + '\n')
 
     likelihood = NormalisingLikelihood()
     assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5,
@@ -790,6 +795,8 @@ def test_likelihood_can_disable_likelihood_aware_catalogue(tmp_path):
         '\n'.join(all_functions) + '\n')
     (compl_dir / f'unique_equations_{comp}.txt').write_text(
         '\n'.join(all_functions) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(all_functions))) + '\n')
 
     likelihood = DirectLikelihood()
     os.makedirs(likelihood.out_dir)
@@ -836,6 +843,8 @@ def test_likelihood_aware_match_uses_transformed_representatives(tmp_path):
     all_functions = ['a0*(a1 + x)', 'a2 + x', 'a0*x']
     (compl_dir / f'all_equations_{comp}.txt').write_text('\n'.join(all_functions) + '\n')
     (compl_dir / f'unique_equations_{comp}.txt').write_text('\n'.join(all_functions) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(all_functions))) + '\n')
 
     likelihood = NormalisingLikelihood()
     assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5,
@@ -859,6 +868,273 @@ def test_likelihood_aware_match_uses_transformed_representatives(tmp_path):
     np.testing.assert_allclose(matched[0, :], matched[1, :])
     assert matched[2, 0] == 20.0
     assert matched[2, 1] == 2.5
+
+
+def test_unresolved_curvature_is_scored_independently_of_its_sign():
+    """A noise-level eigenvalue must not decide whether a fit is usable.
+
+    Finite-differenced Hessians resolve eigenvalues only to about
+    EIGENVALUE_REL_THRESHOLD of the largest, so a mathematically flat direction
+    comes out as a small positive or a small negative number at random. Whether
+    a function is rejected as a saddle, snapped, or scored must not depend on
+    which of those it happened to be.
+    """
+    from esr.fitting.test_all_Fisher import (
+        EIGENVALUE_REL_THRESHOLD, _compute_snap_mask, _has_negative_curvature,
+        _score_projected_eigenbasis)
+
+    scale = 1.0e5
+    theta = np.array([2.0, 3.0])
+
+    def almost_singular(excess):
+        """Hessian whose normalised spectrum has smallest eigenvalue -excess."""
+        return scale * np.array([[1.0, 1.0 + excess], [1.0 + excess, 1.0]])
+
+    unresolved = 0.1 * EIGENVALUE_REL_THRESHOLD
+
+    #  Curvature below the resolution of the Hessian is not a saddle...
+    assert not _has_negative_curvature(almost_singular(+unresolved))
+    assert not _has_negative_curvature(almost_singular(-unresolved))
+    #  ...but resolved negative curvature still is.
+    assert _has_negative_curvature(
+        almost_singular(100. * EIGENVALUE_REL_THRESHOLD))
+
+    #  Both signs are an unresolved direction, so both make the snap mandatory.
+    for excess in (+unresolved, -unresolved):
+        H = almost_singular(excess)
+        diag = np.diag(H)
+        Nsteps = np.abs(theta) / np.sqrt(12. / diag)
+        _, degenerate = _compute_snap_mask(H, diag, theta, Nsteps.copy(), 1)
+        assert degenerate, f'excess {excess}: unresolved direction must snap'
+
+    def flat_negloglike(t):
+        return 100.0
+
+    scores = [
+        _score_projected_eigenbasis(almost_singular(excess), theta, 100.0,
+                                    True, flat_negloglike)[3]
+        for excess in (+unresolved, -unresolved)
+    ]
+    assert np.isfinite(scores[0]), "unresolved curvature should still be scored"
+    assert np.isclose(scores[0], scores[1]), (
+        f"codelen depends on the sign of unresolved curvature: {scores}")
+
+
+def test_likelihood_catalogue_keeps_the_simplifiers_representatives(tmp_path):
+    """The catalogue groups the unique equations, not every generated tree.
+
+    A likelihood transformation cannot split one of the simplifier's families --
+    its members differ only by a parameter redefinition, which the
+    transformation carries through with them -- so the catalogue can only merge
+    families further. Building from all_equations instead would re-admit the
+    redundant parameterisations the simplifier removed, and fit them as separate
+    models: a near-degenerate Hessian then earns such a form a shorter
+    codelength than the family it is a redundant copy of.
+    """
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    class NormalisingLikelihood:
+        is_mse = False
+        use_likelihood_catalogue = True
+        catalogue_transform_version = 'test'
+
+        def __init__(self, fn_dir, out_dir):
+            self.fn_dir = fn_dir
+            self.base_out_dir = out_dir
+            self.out_dir = self.temp_dir = self.fig_dir = out_dir
+
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1 = sympy.symbols('a0 a1', real=True)
+            eq = sympy.sympify(fcn_i, locals={'x': x, 'a0': a0, 'a1': a1})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), False
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    out_dir = tmp_path / 'out'
+    out_dir.mkdir()
+
+    #  pow(x,(a0*a1)) is the same one-parameter family as pow(x,a0), written
+    #  with a spare parameter; the simplifier has already folded it away, so it
+    #  appears in all_equations but not among the unique equations.
+    all_functions = ['pow(x,a0)', 'pow(x,(a0*a1))', 'a0*x']
+    unique_functions = ['pow(x,a0)', 'a0*x']
+    (compl_dir / f'all_equations_{comp}.txt').write_text(
+        '\n'.join(all_functions) + '\n')
+    (compl_dir / f'unique_equations_{comp}.txt').write_text(
+        '\n'.join(unique_functions) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text('0\n0\n1\n')
+
+    likelihood = NormalisingLikelihood(str(compl_dir.parent), str(out_dir))
+    assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
+
+    paths = likelihood_catalogue_paths(comp, likelihood)
+    representatives = open(paths['unique']).read().split()
+    assert 'pow(x,(a0*a1))' not in representatives, (
+        'the catalogue re-admitted a parameterisation the simplifier removed')
+    assert set(representatives) <= set(unique_functions)
+
+    #  Still one match per generated tree, and the redundant spelling inherits
+    #  the family its simplifier representative belongs to.
+    matches = [int(v) for v in open(paths['matches']).read().split()]
+    assert len(matches) == len(all_functions)
+    assert matches[0] == matches[1]
+
+    metadata = test_all._read_likelihood_catalogue_metadata(comp, likelihood)
+    assert metadata['n_all'] == len(all_functions)
+    assert metadata['raw_unique_count'] == len(unique_functions)
+    assert metadata['n_unique'] <= len(unique_functions)
+
+
+def test_determinant_with_diagonal_snapping_warns_but_is_allowed():
+    """use_det_I=True with snap_choice=0 is a comparison setting, not an error.
+
+    Holding the published snapping rule fixed is the only way to attribute a
+    change to the determinant alone, so the pairing stays available; but
+    diagonal snapping cannot remove an unconstrained direction from det(H), so
+    it must say so.
+    """
+    from esr.fitting.test_all_Fisher import (
+        DiagonalSnapDeterminantWarning, _validate_snap_and_det)
+
+    with pytest.warns(DiagonalSnapDeterminantWarning, match='snap_choice=1'):
+        _validate_snap_and_det(True, 0)
+
+    #  Every other supported pairing is silent.
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', DiagonalSnapDeterminantWarning)
+        for use_det_I, snap_choice in [(False, 0), (True, 1), (True, 2)]:
+            _validate_snap_and_det(use_det_I, snap_choice)
+
+
+def test_degeneracy_verdict_does_not_depend_on_parameter_scaling():
+    """Rescaling a parameter must not turn a good fit into a degenerate one.
+
+    Writing a parameter in different units multiplies a row and column of the
+    Hessian, which can drive lambda_min/lambda_max arbitrarily small without
+    making the fit any less determined. The degeneracy test therefore has to be
+    invariant under that rescaling, or well determined models with parameters of
+    very different magnitudes (the Pantheon exponentials, say) get stripped of a
+    parameter.
+    """
+    from esr.fitting.test_all_Fisher import (
+        _compute_snap_mask, _has_negative_curvature)
+
+    H = np.array([[240.0, 420.0], [420.0, 860.0]])   # ordinary linear fit
+    theta = np.array([1.0, 2.0])
+
+    for stretch in [1.0, 1.0e3, 1.0e-3, 1.0e6]:
+        S = np.diag([stretch, 1.0])
+        H_scaled = S @ H @ S
+        theta_scaled = np.array([theta[0] / stretch, theta[1]])
+        assert not _has_negative_curvature(H_scaled)
+        eigenvalues = np.linalg.eigvalsh(H_scaled)
+        diag = np.diag(H_scaled)
+        Nsteps = np.abs(theta_scaled) / np.sqrt(12. / diag)
+        _, degenerate = _compute_snap_mask(H_scaled, diag, theta_scaled,
+                                           Nsteps.copy(), 1)
+        assert not degenerate, (
+            f'stretch {stretch:g}: a rescaled well-determined fit was called '
+            f'degenerate (raw eigenvalue ratio '
+            f'{eigenvalues.min() / eigenvalues.max():.2e})')
+
+
+def test_weakly_occupied_but_resolved_direction_is_not_forced_to_snap():
+    """A small projection onto a healthy eigendirection is an optional snap.
+
+    Only an eigenvalue the Hessian cannot resolve makes the determinant
+    untrustworthy. A well-conditioned direction that theta simply happens to be
+    nearly orthogonal to stays subject to the description-length comparison, so
+    that ordinary fits are not stripped of a parameter.
+    """
+    from esr.fitting.test_all_Fisher import (
+        EIGENVALUE_REL_THRESHOLD, _compute_snap_mask)
+
+    #  Eigenvalues 1 and 199: both comfortably resolved, but theta projects onto
+    #  the weaker one by far less than one precision step.
+    H = np.array([[100.0, 99.0], [99.0, 100.0]])
+    diag = np.array([100.0, 100.0])
+    theta = np.array([0.001, 0.001])
+    Nsteps = np.abs(theta) / np.sqrt(12. / diag)
+    eigenvalues = np.linalg.eigvalsh(H)
+    assert eigenvalues.min() > eigenvalues.max() * EIGENVALUE_REL_THRESHOLD
+
+    result, degenerate = _compute_snap_mask(H, diag, theta, Nsteps.copy(), 1)
+    assert np.sum(result < 1) >= 1, 'the weak direction should be a candidate'
+    assert not degenerate, 'a resolved direction must not force the snap'
+
+
+def test_snapping_refits_the_retained_parameters():
+    """Zeroing a parameter is not the same as removing it.
+
+    The remaining parameters were fitted alongside the one being snapped, so
+    they have to be re-optimised or the reduced model is evaluated at the wrong
+    point and its likelihood collapses.
+    """
+    from esr.fitting.test_all_Fisher import _refit_after_snap
+
+    #  Minimum of (a0 - 1)^2 + (a1 - 2 a0)^2 over a1, at a0 = 0, is a1 = 0.
+    def negloglike(t):
+        return (t[0] - 1.0) ** 2 + (t[1] - 2.0 * t[0]) ** 2
+
+    kept = np.array([False, True])
+    theta, refitted = _refit_after_snap(negloglike, np.array([0.0, 4.0]), kept)
+    assert theta[0] == 0.0, "a snapped parameter must stay at zero"
+    assert np.isclose(theta[1], 0.0, atol=1e-4)
+    assert np.isclose(refitted, 1.0, atol=1e-6)
+    assert refitted < negloglike(np.array([0.0, 4.0]))
+
+    #  Nothing left free: return the snapped point unchanged.
+    theta, refitted = _refit_after_snap(
+        negloglike, np.zeros(2), np.array([False, False]))
+    assert np.allclose(theta, 0.0)
+    assert np.isclose(refitted, 1.0)
+
+
+def test_unresolved_intercept_is_snapped_without_destroying_the_fit(tmp_path):
+    """An intercept that the data cannot resolve is removed, not broken.
+
+    Data taken far from x = 0 constrain the slope but not the intercept. The
+    eigenbasis modes must drop the intercept and keep fitting the slope, rather
+    than zeroing the intercept while holding the slope at a value that was only
+    optimal alongside it.
+    """
+    import sympy
+    from esr.fitting.test_all_Fisher import convert_params
+    from esr.fitting.sympy_symbols import x as xsym
+
+    rng = np.random.default_rng(0)
+    xvar = np.linspace(1.0e4, 1.0e4 + 40.0, 100)
+    yerr = np.full_like(xvar, 0.5)
+    yvar = 3.0 + 1.7 * xvar + rng.normal(scale=yerr)
+    data_file = tmp_path / 'unresolved.txt'
+    np.savetxt(str(data_file), np.array([xvar, yvar, yerr]).T)
+    likelihood = GaussLikelihood('unresolved.txt', 'unresolved',
+                                 data_dir=str(tmp_path),
+                                 base_out_dir=str(tmp_path))
+
+    fcn = 'a0 + a1*x'
+    _, eq, integrated = likelihood.run_sympify(fcn, tmax=5,
+                                               try_integration=False)
+    a0s, a1s = sympy.symbols('a0 a1', real=True)
+    eq_numpy = sympy.lambdify([xsym, a0s, a1s], eq, 'numpy')
+    theta = np.array([3.0, 1.7])
+    unsnapped = likelihood.negloglike(theta, eq_numpy, integrated=integrated)
+
+    for snap_choice in [1, 2]:
+        params, negloglike, _, codelen = convert_params(
+            fcn, eq, integrated, theta.copy(), likelihood, unsnapped,
+            max_param=2, use_det_I=True, snap_choice=snap_choice)
+        assert np.isfinite(codelen)
+        assert abs(params[0]) < 1.0e-3, (
+            f'snap_choice={snap_choice}: intercept should be dropped, '
+            f'got {params[0]}')
+        assert np.isclose(params[1], 1.7, atol=1e-2)
+        assert negloglike < unsnapped + 1.0, (
+            f'snap_choice={snap_choice}: snapping degraded -log(L) from '
+            f'{unsnapped} to {negloglike}')
 
 
 def test_convert_params_preserves_diagonal_default_and_supports_full_fisher():
@@ -1250,6 +1526,8 @@ def test_determinant_scoring_and_matching_with_parameter_removal(
         '\n'.join(all_functions) + '\n')
     (compl_dir / f'unique_equations_{comp}.txt').write_text(
         '\n'.join(all_functions) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(all_functions))) + '\n')
 
     assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
     test_all.main(comp, likelihood, Niter_params=[4], Nconv_params=[2])
@@ -1692,6 +1970,8 @@ def test_likelihood_catalogue_cache_invalidates_on_equation_change(tmp_path):
             '\n'.join(funcs) + '\n')
         (compl_dir / f'unique_equations_{comp}.txt').write_text(
             '\n'.join(funcs) + '\n')
+        (compl_dir / f'matches_{comp}.txt').write_text(
+            '\n'.join(str(i) for i in range(len(funcs))) + '\n')
 
     likelihood = NormalisingLikelihood()
     write(['a0*(a1 + x)', 'a2 + x'])
@@ -1744,6 +2024,8 @@ def test_likelihood_catalogue_versioned_cache_hit_skips_rebuild(tmp_path, monkey
     funcs = ['a0*(a1 + x)', 'a2 + x']
     for name in (f'all_equations_{comp}.txt', f'unique_equations_{comp}.txt'):
         (compl_dir / name).write_text('\n'.join(funcs) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(funcs))) + '\n')
 
     likelihood = NormalisingLikelihood()
 
@@ -1797,6 +2079,8 @@ def test_likelihood_catalogue_warns_on_failed_transforms(tmp_path):
     (compl_dir / f'all_equations_{comp}.txt').write_text('\n'.join(funcs) + '\n')
     (compl_dir / f'unique_equations_{comp}.txt').write_text(
         '\n'.join(funcs) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(funcs))) + '\n')
 
     likelihood = BrokenLikelihood()
     with pytest.warns(test_all.LikelihoodCatalogueWarning, match='failed to'):
@@ -1877,6 +2161,8 @@ def test_likelihood_catalogue_cache_invalidates_on_transform_change(tmp_path):
     funcs = ['a0*(a1 + x)', 'a2 + x']
     for name in (f'all_equations_{comp}.txt', f'unique_equations_{comp}.txt'):
         (compl_dir / name).write_text('\n'.join(funcs) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(funcs))) + '\n')
 
     class Base:
         is_mse = False
@@ -1954,6 +2240,8 @@ def test_likelihood_catalogue_retries_after_failed_transforms(tmp_path):
     funcs = ['a0*(a1 + x)', 'a2 + x']
     for name in (f'all_equations_{comp}.txt', f'unique_equations_{comp}.txt'):
         (compl_dir / name).write_text('\n'.join(funcs) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(funcs))) + '\n')
 
     class SometimesFail:
         is_mse = False
@@ -2002,7 +2290,8 @@ def test_transform_version_tuple_does_not_force_rebuild():
     from esr.fitting import test_all
 
     s = test_all._likelihood_catalogue_settings(5, False, 'h', ('a', 1), 'fp')
-    assert s['cache_schema_version'] == 0  # initial public cache schema
+    assert s['cache_schema_version'] == 1  # bumped when the build moved
+    #  from all_equations to the simplifier's unique equations
     assert s == json.loads(json.dumps(s))            # stable across load
     assert isinstance(s['transform_version'], list)  # tuple normalised to list
 
@@ -2021,6 +2310,8 @@ def test_likelihood_catalogue_activates_on_transformed_collision(tmp_path):
     funcs = ['a0 + x', 'a0 - x', 'a0*x']
     for name in (f'all_equations_{comp}.txt', f'unique_equations_{comp}.txt'):
         (compl_dir / name).write_text('\n'.join(funcs) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(funcs))) + '\n')
 
     class Merging:
         is_mse = False
@@ -2059,6 +2350,8 @@ def test_versionless_transform_is_not_cached(tmp_path, monkeypatch):
     funcs = ['a0*(a1 + x)', 'a2 + x']
     for name in (f'all_equations_{comp}.txt', f'unique_equations_{comp}.txt'):
         (compl_dir / name).write_text('\n'.join(funcs) + '\n')
+    (compl_dir / f'matches_{comp}.txt').write_text(
+        '\n'.join(str(i) for i in range(len(funcs))) + '\n')
 
     class Versionless:
         is_mse = False

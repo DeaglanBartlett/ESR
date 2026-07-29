@@ -3,11 +3,11 @@
 These utilities are shared by the fitting stages: they define the common file
 paths, handle natural-sort ordering and rank-local file concatenation, write the
 negative-log-likelihood output table, and raise Python's recursion limit for deep
-expression trees. They live here (rather than in ``test_all``) so that
-``test_all``, ``test_all_Fisher``, ``match`` and downstream code can reuse them
-without importing the fitting driver. ``test_all`` re-exports the established
-helpers for backwards compatibility, while ESR's own modules import them from
-this module directly.
+expression trees. This module is where they live, so that ``test_all``,
+``test_all_Fisher``, ``match``, ``combine_DL`` and ``plot`` can each import the
+ones they need from here directly rather than reaching them through the
+``test_all`` fitting driver. Each stage imports only the helpers it uses, so a
+given helper is not guaranteed to be reachable as ``test_all.<name>``.
 """
 import glob
 import os

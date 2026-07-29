@@ -110,7 +110,8 @@ def function_catalogue_path(comp, likelihood, unique=True):
 def _likelihood_catalogue_settings(tmax, try_integration,
                                    all_equations_hash=None,
                                    transform_version=None,
-                                   transform_fingerprint=None):
+                                   transform_fingerprint=None,
+                                   raw_matches_hash=None):
     """Settings fingerprint stored alongside a cached likelihood catalogue.
 
     The returned dict is written into the catalogue metadata and compared on
@@ -129,6 +130,11 @@ def _likelihood_catalogue_settings(tmax, try_integration,
         adding, removing or editing an equation invalidates the cache (otherwise
         a stale matches file could associate equations with the wrong
         representative).
+      * ``raw_matches_hash`` -- a hash of the raw ``matches`` file. The catalogue
+        is built on top of the simplifier's own grouping, and that grouping can
+        change without ``all_equations`` changing at all (the generated trees are
+        the same; only which of them the simplifier judges equivalent has moved),
+        so the equation hash alone would not catch it.
       * ``transform_fingerprint`` -- a hash of the ``run_sympify`` transform
         applied to a few fixed probe expressions (see ``_transform_fingerprint``).
         This is a *best-effort heuristic*: it reliably distinguishes broad
@@ -153,15 +159,18 @@ def _likelihood_catalogue_settings(tmax, try_integration,
             likelihood transformation
         :transform_fingerprint (str or None): probe-based hash of the transform
             behaviour
+        :raw_matches_hash (str or None): content hash of the raw ``matches`` file
+            giving the simplifier's grouping the catalogue is built on
 
     Returns:
         :settings (dict): JSON-serialisable settings fingerprint
     """
     settings = {
-        'cache_schema_version': 0,
+        'cache_schema_version': 1,
         'tmax': float(tmax),
         'try_integration': bool(try_integration),
         'all_equations_hash': all_equations_hash,
+        'raw_matches_hash': raw_matches_hash,
         'transform_version': transform_version,
         'transform_fingerprint': transform_fingerprint,
     }
@@ -478,17 +487,20 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
     raw_paths = raw_catalogue_paths(comp, likelihood)
     if rank == 0:
         all_equations_hash = _hash_file(raw_paths['all'])
+        raw_matches_hash = _hash_file(raw_paths['matches'])
         transform_fingerprint = _transform_fingerprint(
             likelihood, tmax, try_integration)
     else:
         all_equations_hash = None
+        raw_matches_hash = None
         transform_fingerprint = None
     all_equations_hash = comm.bcast(all_equations_hash, root=0)
+    raw_matches_hash = comm.bcast(raw_matches_hash, root=0)
     transform_fingerprint = comm.bcast(transform_fingerprint, root=0)
     transform_version = getattr(likelihood, 'catalogue_transform_version', None)
     settings = _likelihood_catalogue_settings(
         tmax, try_integration, all_equations_hash,
-        transform_version, transform_fingerprint)
+        transform_version, transform_fingerprint, raw_matches_hash)
 
     metadata = _read_likelihood_catalogue_metadata(comp, likelihood)
     # A cache is reused only when its inputs match, it was built cleanly (no
@@ -509,30 +521,48 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
 
     max_param = int(max(4, np.floor((comp - 1) / 2)))
     if rank == 0:
-        with open(raw_paths['all'], 'r') as f:
-            all_functions = [line.strip() for line in f]
+        # Group the *unique* equations, not every generated tree. The simplifier
+        # has already partitioned all_equations into families, and a likelihood
+        # transformation cannot split one: members of a family differ only by a
+        # parameter redefinition, which the transformation carries through with
+        # them. It can only merge families further, which is what this catalogue
+        # is for. Starting from all_equations instead would re-admit the
+        # redundant parameterisations the simplifier removed -- x**(a0*a1)
+        # alongside x**a0 -- and fit them as separate models, where a
+        # near-degenerate Hessian earns them a shorter codelength than the very
+        # family they are a redundant copy of.
         with open(raw_paths['unique'], 'r') as f:
-            raw_unique_count = sum(1 for _ in f)
-        n_all = len(all_functions)
-        per = int(np.ceil(n_all / size)) if n_all else 0
+            unique_functions = [line.strip() for line in f]
+        raw_unique_count = len(unique_functions)
+        with open(raw_paths['matches'], 'r') as f:
+            raw_matches = [int(float(line.strip())) for line in f if line.strip()]
+        if raw_matches and (min(raw_matches) < 0
+                            or max(raw_matches) >= raw_unique_count):
+            raise ValueError(
+                f'Raw matches file for complexity {comp} indexes outside its '
+                f'unique-equation catalogue ({raw_unique_count} entries). '
+                f'Regenerate the catalogue with duplicate_checker.main.')
+        per = int(np.ceil(raw_unique_count / size)) if raw_unique_count else 0
         # Contiguous slices, so gathering in rank order reproduces global index
         # order and the representative selection is deterministic.
         chunks = [
-            (min(r * per, n_all), all_functions[min(r * per, n_all):min((r + 1) * per, n_all)])
+            (min(r * per, raw_unique_count),
+             unique_functions[min(r * per, raw_unique_count):
+                              min((r + 1) * per, raw_unique_count)])
             for r in range(size)]
     else:
         chunks = None
 
     # The per-equation canonicalisation is the expensive part of the build
-    # (run_sympify + factor/cancel on every raw tree). Measured serially on one
+    # (run_sympify + factor/cancel on every equation). Measured serially on one
     # core over local complexities 4-6: ~1.7-2.0 ms/equation for a
     # non-transforming likelihood and ~2.3-3.2 ms for a parameter-removing one,
-    # with the per-equation cost growing ~1.3x per unit complexity. all_equations
-    # has 772,515 trees at complexity 9 (99,406 at 8, 19,860 at 7), so even at
-    # the flat complexity-6 rate that is ~26-40 min serial at c9, rising to
-    # ~1.5 h once the per-equation growth (to ~7 ms/eq at c9) is extrapolated.
-    # So scatter the work across the ranks rather than looping on rank 0.
-    # Each rank buckets its own slice by canonical transformed form: a
+    # with the per-equation cost growing ~1.3x per unit complexity. Working from
+    # the unique equations rather than every generated tree cuts the count by
+    # roughly a factor of five at low complexity and far more at high (28,465
+    # unique against 772,515 trees at complexity 9), but the remaining cost still
+    # grows quickly, so scatter the work across the ranks rather than looping on
+    # rank 0. Each rank buckets its own slice by canonical transformed form: a
     # difference between the tree's ``expected`` layout and the layout surviving
     # the transformation means run_sympify altered the parameter space (the
     # catalogue is genuinely needed), and equations sharing a transformed key
@@ -551,7 +581,7 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
 
         key_to_unique = {}
         unique_representatives = []
-        matches = []
+        raw_to_family = []
         changed_layout_count = 0
         failed_count = 0
         for index, key, changed, failed in results:
@@ -561,8 +591,13 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
                 changed_layout_count += 1
             if key not in key_to_unique:
                 key_to_unique[key] = len(unique_representatives)
-                unique_representatives.append(all_functions[index])
-            matches.append(key_to_unique[key])
+                unique_representatives.append(unique_functions[index])
+            raw_to_family.append(key_to_unique[key])
+
+        # The written matches file stays indexed by all_equations, as match.py
+        # expects, by composing the simplifier's own all-equation -> unique map
+        # with the unique -> transformed-family map just built.
+        matches = [raw_to_family[raw_index] for raw_index in raw_matches]
 
         # Surface swallowed transformation failures. A handful of genuinely
         # pathological expressions can legitimately fail, but a large fraction
@@ -571,10 +606,10 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
         # silently.
         if failed_count > 0:
             emit_diagnostic_warning(
-                f'{failed_count} of {len(all_functions)} equations failed to '
-                f'transform while building the likelihood-aware catalogue for '
-                f'complexity {comp}; each such equation is treated as its own '
-                f'family.', LikelihoodCatalogueWarning)
+                f'{failed_count} of {raw_unique_count} unique equations failed '
+                f'to transform while building the likelihood-aware catalogue '
+                f'for complexity {comp}; each such equation is treated as its '
+                f'own family.', LikelihoodCatalogueWarning)
 
         # Activate when the transform removes/relabels a parameter (correctness)
         # OR collapses raw-distinct expressions onto the same transformed model
@@ -606,7 +641,7 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
         metadata = {
             'active': bool(active),
             'settings': settings,
-            'n_all': len(all_functions),
+            'n_all': len(matches),
             'n_unique': len(unique_representatives),
             'raw_unique_count': raw_unique_count,
             'changed_layout_count': changed_layout_count,
@@ -617,7 +652,7 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
         if active:
             print('Using likelihood-aware catalogue: '
                   f"{len(unique_representatives)} transformed families from "
-                  f"{len(all_functions)} equations; "
+                  f"{raw_unique_count} unique equations; "
                   f"{changed_layout_count} parameter-layout changes.",
                   flush=True)
     comm.Barrier()

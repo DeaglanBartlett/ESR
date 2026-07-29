@@ -121,21 +121,67 @@ only the snap decision and the description length are expressed in the Hessian
 eigenbasis, so the snap and the codelength share a basis. This mode requires
 ``use_det_I=True``. With
 ``snap_choice=0``, snapping is assessed independently from each
-Hessian diagonal element. To compare against the published diagonal
+Hessian diagonal element.
+
+``use_det_I=True`` with ``snap_choice=0`` is allowed, and is the setting to use
+if you want to attribute a change to the determinant alone while holding the
+published snapping rule fixed. ESR warns when it is used
+(``DiagonalSnapDeterminantWarning``): the diagonal test examines one parameter
+axis at a time, so it cannot remove an unconstrained direction lying between the
+axes, and that direction then stays in `\det H` where the smaller its eigenvalue
+the shorter the codelength. Fitting ``x**(a0*a1)``, which is just ``x**a0``
+written with a spare parameter, gives a description length of 17.08 under this
+pairing against 19.43 for ``x**a0`` itself. Use it for comparison runs, not to
+rank a catalogue.
+
+To compare against the published diagonal
 parameter-codelength formula, run
 ``test_all_Fisher.main(comp, likelihood, use_det_I=False, snap_choice=0)``
 and then ``match.main(comp, likelihood)``. This comparison uses the diagonal
 formula within ESR's current shared fitting pipeline. It is therefore not a
 byte-for-byte reproduction of an older ESR run.
 
+Whether a direction counts as unconstrained is judged on the Hessian normalised
+by its own diagonal, `D^{-1/2} H D^{-1/2}` for `D = {\rm diag}(H)`, rather than
+on the raw eigenvalues. Rescaling a parameter -- a change of units, or writing
+`2 a_0` in place of `a_0` -- rescales a row and column of `H` and can make
+`\lambda_{\rm min}/\lambda_{\rm max}` arbitrarily small without making the fit
+any less determined, so a threshold on the raw spectrum cannot separate a badly
+scaled model from a genuinely redundant one. The normalised matrix is unchanged
+by that rescaling. A direction whose normalised eigenvalue falls below
+``EIGENVALUE_REL_THRESHOLD`` is treated as unconstrained whatever sign it
+carries, since finite differencing gives a mathematically flat direction a small
+positive or a small negative eigenvalue at random; the same threshold is used to
+decide that resolved negative curvature means a saddle, so a fit is never
+rejected for curvature it cannot resolve.
+
+Removing an unconstrained direction is mandatory, because the unsnapped
+determinant still contains its eigenvalue and the smaller that eigenvalue comes
+out the shorter the code it produces. Under ``snap_choice=1`` and ``2`` the
+remaining parameters are then re-optimised with the snapped ones held at zero,
+since they were fitted alongside the parameter being removed: zeroing an
+intercept while leaving the slope where it was would otherwise collapse the
+likelihood and make a necessary snap look like a bad one. ``snap_choice=0``
+keeps the published behaviour of scoring at the zeroed vector itself.
+
 When ``likelihood.run_sympify`` removes or relabels parameters, for example
 by applying a likelihood-specific symbolic transformation, ESR can build a
 fitted-function catalogue (named ``likelihood_catalogue`` in code identifiers
-and output files). Raw
-equations are grouped by their exact symbolic transformed expression after
-canonical parameter relabelling; one raw representative is fitted for each
-transformed model family, while ``combine_DL`` still uses the raw expression's
-tree complexity for the final description length. If this catalogue changes,
+and output files). The catalogue starts from the simplifier's *unique*
+equations and groups them by their exact symbolic transformed expression after
+canonical parameter relabelling; one representative is fitted for each
+transformed model family, while ``combine_DL`` still uses each generated
+expression's own tree complexity for the final description length.
+
+It builds on the simplifier's grouping rather than redoing it from
+``all_equations``, because a likelihood transformation cannot split one of those
+families: their members differ only by a parameter redefinition, which the
+transformation carries through with them. It can only merge families further,
+which is the whole point. Starting from every generated tree would instead
+re-admit the redundant parameterisations the simplifier removed --
+``pow(x,(a0*a1))`` alongside ``pow(x,a0)`` -- and fit them as separate models,
+where a near-degenerate Hessian earns such a form a shorter parametric
+codelength than the family it is a redundant copy of. If this catalogue changes,
 the code will fail loudly on stale row counts rather than reusing incompatible
 ``test_all`` or Fisher outputs; rerun ``test_all.main`` and
 ``test_all_Fisher.main`` with the current likelihood/settings.
@@ -156,6 +202,38 @@ setting changes, or the cached build had transform failures. (The catalogue does
 not depend on the Fisher scoring options ``use_det_I``/``snap_choice``, so
 changing those does not rebuild it.)
 
+``examples/likelihood_catalogue.py`` is a worked example. It defines a
+"shape-only" likelihood whose ``run_sympify`` divides out `f(1)`, so the data
+constrain only the shape of the function -- the same situation as a dark-energy
+density known only up to its value today, where the model is `f_{\rm DE} =
+g/g(1)`. Any overall amplitude is then invisible to the likelihood, so
+``a0*x**2``, ``2*x**2`` and ``x**2`` are one model rather than three. The script
+runs the complexity-5 catalogue both ways on the same data and takes about a
+minute on one core.
+
+.. code-block:: none
+
+	use_likelihood_catalogue=False  131 functions fitted   test_all took  21.2 s
+	use_likelihood_catalogue=True    94 functions fitted   test_all took  19.4 s
+
+	without the catalogue:            with the catalogue:
+	    rank  0  2*x**2                   rank  0  x**2
+	    rank  1  x**2                     rank  1  x*(a0 - x)
+	    rank  2  x*(a0 - x)               rank  2  x*(a0 + x)
+
+Deduplicating after the transformation removes 37 of the 131 fits, and the run
+comes out faster rather than slower despite the extra transformation pass over
+the unique equations. The equations the transformation has made equivalent stop
+being reported separately: ``2*x**2`` and ``x**2`` have identical description
+lengths above because they *are* the same model here, and only one of them
+survives with the catalogue on.
+
+The catalogue changes how much work is done, not what the answer is. The best
+description length is 16.7905 either way, and of the equations ranked in both
+runs the overwhelming majority agree to within 0.01 nats; where one does move it
+is because fitting a model once rather than several times gave the optimiser a
+better shot at its maximum likelihood.
+
 Once you have run this for many complexities, you can plot the pareto front and save it to file using the following function.
 
 .. code-block:: python
@@ -164,6 +242,62 @@ Once you have run this for many complexities, you can plot the pareto front and 
 
 	esr.plotting.plot.pareto_plot(likelihood.out_dir, 'pareto.png')
 
+
+Comparing the Fisher scoring options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``examples/fisher_scoring_options.py`` runs the complexity 5 ``core_maths``
+catalogue on mock data once per setting and prints what changes between them. It
+takes about half a minute on one core, and generates the catalogue first if it
+is not already present.
+
+The reason for scoring with the determinant is that a description length should
+not depend on how an equation happens to be written. ESR's complexity 5
+catalogue keeps three algebraic forms of the same two-parameter linear family
+--- ``a0 + a1*x``, ``a0*(a1 + x)`` and ``a0*(a1 - x)`` --- which fit any dataset
+identically and have the same functional codelength. On data generated from
+`y = 3 + 1.7 x` the example prints
+
+.. code-block:: none
+
+	use_det_I=False, snap_choice=0
+	    a0 + a1*x      rank   1   L =  83.40230   parametric =  7.69704
+	    a0*(a1 + x)    rank   2   L =  83.81831   parametric =  8.11305
+	    a0*(a1 - x)    rank   3   L =  83.81831   parametric =  8.11305
+
+	use_det_I=True, snap_choice=1
+	    a0 + a1*x      rank   1   L =  82.38715   parametric =  6.68189
+	    a0*(a1 + x)    rank   2   L =  82.38715   parametric =  6.68189
+	    a0*(a1 - x)    rank   3   L =  82.38715   parametric =  6.68189
+
+The diagonal formula separates the three by 0.416 nats, and so picks a winner
+among them on grounds that have nothing to do with the data; the determinant
+gives all three the same parametric codelength. The gap between the two is not
+arbitrary, since for a Fisher matrix `I` with correlation matrix `C`
+
+.. math::
+
+	\frac{1}{2} \sum_j \ln I_{jj} - \frac{1}{2} \ln \det I =
+	-\frac{1}{2} \ln \det C .
+
+This is non-negative by Hadamard's inequality and is fixed by the choice of
+parameters, so it carries no information about either the model or the data. The
+example evaluates both sides for ``a0 + a1*x``, whose Fisher matrix is analytic,
+and gets 1.015148 nats either way.
+
+The same run shows why ``snap_choice=1`` rather than ``2`` is the default: mode
+2 keeps a different set of forms of the family, and still spreads their
+parametric codelengths over 0.29 nats, because the coordinate it zeros lives in
+the Hessian eigenbasis rather than in the parameters themselves.
+
+The example ends by fitting ``a0 + a1*x`` to data generated with and without an
+intercept, to show snapping on its own. With a zero intercept, ``a0`` is
+consistent with zero to within its own encoding precision, so it is snapped away
+and the description length falls from 151.66 to 147.79. All three snapping modes
+agree there, as they should: an unwanted intercept lies along a parameter axis,
+which is the one case the diagonal test of ``snap_choice=0`` handles as well as
+the eigendecomposition. The modes part company when the poorly constrained
+direction lies between the parameter axes instead.
 
 
 Fitting a single function

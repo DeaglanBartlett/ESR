@@ -53,9 +53,14 @@ data.txt
 esr/generation/old_*
 esr/fitting/old_*
 
+# Output of the example scripts, which write into the working directory
+fisher_options/
+likelihood_catalogue/
+
 # Claude Code
 CLAUDE.md
 Panel_debates/
+Plots/
 log.md
 log-summary.md
 .claude/
