@@ -880,8 +880,11 @@ def test_unresolved_curvature_is_scored_independently_of_its_sign():
     which of those it happened to be.
     """
     from esr.fitting.test_all_Fisher import (
-        EIGENVALUE_REL_THRESHOLD, _compute_snap_mask, _has_negative_curvature,
-        _score_projected_eigenbasis)
+        EIGENVALUE_REL_THRESHOLD,
+        _compute_snap_mask,
+        _has_negative_curvature,
+        _score_projected_eigenbasis,
+    )
 
     scale = 1.0e5
     theta = np.array([2.0, 3.0])
@@ -932,8 +935,9 @@ def test_likelihood_catalogue_keeps_the_simplifiers_representatives(tmp_path):
     codelength than the family it is a redundant copy of.
     """
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     class NormalisingLikelihood:
         is_mse = False
@@ -971,14 +975,16 @@ def test_likelihood_catalogue_keeps_the_simplifiers_representatives(tmp_path):
     assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
 
     paths = likelihood_catalogue_paths(comp, likelihood)
-    representatives = open(paths['unique']).read().split()
+    with open(paths['unique']) as f:
+        representatives = f.read().split()
     assert 'pow(x,(a0*a1))' not in representatives, (
         'the catalogue re-admitted a parameterisation the simplifier removed')
     assert set(representatives) <= set(unique_functions)
 
     #  Still one match per generated tree, and the redundant spelling inherits
     #  the family its simplifier representative belongs to.
-    matches = [int(v) for v in open(paths['matches']).read().split()]
+    with open(paths['matches']) as f:
+        matches = [int(v) for v in f.read().split()]
     assert len(matches) == len(all_functions)
     assert matches[0] == matches[1]
 
@@ -997,7 +1003,9 @@ def test_determinant_with_diagonal_snapping_warns_but_is_allowed():
     it must say so.
     """
     from esr.fitting.test_all_Fisher import (
-        DiagonalSnapDeterminantWarning, _validate_snap_and_det)
+        DiagonalSnapDeterminantWarning,
+        _validate_snap_and_det,
+    )
 
     with pytest.warns(DiagonalSnapDeterminantWarning, match='snap_choice=1'):
         _validate_snap_and_det(True, 0)
@@ -1020,7 +1028,9 @@ def test_degeneracy_verdict_does_not_depend_on_parameter_scaling():
     parameter.
     """
     from esr.fitting.test_all_Fisher import (
-        _compute_snap_mask, _has_negative_curvature)
+        _compute_snap_mask,
+        _has_negative_curvature,
+    )
 
     H = np.array([[240.0, 420.0], [420.0, 860.0]])   # ordinary linear fit
     theta = np.array([1.0, 2.0])
@@ -1050,7 +1060,9 @@ def test_weakly_occupied_but_resolved_direction_is_not_forced_to_snap():
     that ordinary fits are not stripped of a parameter.
     """
     from esr.fitting.test_all_Fisher import (
-        EIGENVALUE_REL_THRESHOLD, _compute_snap_mask)
+        EIGENVALUE_REL_THRESHOLD,
+        _compute_snap_mask,
+    )
 
     #  Eigenvalues 1 and 199: both comfortably resolved, but theta projects onto
     #  the weaker one by far less than one precision step.
@@ -1102,8 +1114,9 @@ def test_unresolved_intercept_is_snapped_without_destroying_the_fit(tmp_path):
     optimal alongside it.
     """
     import sympy
-    from esr.fitting.test_all_Fisher import convert_params
+
     from esr.fitting.sympy_symbols import x as xsym
+    from esr.fitting.test_all_Fisher import convert_params
 
     rng = np.random.default_rng(0)
     xvar = np.linspace(1.0e4, 1.0e4 + 40.0, 100)

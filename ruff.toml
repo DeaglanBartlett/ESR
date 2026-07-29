@@ -1,0 +1,16 @@
+# Lint rules for ESR.
+#
+# CI installs Ruff unpinned, so the rules it applies would otherwise be whatever
+# the latest release happens to switch on by default. Ruff 0.16.0 expanded that
+# default set (UP, SIM, B, PL, RUF and others), which flagged 372 pre-existing
+# issues across the codebase and turned build-linux red on main as well as on
+# feature branches, without anything in the code having changed.
+#
+# Selecting the rules explicitly keeps CI stable whatever version is installed.
+# The set below is Ruff's historic default -- pyflakes plus the pycodestyle
+# errors that matter -- so this pins current behaviour rather than changing it.
+# Adopting more rules is then a deliberate decision (and a tidy-up commit)
+# rather than something a Ruff release does to us mid-review.
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
