@@ -1,14 +1,13 @@
-import numpy as np
-import sys
-from mpi4py import MPI
 import csv
-import os
 import gc
+import os
 import pprint
+import sys
 
-import esr.generation.generator as generator
-import esr.generation.simplifier as simplifier
-import esr.generation.utils as utils
+import numpy as np
+from mpi4py import MPI
+
+from esr.generation import generator, simplifier, utils
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -287,7 +286,6 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
     sys.stdout.flush()
     comm.Barrier()
 
-    return
 
 
 if __name__ == "__main__":

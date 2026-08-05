@@ -1,13 +1,38 @@
 import unittest
+from fractions import Fraction
+
 import sympy
 from sympy import (
-    symbols, Add, Symbol, Order, Poly, UniversalSet, AlgebraicNumber, sqrt,
-    Pow, UnevaluatedExpr, MatrixSymbol, Mul, Rational, Integral, S,
-    Derivative, ConditionSet, Catalan, Matrix, I, MatMul, Float,
-    FiniteSet, Sum, Eq, And)
-from fractions import Fraction
-from sympy.logic.boolalg import BooleanTrue, BooleanFalse
+    Add,
+    AlgebraicNumber,
+    And,
+    Catalan,
+    ConditionSet,
+    Derivative,
+    Eq,
+    FiniteSet,
+    Float,
+    I,
+    Integral,
+    MatMul,
+    Matrix,
+    MatrixSymbol,
+    Mul,
+    Order,
+    Poly,
+    Pow,
+    Rational,
+    S,
+    Sum,
+    Symbol,
+    UnevaluatedExpr,
+    UniversalSet,
+    sqrt,
+    symbols,
+)
 from sympy.combinatorics.permutations import Permutation
+from sympy.logic.boolalg import BooleanFalse, BooleanTrue
+
 from esr.generation.custom_printer import ESRPrinter, sstr, sstrrepr
 
 

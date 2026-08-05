@@ -1,15 +1,15 @@
-import numpy as np
 import itertools
-import sys
-from mpi4py import MPI
-import sympy
-from sympy.core.sympify import kernS
 import os
 import pprint
+import sys
 
-import esr.generation.simplifier as simplifier
-import esr.generation.utils as utils
+import numpy as np
+import sympy
+from mpi4py import MPI
+from sympy.core.sympify import kernS
+
 from esr.fitting.sympy_symbols import sympy_locs
+from esr.generation import simplifier, utils
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()

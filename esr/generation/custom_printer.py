@@ -1,13 +1,13 @@
-from sympy.core import S, Rational, Pow, Basic, Mul, Number, Add
+from mpmath.libmp import prec_to_dps
+from mpmath.libmp import to_str as mlib_to_str
+from sympy.core import Add, Basic, Mul, Number, Pow, Rational, S
 from sympy.core.mul import _keep_coeff
 from sympy.core.relational import Relational
 from sympy.core.sorting import default_sort_key
 from sympy.core.sympify import SympifyError
-from sympy.utilities.iterables import sift
-from sympy.printing.precedence import precedence, PRECEDENCE
+from sympy.printing.precedence import PRECEDENCE, precedence
 from sympy.printing.printer import Printer, print_function
-
-from mpmath.libmp import prec_to_dps, to_str as mlib_to_str
+from sympy.utilities.iterables import sift
 
 
 class ESRPrinter(Printer):
@@ -203,7 +203,7 @@ class ESRPrinter(Printer):
             m = '.Lopen'
         else:
             m = '.Ropen'
-        return fin.format(**{'a': a, 'b': b, 'm': m})
+        return fin.format(a=a, b=b, m=m)
 
     def _print_AccumulationBounds(self, i):
         return "AccumBounds(%s, %s)" % (self._print(i.min),
@@ -403,10 +403,7 @@ class ESRPrinter(Printer):
         )
 
     def _print_ElementwiseApplyFunction(self, expr):
-        return "{}.({})".format(
-            expr.function,
-            self._print(expr.expr),
-        )
+        return f"{expr.function}.({self._print(expr.expr)})"
 
     def _print_NaN(self, expr):
         return 'nan'
@@ -430,7 +427,7 @@ class ESRPrinter(Printer):
         return expr.__str__()
 
     def _print_Permutation(self, expr):
-        from sympy.combinatorics.permutations import Permutation, Cycle
+        from sympy.combinatorics.permutations import Cycle, Permutation
         from sympy.utilities.exceptions import sympy_deprecation_warning
 
         perm_cyclic = Permutation.print_cyclic
@@ -826,14 +823,14 @@ class ESRPrinter(Printer):
 
         args = ', '.join(self._print(item) for item in items)
         if any(item.has(FiniteSet) for item in items):
-            return 'FiniteSet({})'.format(args)
-        return '{{{}}}'.format(args)
+            return f'FiniteSet({args})'
+        return f'{{{args}}}'
 
     def _print_Partition(self, s):
         items = sorted(s, key=default_sort_key)
 
         args = ', '.join(self._print(arg) for arg in items)
-        return 'Partition({})'.format(args)
+        return f'Partition({args})'
 
     def _print_frozenset(self, s):
         if not s:

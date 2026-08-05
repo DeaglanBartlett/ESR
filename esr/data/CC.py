@@ -1,12 +1,13 @@
 import csv
+
+import arviz as az
+import corner
 import jax.numpy as jnp
+import matplotlib.pyplot as plt
 import numpyro
 import numpyro.distributions as dist
-from numpyro.diagnostics import hpdi
 from jax import random
-import matplotlib.pyplot as plt
-import corner
-import arviz as az
+from numpyro.diagnostics import hpdi
 
 with open('CC_Table1_2201.07241.tsv', 'r') as f:
     reader = csv.reader(f, delimiter='\t')
