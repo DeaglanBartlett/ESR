@@ -75,10 +75,13 @@ where type 0, 1 and 2 functions are nullary, unary, and binary, respectively.
 Fitting to a dataset
 --------------------
 
+
+Basic fitting pipeline
+~~~~~~~~~~~~~~~~~~~~~~
+
 Suppose we have already generated the equations required for the ``CCLikelihood`` class.
 In the following we show the steps that are required to fit the complexity 5 functions to these data.
 The various ``fitting`` functions rely on the output of the previous script, so the order cannot change.
-
 
 .. code-block:: python
 
@@ -98,6 +101,18 @@ The various ``fitting`` functions rely on the output of the previous script, so 
 	esr.fitting.combine_DL.main(comp, likelihood)
 	esr.fitting.plot.main(comp, likelihood)
 
+
+Once you have run this for many complexities, you can plot the pareto front and save it to file using the following function.
+
+.. code-block:: python
+
+	import esr.plotting.plot
+
+	esr.plotting.plot.pareto_plot(likelihood.out_dir, 'pareto.png')
+
+MPI scheduling behaviour
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 For MPI runs, ``test_all.main`` uses dynamic rank-0 work dispatch by default
 when there are at least two worker ranks and more functions than ranks. This
 avoids long idle tails when different expressions take very different amounts
@@ -106,6 +121,9 @@ of time to optimise. To reproduce the original static rank partitioning, call
 same final ``negloglike_comp*.dat`` file as static runs, and also write a
 temporary ``*.checkpoint.dat`` file during long jobs; downstream stages should
 use the final file after the run completes.
+
+Default Fisher scoring and snapping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The Fisher stage defaults to determinant scoring with eigenbasis snapping:
 ``use_det_I=True, snap_choice=1``. It writes these choices to the output
@@ -123,6 +141,9 @@ eigenbasis, so the snap and the codelength share a basis. This mode requires
 ``snap_choice=0``, snapping is assessed independently from each
 Hessian diagonal element.
 
+Determinant with diagonal snapping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ``use_det_I=True`` with ``snap_choice=0`` is allowed, and is the setting to use
 if you want to attribute a change to the determinant alone while holding the
 published snapping rule fixed. ESR warns when it is used
@@ -134,12 +155,18 @@ written with a spare parameter, gives a description length of 17.08 under this
 pairing against 19.43 for ``x**a0`` itself. Use it for comparison runs, not to
 rank a catalogue.
 
+Published diagonal comparison
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 To compare against the published diagonal
 parameter-codelength formula, run
 ``test_all_Fisher.main(comp, likelihood, use_det_I=False, snap_choice=0)``
 and then ``match.main(comp, likelihood)``. This comparison uses the diagonal
 formula within ESR's current shared fitting pipeline. It is therefore not a
 byte-for-byte reproduction of an older ESR run.
+
+Normalised Hessian criterion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Whether a direction counts as unconstrained is judged on the Hessian normalised
 by its own diagonal, `D^{-1/2} H D^{-1/2}` for `D = {\rm diag}(H)`, rather than
@@ -155,6 +182,9 @@ positive or a small negative eigenvalue at random; the same threshold is used to
 decide that resolved negative curvature means a saddle, so a fit is never
 rejected for curvature it cannot resolve.
 
+Why re-optimisation after snapping is required
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Removing an unconstrained direction is mandatory, because the unsnapped
 determinant still contains its eigenvalue and the smaller that eigenvalue comes
 out the shorter the code it produces. Under ``snap_choice=1`` and ``2`` the
@@ -163,6 +193,9 @@ since they were fitted alongside the parameter being removed: zeroing an
 intercept while leaving the slope where it was would otherwise collapse the
 likelihood and make a necessary snap look like a bad one. ``snap_choice=0``
 keeps the published behaviour of scoring at the zeroed vector itself.
+
+Likelihood-aware fitted catalogue
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When ``likelihood.run_sympify`` removes or relabels parameters, for example
 by applying a likelihood-specific symbolic transformation, ESR can build a
@@ -202,7 +235,15 @@ setting changes, or the cached build had transform failures. (The catalogue does
 not depend on the Fisher scoring options ``use_det_I``/``snap_choice``, so
 changing those does not rebuild it.)
 
-``examples/likelihood_catalogue.py`` is a worked example. It defines a
+Worked notebook: likelihood-aware fitted catalogue
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+	:maxdepth: 1
+
+	notebooks/likelihood_catalogue
+
+The above worked example defines a
 "shape-only" likelihood whose ``run_sympify`` divides out `f(1)`, so the data
 constrain only the shape of the function -- the same situation as a dark-energy
 density known only up to its value today, where the model is `f_{\rm DE} =
@@ -234,19 +275,19 @@ runs the overwhelming majority agree to within 0.01 nats; where one does move it
 is because fitting a model once rather than several times gave the optimiser a
 better shot at its maximum likelihood.
 
-Once you have run this for many complexities, you can plot the pareto front and save it to file using the following function.
-
-.. code-block:: python
-
-	import esr.plotting.plot
-
-	esr.plotting.plot.pareto_plot(likelihood.out_dir, 'pareto.png')
-
 
 Comparing the Fisher scoring options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``examples/fisher_scoring_options.py`` runs the complexity 5 ``core_maths``
+Worked notebook: Fisher scoring options
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+	:maxdepth: 1
+
+	notebooks/fisher_scoring_options
+
+The above example runs the complexity 5 ``core_maths``
 catalogue on mock data once per setting and prints what changes between them. It
 takes about half a minute on one core, and generates the catalogue first if it
 is not already present.
