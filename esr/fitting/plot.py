@@ -1,4 +1,3 @@
-import sys
 import csv
 from mpi4py import MPI
 import warnings
@@ -10,9 +9,13 @@ import matplotlib as mpl
 import os
 
 from esr.fitting.sympy_symbols import x, a0
+from esr.fitting.utils import fitting_paths, set_recursionlimit_for_comp
 import esr.generation.simplifier as simplifier
 
-warnings.filterwarnings("ignore")
+# Suppress the numpy/scipy RuntimeWarnings raised while evaluating functions for
+# plotting, but leave other categories (including ESR's own diagnostics and
+# unrelated user warnings) untouched.
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -45,8 +48,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     tmax = 5
     nfun = 50  # Number of functions to plot
 
-    if comp >= 8:
-        sys.setrecursionlimit(2000 + 500 * (comp - 8))
+    set_recursionlimit_for_comp(comp)
 
     if not os.path.isdir(likelihood.fig_dir):
         print('Making:', likelihood.fig_dir)
@@ -58,7 +60,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     all_DL = []
     max_param = None
 
-    with open(likelihood.out_dir + '/final_'+str(comp)+'.dat', "r") as f:
+    with open(fitting_paths(comp, likelihood)['final'], "r") as f:
         reader = csv.reader(f, delimiter=';')
 
         for row in reader:

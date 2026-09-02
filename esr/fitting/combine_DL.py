@@ -1,11 +1,14 @@
 import numpy as np
 from mpi4py import MPI
 import os
+from pathlib import Path
 from prettytable import PrettyTable
 import csv
+import warnings
 from collections import defaultdict
 
 import esr.fitting.test_all as test_all
+from esr.fitting.utils import combine_temp_files, fitting_paths, raw_catalogue_paths
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -30,10 +33,10 @@ def main(comp, likelihood, print_frequency=1000):
     if rank == 0:
         print('\nComputing description lengths', flush=True)
 
-    allfn_file = likelihood.fn_dir + \
-        "/compl_%i/all_equations_%i.txt" % (comp, comp)
-    aifeyn_file = likelihood.fn_dir + \
-        "/compl_%i/%s%i.txt" % (comp, likelihood.fnprior_prefix, comp)
+    raw_paths = raw_catalogue_paths(comp, likelihood)
+    fit_paths = fitting_paths(comp, likelihood, rank=rank)
+    allfn_file = raw_paths['all']
+    aifeyn_file = raw_paths['fnprior']
 
     _, data_start, data_end = test_all.get_functions(comp, likelihood)
 
@@ -42,12 +45,26 @@ def main(comp, likelihood, print_frequency=1000):
     results = defaultdict(list)
     results_fcn = {}
 
-    # Stream read through codelen_matches_comp*.dat file
-    if rank == 0:
-        with open(likelihood.out_dir + "/codelen_matches_comp" + str(comp) + ".dat", 'r') as f:
-            num_lines = sum(1 for _ in f)  # Count total lines in the file
+    codelen_file = Path(fit_paths['codelen_matches'])
+    companion_files = {
+        "codelen matches": codelen_file,
+        "AIFeyn": Path(aifeyn_file),
+        "function catalogue": Path(allfn_file),
+    }
+    line_counts = {}
+    for name, path in companion_files.items():
+        with path.open('r') as f:
+            line_counts[name] = sum(1 for _ in f)
+    if len(set(line_counts.values())) != 1:
+        counts = ", ".join(f"{name}={count}" for name, count in line_counts.items())
+        raise ValueError(
+            "Companion files for description-length combination have unequal "
+            f"line counts ({counts}); regenerate the matched results.")
+    num_lines = line_counts["codelen matches"]
 
-    with open(likelihood.out_dir + "/codelen_matches_comp" + str(comp) + ".dat", 'r') as f, \
+    malformed_records = defaultdict(int)
+
+    with codelen_file.open('r') as f, \
             open(aifeyn_file, 'r') as aifeyn_f, \
             open(allfn_file, 'r') as allfn_f:
 
@@ -57,16 +74,23 @@ def main(comp, likelihood, print_frequency=1000):
                 print(f'{i+1} of {num_lines}', flush=True)
 
             if line.strip() == '':
-                continue  # Skip empty lines
+                malformed_records["empty rows"] += 1
+                continue
             parts = line.strip().split()
-            idx = int(float(parts[2]))  # Index is in column 3
+            if len(parts) < 3:
+                malformed_records["rows with fewer than three fields"] += 1
+                continue
+            try:
+                values = [float(value) for value in parts]
+                aifeyn_i = float(line_ai.strip())
+                idx = int(values[2])  # Index is in column 3
+            except (ValueError, IndexError, OverflowError):
+                malformed_records["rows with non-numeric fields"] += 1
+                continue
 
             if idx in needed_indices:
-
-                negloglike_i = float(parts[0])
-                codelen_i = float(parts[1])
-                # Read corresponding AIFeyn value
-                aifeyn_i = float(line_ai.strip())
+                negloglike_i = values[0]
+                codelen_i = values[1]
                 DL = negloglike_i + codelen_i + aifeyn_i
 
                 if not np.isfinite(DL) or np.isnan(DL):
@@ -75,23 +99,37 @@ def main(comp, likelihood, print_frequency=1000):
                 # This is the first time we see this index
                 if (len(results[idx]) == 0) or (DL < results[idx][0]):
                     results[idx] = [
-                        DL] + [float(x) for x in parts[3:]] + [negloglike_i, codelen_i, aifeyn_i]
+                        DL] + values[3:] + [negloglike_i, codelen_i, aifeyn_i]
                     # Store the function string
                     results_fcn[idx] = line_fcn.strip()
 
-    num_cols = len(results[next(iter(results))]) if results else 0
+    if rank == 0 and malformed_records:
+        summary = ", ".join(
+            f"{count} {reason}" for reason, count in malformed_records.items())
+        warnings.warn(
+            f"Skipped malformed description-length records: {summary}.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
 
-    prefix = likelihood.combineDL_prefix
+    num_params = max((len(row) - 4 for row in results.values()), default=0)
+    # Ensure all ranks agree on parameter width so the concatenated file has a
+    # consistent number of columns even when some ranks have no valid results.
+    num_params = comm.allreduce(num_params, op=MPI.MAX)
+    num_cols = num_params + 4
 
-    output_file = likelihood.temp_dir + '/' + \
-        prefix + str(comp) + '_' + str(rank) + '.dat'
-    output_file_fcn = likelihood.temp_dir + '/' + \
-        prefix+'fcn_'+str(comp)+'_'+str(rank)+'.dat'
+    output_file = fit_paths['combined_rank']
+    output_file_fcn = fit_paths['combined_functions_rank']
     with open(output_file, 'w') as fout, \
             open(output_file_fcn, 'w') as fout_fcn:
         for idx in range(data_start, data_end):
             if idx in results:
-                line_data = results[idx]
+                row = results[idx]
+                params = row[1:-3]
+                if len(params) > num_params:
+                    raise RuntimeError(
+                        "Parameter width exceeds the combined-file maximum.")
+                line_data = [row[0]] + params + [0.0] * (num_params - len(params)) + row[-3:]
                 fcn = results_fcn[idx]
             else:
                 line_data = [np.nan] + [0.0] * (num_cols-1)
@@ -103,24 +141,18 @@ def main(comp, likelihood, print_frequency=1000):
     comm.Barrier()
 
     if rank == 0:
-        string = 'cat `find ' + likelihood.temp_dir + '/ -name "'+prefix + \
-            str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + \
-            '/'+prefix+'comp'+str(comp)+'.dat'
-        os.system(string)
-        string = 'rm ' + likelihood.temp_dir + '/'+prefix+str(comp)+'_*.dat'
-        os.system(string)
-
-        string = 'cat `find ' + likelihood.temp_dir + '/ -name "'+prefix+'fcn_' + \
-            str(comp)+'_*.dat" | sort -V` > ' + likelihood.out_dir + \
-            '/'+prefix+'fcn_comp'+str(comp)+'.dat'
-        os.system(string)
-        string = 'rm ' + likelihood.temp_dir + \
-            '/'+prefix+'fcn_'+str(comp)+'_*.dat'
-        os.system(string)
+        combine_temp_files(
+            likelihood.temp_dir,
+            fit_paths['combined_rank_pattern'],
+            fit_paths['combined'])
+        combine_temp_files(
+            likelihood.temp_dir,
+            fit_paths['combined_functions_rank_pattern'],
+            fit_paths['combined_functions'])
         data_entries = []
         num_params = 0
-        with open(likelihood.out_dir + '/'+prefix+'comp'+str(comp)+'.dat', 'r') as f, \
-                open(likelihood.out_dir + '/'+prefix+'fcn_comp'+str(comp)+'.dat', "r") as fcn_f:
+        with open(fit_paths['combined'], 'r') as f, \
+                open(fit_paths['combined_functions'], "r") as fcn_f:
             for i, (line, fcn_line) in enumerate(zip(f, fcn_f)):
                 parts = line.strip().split()
                 if not parts:
@@ -129,15 +161,22 @@ def main(comp, likelihood, print_frequency=1000):
                 if (not np.isnan(DL)) and (not np.isinf(DL)):
                     # Store DL, index, and other info
                     data_entries.append((DL, parts[1:], fcn_line.strip()))
-                if num_params == 0:
-                    num_params = len(parts) - 4
+                num_params = max(num_params, len(parts) - 4)
         print(f"Number of parameters: {num_params}", flush=True)
-        print(f'Original file length: {i+1}', flush=True)
+        n_read = i + 1 if 'i' in dir() else 0
+        print(f'Original file length: {n_read}', flush=True)
         data_entries.sort(key=lambda x: x[0])
         print(
             f"Sorted {len(data_entries)} entries by DL for complexity {comp}", flush=True)
 
         #  Get relative probabilities
+        if len(data_entries) == 0:
+            print("(no valid functions at this complexity)", flush=True)
+            path = Path(fit_paths['final'])
+            path.write_text("")
+            comm.Barrier()
+            return
+
         Prel_DL = np.array([entry[0] for entry in data_entries])
         log_L = np.array([entry[1][-3] for entry in data_entries])
         Prel_DL -= Prel_DL[0]  # Shift so the best function has DL=0
@@ -154,38 +193,45 @@ def main(comp, likelihood, print_frequency=1000):
         Nfuncs = 10
 
         # Start this file from scratch here
-        if os.path.exists(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat'):
-            os.remove(likelihood.out_dir + '/' +
-                      likelihood.final_prefix+str(comp)+'.dat')
+        if os.path.exists(fit_paths['final']):
+            os.remove(fit_paths['final'])
 
         for i, d in enumerate(data_entries):  # Only print the top 10 functions
             if i < Nfuncs:
                 fcn = d[-1]
                 DL = d[0]
                 params = [float(pp) for pp in d[1][:-3]]
+                # Pad params to num_params (0-param functions have fewer columns)
+                while len(params) < num_params:
+                    params.append(0.0)
+                if len(params) > num_params:
+                    raise RuntimeError(
+                        "Parameter width exceeds the combined-file maximum.")
                 negloglike = float(d[1][-3])
                 codelen = float(d[1][-2])
                 aifeyn = float(d[1][-1])
                 ptab.add_row([i+1, fcn, '%.2f' % DL, '%.2e' % Prel[i], '%.2f' % negloglike,
                              '%.2f' % codelen, '%.2e' % aifeyn] + ['%.2e' % p for p in params])
 
-            with open(likelihood.out_dir + '/'+likelihood.final_prefix+str(comp)+'.dat', 'a') as f:
+            with open(fit_paths['final'], 'a') as f:
                 writer = csv.writer(f, delimiter=';')
+                # Pad params to num_params for consistent column count
+                row_params = list(d[1][:-3])
+                if len(row_params) > num_params:
+                    raise RuntimeError(
+                        "Parameter width exceeds the combined-file maximum.")
+                row_params += ['0.0'] * (num_params - len(row_params))
                 writer.writerow([i,
                                  d[-1],  # fcn
                                  d[0],  # DL
                                  Prel[i],
                                  d[1][-3],  # negloglike
                                  d[1][-2],  # codelen
-                                 d[1][-1]] + d[1][:-3])  # aifeyn, params
-
-        if len(data_entries) == 0:
-            os.system("touch " + likelihood.out_dir + '/' +
-                      likelihood.final_prefix+str(comp)+'.dat')
+                                 d[1][-1]] + row_params)  # aifeyn, params
 
         print(ptab)
 
-        with open(likelihood.out_dir + '/results_pretty_'+str(comp)+'.txt', 'w') as f:
+        with open(fit_paths['results_pretty'], 'w') as f:
             print(ptab, file=f)
 
     comm.Barrier()

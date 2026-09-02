@@ -15,6 +15,7 @@ esr/fitting/plot.py
 esr/fitting/sympy_symbols.py
 esr/fitting/test_all.py
 esr/fitting/test_all_Fisher.py
+esr/fitting/utils.py
 esr/generation/__init__.py
 esr/generation/custom_printer.py
 esr/generation/duplicate_checker.py

@@ -18,22 +18,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python 3.11
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Setup MPI
-        uses: mpi4py/setup-mpi@v1
-        with:
-          mpi: 'openmpi'
+      - name: Install MPI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openmpi-bin libopenmpi-dev
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 pytest
+          pip install pytest ruff nbclient nbformat ipykernel
           pip install -e .
       - name: Lint with Ruff
         run: |
-          pip install ruff
-          ruff check esr
+          ruff check esr tests
+        continue-on-error: false
+      # The docs embed these notebooks with nb_execution_mode = 'off', so their
+      # stored outputs are never regenerated at build time and would go stale
+      # silently as the code changes. Re-run them here, in a scratch directory
+      # and without writing the outputs back, purely to check they still work.
+      - name: Execute the documentation notebooks
+        run: |
+          mkdir -p notebook_check
+          cd notebook_check
+          python ../docs/execute_notebooks.py
         continue-on-error: false

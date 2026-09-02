@@ -11,6 +11,7 @@ setup(
     packages=find_packages(),
     install_requires=['sympy',
                       'myst-parser',
+                      'myst-nb',
                       'numpy',
                       'scipy',
                       'matplotlib',
