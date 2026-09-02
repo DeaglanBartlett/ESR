@@ -1094,6 +1094,63 @@ def test_diagonal_codelen_exceeds_determinant_by_the_correlation_term(tmp_path):
         f'measured {measured} against predicted {predicted}')
 
 
+def test_unremovable_degenerate_direction_gives_an_infinite_codelen(tmp_path):
+    """A mandatory snap that leaves no usable likelihood must not silently
+    revert to the unsnapped score.
+
+    The unsnapped determinant still contains the unconstrained direction, and
+    the smaller its eigenvalue comes out the shorter the code it produces --
+    which is the reward the mandatory snap exists to prevent. If no snap of that
+    direction leaves a finite likelihood there is no trustworthy codelength, so
+    the fit is rejected outright.
+    """
+    import sympy
+    from esr.fitting.test_all_Fisher import convert_params
+    from esr.fitting.sympy_symbols import x as xsym
+
+    #  A redundant parameterisation is only exactly flat when the residuals
+    #  vanish: with noisy data the residual curvature term lifts the null
+    #  direction in proportion to the noise. Small errors here so the direction
+    #  is unambiguously below the degeneracy threshold.
+    rng = np.random.default_rng(0)
+    xvar = np.linspace(1.0, 3.0, 60)
+    yerr = np.full_like(xvar, 1.0e-4)
+    yvar = 2.0 * xvar + rng.normal(scale=yerr)
+    np.savetxt(str(tmp_path / 'degenerate.txt'),
+               np.array([xvar, yvar, yerr]).T)
+
+    class PositivePredictionLikelihood(GaussLikelihood):
+        """Gaussian, but a non-positive prediction is outside the model."""
+
+        def negloglike(self, a, eq_numpy, **kwargs):
+            prediction = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
+            if not np.all(np.isfinite(prediction)) or np.any(prediction <= 0):
+                return np.inf
+            return super().negloglike(a, eq_numpy, **kwargs)
+
+    likelihood = PositivePredictionLikelihood(
+        'degenerate.txt', 'degenerate', data_dir=str(tmp_path),
+        base_out_dir=str(tmp_path))
+
+    #  a0*a1*x is the one-parameter family a0*x with a spare parameter: only the
+    #  product is identified. Zeroing either parameter makes the prediction zero,
+    #  which this likelihood rejects, so the degenerate direction cannot be
+    #  removed at all.
+    fcn = 'a0*a1*x'
+    _, eq, integrated = likelihood.run_sympify(fcn, tmax=5, try_integration=False)
+    a0s, a1s = sympy.symbols('a0 a1', real=True)
+    eq_numpy = sympy.lambdify([xsym, a0s, a1s], eq, 'numpy')
+    theta = np.array([1.0, 2.0])
+    negloglike = likelihood.negloglike(theta, eq_numpy, integrated=integrated)
+    assert np.isfinite(negloglike)
+
+    _, _, _, codelen = convert_params(
+        fcn, eq, integrated, theta.copy(), likelihood, negloglike,
+        max_param=2, use_det_I=True, snap_choice=1)
+    assert np.isinf(codelen), (
+        f'a degenerate fit that cannot be snapped was scored anyway: {codelen}')
+
+
 def test_likelihood_catalogue_cache_invalidates_on_grouping_change(tmp_path):
     """The catalogue is built on the simplifier's grouping, so it has to be
     rebuilt when that grouping changes.

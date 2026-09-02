@@ -317,6 +317,37 @@ def _compute_codelen(Hmat, Fisher_diag, theta, kept_mask, use_det_I):
                                               np.log(np.abs(theta_active)))
 
 
+def _unresolved_directions(Hmat, eigenvalues, eigenvectors):
+    """Which eigendirections of the Hessian carry unresolved curvature.
+
+    An eigenvalue is only meaningful next to the scale of the parameters it is
+    measured in, so each direction is compared against its own Rayleigh quotient
+    over ``diag(H)``: ``lambda_j / (v_j . diag(H) v_j)``. That ratio is unchanged
+    when a parameter is rescaled, and its minimum over directions is the smallest
+    eigenvalue of the correlation-normalised Hessian, so this is the per-direction
+    form of the test :func:`_correlation_eigenvalues` applies to the matrix as a
+    whole.
+
+    The one-precision-step test cannot stand in for this. A direction can be
+    unresolved and still clear one step, if ``theta`` projects far enough along
+    it; scoring it then leaves the unresolved eigenvalue inside ``det H``, where
+    the smaller it is the shorter the code it produces.
+
+    Args:
+        :Hmat (np.ndarray): Hessian of the negative log-likelihood (nparam x nparam)
+        :eigenvalues (np.ndarray): its eigenvalues (nparam,)
+        :eigenvectors (np.ndarray): its eigenvectors as columns (nparam x nparam)
+
+    Returns:
+        :unresolved (np.ndarray): boolean mask of the unresolved directions
+    """
+    diagonal = np.diag(_symmetrized_hessian(Hmat))
+    scale = np.einsum('ij,i,ij->j', eigenvectors, diagonal, eigenvectors)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        ratio = np.where(scale > 0, eigenvalues / scale, -np.inf)
+    return ~(ratio >= EIGENVALUE_REL_THRESHOLD)
+
+
 def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
     """Compute which parameters to snap to zero based on snap_choice.
 
@@ -373,9 +404,15 @@ def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
         good_eig = eigenvalues > 0
         Nsteps_rot = np.zeros(nparam)
         Nsteps_rot[good_eig] = np.abs(theta_rot[good_eig]) / np.sqrt(12. / eigenvalues[good_eig])
-        # Map unconstrained eigendirections back to original parameters:
-        # for each bad eigendirection, snap the original param with largest projection
-        bad_eig = np.where(Nsteps_rot < 1)[0]
+        # Map unconstrained eigendirections back to original parameters: for each
+        # bad eigendirection, snap the original param with largest projection. A
+        # direction is bad if it carries fewer than one precision step, or if its
+        # curvature is unresolved -- the latter regardless of the former, since a
+        # direction the data cannot measure must leave det(H) however far theta
+        # happens to project along it.
+        unresolved = _unresolved_directions(
+            Hmat[:nparam, :nparam], eigenvalues, eigenvectors)
+        bad_eig = np.where((Nsteps_rot < 1) | unresolved)[0]
         snap_set = set()
         for ei in bad_eig:
             snap_set.add(np.argmax(np.abs(eigenvectors[:, ei])))
@@ -504,7 +541,11 @@ def _score_projected_eigenbasis(Hmat, theta, negloglike, use_det_I,
         return theta, negloglike, nparam, np.inf
 
     b = V.T @ theta
-    good = eigenvalues > 0
+    #  A direction whose curvature is unresolved relative to the parameter scales
+    #  is not retained however far b projects along it: keeping it would leave the
+    #  unresolved eigenvalue in the volume term, where the smaller it is the
+    #  shorter the code.
+    good = (eigenvalues > 0) & ~_unresolved_directions(Hmat, eigenvalues, V)
     has_degenerate = bool(np.min(scaled) < EIGENVALUE_REL_THRESHOLD)
 
     # (Near-)degenerate positive eigenvalues make the eigenbasis ill-conditioned:
