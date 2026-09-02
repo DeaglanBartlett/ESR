@@ -39,6 +39,7 @@ ext_maths
 esr_env
 build/
 docs/build/
+docs/_build/
 
 examples/fitting/
 examples/data.txt

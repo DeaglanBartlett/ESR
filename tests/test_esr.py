@@ -994,6 +994,168 @@ def test_likelihood_catalogue_keeps_the_simplifiers_representatives(tmp_path):
     assert metadata['n_unique'] <= len(unique_functions)
 
 
+def _linear_least_squares(xvar, yvar, yerr):
+    """Exact ML intercept and slope for a straight line, and the Fisher matrix."""
+    design = np.vstack([np.ones_like(xvar), xvar]).T
+    weight = 1.0 / yerr ** 2
+    fisher = (design * weight[:, None]).T @ design
+    theta = np.linalg.solve(fisher, (design * weight[:, None]).T @ yvar)
+    return theta, fisher
+
+
+def _straight_line_data(tmp_path, name='invariance.txt'):
+    """Mock data from y = 3 + 1.7x, with a likelihood reading it."""
+    rng = np.random.default_rng(0)
+    xvar = np.linspace(1.0, 5.0, 100)
+    yerr = np.full_like(xvar, 0.5)
+    yvar = 3.0 + 1.7 * xvar + rng.normal(scale=yerr)
+    np.savetxt(str(tmp_path / name), np.array([xvar, yvar, yerr]).T)
+    likelihood = GaussLikelihood(name, 'invariance', data_dir=str(tmp_path),
+                                 base_out_dir=str(tmp_path))
+    return xvar, yvar, yerr, likelihood
+
+
+def _parametric_codelen(fcn, theta, likelihood, use_det_I, snap_choice=1):
+    """Parametric codelength of one expression at a supplied parameter vector."""
+    import sympy
+    from esr.fitting.test_all_Fisher import convert_params
+    from esr.fitting.sympy_symbols import x as xsym
+
+    theta = np.asarray(theta, dtype=float)
+    _, eq, integrated = likelihood.run_sympify(fcn, tmax=5, try_integration=False)
+    syms = list(np.atleast_1d(sympy.symbols(
+        ' '.join(f'a{i}' for i in range(len(theta))), real=True)))
+    eq_numpy = sympy.lambdify([xsym] + syms, eq, 'numpy')
+    negloglike = likelihood.negloglike(theta, eq_numpy, integrated=integrated)
+    _, _, _, codelen = convert_params(
+        fcn, eq, integrated, theta.copy(), likelihood, negloglike,
+        max_param=len(theta), use_det_I=use_det_I, snap_choice=snap_choice)
+    return codelen
+
+
+def test_determinant_codelen_is_the_same_for_equivalent_parameterisations(tmp_path):
+    """The headline result: a description length should not depend on how an
+    equation happens to be written.
+
+    ESR's complexity-5 catalogue keeps three algebraic forms of the same
+    two-parameter linear family. They fit any dataset identically and have the
+    same functional codelength, so their parametric codelengths should agree.
+    Under the determinant they do; under the published diagonal formula they do
+    not, which is what lets an algebraic accident decide which one is reported
+    as best.
+    """
+    xvar, yvar, yerr, likelihood = _straight_line_data(tmp_path)
+    (intercept, slope), _ = _linear_least_squares(xvar, yvar, yerr)
+
+    #  The same fit, written three ways: a0 + a1*x, a0*(a1 + x) and a0*(a1 - x).
+    forms = {
+        'a0 + a1*x': [intercept, slope],
+        'a0*(a1 + x)': [slope, intercept / slope],
+        'a0*(a1 - x)': [-slope, -intercept / slope],
+    }
+
+    determinant = {f: _parametric_codelen(f, t, likelihood, True)
+                   for f, t in forms.items()}
+    diagonal = {f: _parametric_codelen(f, t, likelihood, False, snap_choice=0)
+                for f, t in forms.items()}
+
+    assert all(np.isfinite(v) for v in determinant.values())
+    det_spread = max(determinant.values()) - min(determinant.values())
+    diag_spread = max(diagonal.values()) - min(diagonal.values())
+    assert det_spread < 1e-6, (
+        f'determinant codelengths differ across equivalent forms: {determinant}')
+    #  The diagonal formula is the comparison, not the target: it must visibly
+    #  separate forms that the determinant ties, or this test proves nothing.
+    assert diag_spread > 0.1, (
+        f'diagonal codelengths unexpectedly agree: {diagonal}')
+
+
+def test_diagonal_codelen_exceeds_determinant_by_the_correlation_term(tmp_path):
+    """What the determinant drops is exactly the parameter-correlation term.
+
+    For a Fisher matrix I with correlation matrix C,
+    0.5*sum(log(I_jj)) - 0.5*log(det(I)) = -0.5*log(det(C)),
+    which is non-negative by Hadamard's inequality and is fixed by the choice of
+    parameters, so it carries no information about the model or the data. A
+    straight line has an analytic Fisher matrix, so both sides can be compared.
+    """
+    xvar, yvar, yerr, likelihood = _straight_line_data(tmp_path, 'correlation.txt')
+    theta, fisher = _linear_least_squares(xvar, yvar, yerr)
+
+    scale = np.sqrt(np.diag(fisher))
+    _, logdet_correlation = np.linalg.slogdet(fisher / np.outer(scale, scale))
+    predicted = -0.5 * logdet_correlation
+
+    measured = (_parametric_codelen('a0 + a1*x', theta, likelihood, False, 0)
+                - _parametric_codelen('a0 + a1*x', theta, likelihood, True))
+
+    assert predicted > 0                      # Hadamard
+    assert np.isclose(measured, predicted, atol=1e-4), (
+        f'measured {measured} against predicted {predicted}')
+
+
+def test_likelihood_catalogue_cache_invalidates_on_grouping_change(tmp_path):
+    """The catalogue is built on the simplifier's grouping, so it has to be
+    rebuilt when that grouping changes.
+
+    The generated trees can stay byte-identical while the simplifier's verdict
+    on which of them are equivalent moves, so hashing all_equations alone would
+    not notice. Runs isolated in temporary directories.
+    """
+    import sympy
+    from esr.fitting.sympy_symbols import x
+    from esr.fitting import test_all
+
+    class NormalisingLikelihood:
+        use_likelihood_catalogue = True
+        catalogue_transform_version = 'v1'
+        is_mse = False
+        base_out_dir = str(tmp_path / 'out_base')
+        out_dir = str(tmp_path / 'out')
+        temp_dir = str(tmp_path / 'tmp')
+        fn_dir = str(tmp_path / 'functions')
+
+        def run_sympify(self, fcn_i, **kwargs):
+            a0, a1, a2 = sympy.symbols('a0 a1 a2', real=True)
+            eq = sympy.sympify(
+                fcn_i, locals={'x': x, 'a0': a0, 'a1': a1, 'a2': a2})
+            return fcn_i, sympy.cancel(eq / eq.subs(x, 1)), True
+
+    comp = 1
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    all_functions = ['a0*(a1 + x)', 'a2 + x', 'a0*x']
+    (compl_dir / f'all_equations_{comp}.txt').write_text(
+        '\n'.join(all_functions) + '\n')
+
+    def write_grouping(unique_functions, matches):
+        (compl_dir / f'unique_equations_{comp}.txt').write_text(
+            '\n'.join(unique_functions) + '\n')
+        (compl_dir / f'matches_{comp}.txt').write_text(
+            '\n'.join(str(m) for m in matches) + '\n')
+
+    likelihood = NormalisingLikelihood()
+    write_grouping(all_functions, [0, 1, 2])
+    assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
+    paths = likelihood_catalogue_paths(comp, likelihood)
+    first = test_all._read_likelihood_catalogue_metadata(comp, likelihood)
+    assert first['raw_unique_count'] == 3
+    assert first['settings']['raw_matches_hash'] is not None
+
+    #  The same three trees, but the simplifier now folds the third onto the
+    #  first. all_equations is untouched, so only the matches hash can catch it.
+    write_grouping(all_functions[:2], [0, 1, 0])
+    assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
+    second = test_all._read_likelihood_catalogue_metadata(comp, likelihood)
+    assert second['raw_unique_count'] == 2, 'stale catalogue reused'
+    assert (second['settings']['raw_matches_hash']
+            != first['settings']['raw_matches_hash'])
+    with open(paths['matches']) as f:
+        matches = [int(v) for v in f.read().split()]
+    assert len(matches) == len(all_functions)
+    assert matches[0] == matches[2]
+
+
 def test_determinant_with_diagonal_snapping_warns_but_is_allowed():
     """use_det_I=True with snap_choice=0 is a comparison setting, not an error.
 

@@ -252,22 +252,12 @@ g/g(1)`. Any overall amplitude is then invisible to the likelihood, so
 runs the complexity-5 catalogue both ways on the same data and takes about a
 minute on one core.
 
-.. code-block:: none
-
-	use_likelihood_catalogue=False  131 functions fitted   test_all took  21.2 s
-	use_likelihood_catalogue=True    94 functions fitted   test_all took  19.4 s
-
-	without the catalogue:            with the catalogue:
-	    rank  0  2*x**2                   rank  0  x**2
-	    rank  1  x**2                     rank  1  x*(a0 - x)
-	    rank  2  x*(a0 - x)               rank  2  x*(a0 + x)
-
 Deduplicating after the transformation removes 37 of the 131 fits, and the run
 comes out faster rather than slower despite the extra transformation pass over
 the unique equations. The equations the transformation has made equivalent stop
-being reported separately: ``2*x**2`` and ``x**2`` have identical description
-lengths above because they *are* the same model here, and only one of them
-survives with the catalogue on.
+being reported separately: in the notebook output ``2*x**2`` and ``x**2`` have
+identical description lengths without the catalogue, because they *are* the same
+model here, and only one of them survives with it on.
 
 The catalogue changes how much work is done, not what the answer is. The best
 description length is 16.7905 either way, and of the equations ranked in both
@@ -297,19 +287,9 @@ not depend on how an equation happens to be written. ESR's complexity 5
 catalogue keeps three algebraic forms of the same two-parameter linear family
 --- ``a0 + a1*x``, ``a0*(a1 + x)`` and ``a0*(a1 - x)`` --- which fit any dataset
 identically and have the same functional codelength. On data generated from
-`y = 3 + 1.7 x` the example prints
-
-.. code-block:: none
-
-	use_det_I=False, snap_choice=0
-	    a0 + a1*x      rank   1   L =  83.40230   parametric =  7.69704
-	    a0*(a1 + x)    rank   2   L =  83.81831   parametric =  8.11305
-	    a0*(a1 - x)    rank   3   L =  83.81831   parametric =  8.11305
-
-	use_det_I=True, snap_choice=1
-	    a0 + a1*x      rank   1   L =  82.38715   parametric =  6.68189
-	    a0*(a1 + x)    rank   2   L =  82.38715   parametric =  6.68189
-	    a0*(a1 - x)    rank   3   L =  82.38715   parametric =  6.68189
+`y = 3 + 1.7 x` the notebook gives the three forms parametric codelengths of
+7.69704, 8.11305 and 8.11305 under the published diagonal formula, against
+6.68189 for all three under the determinant.
 
 The diagonal formula separates the three by 0.416 nats, and so picks a winner
 among them on grounds that have nothing to do with the data; the determinant
