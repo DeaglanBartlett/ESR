@@ -5,13 +5,14 @@ from mpi4py import MPI
 import warnings
 import itertools
 import json
+import os
 import numdifftools as nd
 from scipy.optimize import minimize
 from scipy.stats import mode
 
 import esr.fitting.test_all as test_all
 from esr.fitting.utils import (
-    combine_temp_files, emit_diagnostic_warning, fitting_paths,
+    atomic_write, combine_temp_files, emit_diagnostic_warning, fitting_paths,
     set_recursionlimit_for_comp)
 from esr.fitting.sympy_symbols import x, a0
 
@@ -252,8 +253,25 @@ def save_scoring_settings(comp, likelihood, use_det_I, snap_choice):
             eigenbasis. See :func:`convert_params` for details
     """
     _validate_snap_and_det(use_det_I, snap_choice)
-    with open(fitting_paths(comp, likelihood)['fisher_settings'], 'w') as f:
+    with atomic_write(fitting_paths(comp, likelihood)['fisher_settings']) as f:
         json.dump({'use_det_I': bool(use_det_I), 'snap_choice': int(snap_choice)}, f)
+
+
+def clear_scoring_settings(comp, likelihood):
+    """Remove the saved Fisher scoring settings, if there are any.
+
+    ``test_all_Fisher.main`` calls this before it starts, and saves the new
+    settings only once its outputs are complete, so a run that is interrupted
+    part way leaves no settings rather than new settings beside old scores.
+
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object providing ``out_dir``
+    """
+    try:
+        os.remove(fitting_paths(comp, likelihood)['fisher_settings'])
+    except FileNotFoundError:
+        pass
 
 
 def load_scoring_settings(comp, likelihood):
@@ -1008,8 +1026,11 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
     test_all.ensure_likelihood_catalogue(comp, likelihood, tmax, try_integration)
     fcn_list_proc, data_start, data_end = test_all.get_functions(
         comp, likelihood)
+    # The settings describe the codelength files, so the previous run's are
+    # withdrawn before those files are rewritten and the new ones are saved
+    # only after they are complete (below).
     if rank == 0:
-        save_scoring_settings(comp, likelihood, use_det_I, snap_choice)
+        clear_scoring_settings(comp, likelihood)
     comm.Barrier()
     negloglike, params_proc = load_loglike(
         comp, likelihood, data_start, data_end)
@@ -1085,6 +1106,7 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
             likelihood.temp_dir,
             paths['derivs_rank_pattern'],
             paths['derivs'])
+        save_scoring_settings(comp, likelihood, use_det_I, snap_choice)
 
     comm.Barrier()
 

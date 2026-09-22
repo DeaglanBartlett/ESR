@@ -60,6 +60,25 @@ def _variant_negloglike(likelihood, fcn_i, theta_vec, tmax, try_integration):
     return likelihood.negloglike(list(theta_vec), eq_numpy, integrated=integrated)
 
 
+def _require_catalogue_rows(what, n_rows, n_unique):
+    """Raise unless a fitting output has one row per active unique equation.
+
+    The outputs are indexed by position in the unique catalogue, so a file left
+    over from a different catalogue can still be indexed successfully and would
+    attach its scores to the wrong equations.
+
+    Args:
+        :what (str): which output is being checked, for the error message
+        :n_rows (int): number of rows it contains
+        :n_unique (int): number of equations in the active unique catalogue
+    """
+    if n_rows != n_unique:
+        raise ValueError(
+            f'{what} has {n_rows} rows but the active catalogue has {n_unique} '
+            'unique equations. Rerun test_all.main and test_all_Fisher.main '
+            'with the current catalogue/settings.')
+
+
 def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_integration=False, print_frequency=1000 ):
     """
     Check that the matches have been done correctly by re-evaluating the likelihoods of all functions
@@ -242,6 +261,9 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     negloglike, params_meas = test_all_Fisher.load_loglike(
         comp, likelihood, data_start, data_end, split=False)
     max_param = params_meas.shape[1]
+    n_unique = test_all.get_function_count(comp, likelihood, unique=True)
+    _require_catalogue_rows(
+        'The test_all negloglike output', len(negloglike), n_unique)
 
     # Likelihood-aware branch. This intentionally returns before the
     # inverse-substitution logic below, and that omission is deliberate rather
@@ -270,22 +292,18 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             np.genfromtxt(fit_paths['codelen']))
         if codelen_unique.size == 0:
             codelen_unique = np.empty((0, max_param + 2))
-        metadata = test_all._read_likelihood_catalogue_metadata(comp, likelihood)
-        expected_unique = metadata.get('n_unique') if metadata is not None else None
-        if expected_unique is not None and codelen_unique.shape[0] != expected_unique:
+        _require_catalogue_rows(
+            'The Fisher codelength output', codelen_unique.shape[0], n_unique)
+        if len(matches_proc) and matches_proc.max() >= n_unique:
             raise ValueError(
-                'Fisher output row count does not match the likelihood-aware '
-                'catalogue. Rerun test_all.main and test_all_Fisher.main with '
-                'the current catalogue/settings.')
+                'Likelihood-aware match file refers to equations beyond the '
+                'catalogue. Rerun test_all.main and test_all_Fisher.main.')
         codelen = np.full(len(fcn_list_proc), np.nan)
         negloglike_all = np.full(len(fcn_list_proc), np.nan)
         index_arr = np.zeros(len(fcn_list_proc))
         params = np.zeros([len(fcn_list_proc), max_param])
         for i, index in enumerate(matches_proc):
             index_arr[i] = index
-            if index >= codelen_unique.shape[0]:
-                codelen[i] = np.inf
-                continue
             codelen[i] = codelen_unique[index, 0]
             negloglike_all[i] = codelen_unique[index, 1]
             n_available = min(max_param, codelen_unique.shape[1] - 2)
@@ -319,16 +337,21 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             dtype=int
         )
 
+    if len(matches_proc) and matches_proc.max() >= n_unique:
+        raise ValueError(
+            'Match file refers to equations beyond the unique catalogue. '
+            'Regenerate the catalogue, then rerun test_all.main and '
+            'test_all_Fisher.main.')
+
     # 2D array of shape (# unique fcns, 10)
     all_fish = np.loadtxt(fit_paths['derivs'])
     all_fish = np.atleast_2d(all_fish)
     if all_fish.size == 0:
-        # No valid Fisher results — fill with zeros so indexing works
-        # (codelen will be nan/inf for all functions)
-        unique_path = raw_catalogue_paths(comp, likelihood)['unique']
-        with open(unique_path) as f:
-            n_unique = sum(1 for _ in f)
+        # No Hessian entries at all (every function parameterless), so the
+        # rows are empty -- fill with zeros so indexing works
         all_fish = np.zeros((n_unique, int(max_param * (max_param + 1) / 2)))
+    _require_catalogue_rows(
+        'The Fisher derivative output', all_fish.shape[0], n_unique)
 
     # Both of these are also just for this proc
     codelen = np.zeros(len(fcn_list_proc))
@@ -364,11 +387,6 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             measured = params_meas[index, :nparams].copy()
 
         # Access from the unique eqs all_fish array, common to all procs
-        if index >= all_fish.shape[0]:
-            # derivs file has fewer rows than unique equations (Fisher
-            # only writes entries for successfully fitted functions)
-            codelen[i] = np.inf
-            continue
         fish_measured = all_fish[index, :]
 
 

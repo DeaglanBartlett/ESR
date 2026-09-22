@@ -1591,6 +1591,11 @@ def test_numerical_duplicate_diagnostic_does_not_change_catalogue():
         report = f.read()
     assert 'Candidate numerical fingerprint collisions only' in report
     assert 'No equations were removed or remapped' in report
+    #  The diagnostic must actually parse the catalogue: complexity 3 contains
+    #  a0 and Abs(a0), which agree at every sampled point, so a catalogue read
+    #  back still quoted (or otherwise unparsed) would report no groups at all.
+    assert '\nGROUP 0 HASH ' in report
+    assert "'" not in report
 
     return
 
@@ -1875,6 +1880,66 @@ def test_determinant_scoring_and_matching_with_parameter_removal(
 
     # The match output must reproduce the likelihoods it claims.
     assert match.check_match_results(comp, likelihood) == 0
+
+
+def _fitted_cc_pipeline(tmp_path, comp=3):
+    """Generate, fit and Fisher-score a small catalogue in isolated directories."""
+    likelihood = CCLikelihood(fn_dir=str(tmp_path / 'functions'),
+                              base_out_dir=str(tmp_path / 'output'))
+    esr.generation.duplicate_checker.main(
+        'core_maths', comp, fn_dir=likelihood.fn_dir)
+    esr.fitting.test_all.main(comp, likelihood)
+    esr.fitting.test_all_Fisher.main(
+        comp, likelihood, use_det_I=True, snap_choice=1)
+    return likelihood
+
+
+def test_match_rejects_outputs_from_a_different_catalogue(tmp_path):
+    """Fitting outputs are indexed by position in the unique catalogue, so a file
+    left over from a larger or smaller catalogue must be refused rather than
+    have its rows attached to the wrong equations."""
+    from esr.fitting.utils import fitting_paths
+
+    comp = 3
+    likelihood = _fitted_cc_pipeline(tmp_path, comp)
+    esr.fitting.match.main(comp, likelihood)     # consistent outputs match
+
+    paths = fitting_paths(comp, likelihood)
+    for key in ['negloglike', 'derivs']:
+        with open(paths[key]) as f:
+            original = f.read()
+        lines = original.splitlines(keepends=True)
+        for stale in [lines[:-1], lines + lines[-1:]]:
+            with open(paths[key], 'w') as f:
+                f.write(''.join(stale))
+            with pytest.raises(ValueError, match='Rerun test_all.main'):
+                esr.fitting.match.main(comp, likelihood)
+        with open(paths[key], 'w') as f:
+            f.write(original)
+    esr.fitting.match.main(comp, likelihood)
+
+
+def test_interrupted_fisher_run_leaves_no_scoring_settings(tmp_path, monkeypatch):
+    """The saved settings describe the codelength files, so a Fisher run that
+    stops before those files are complete must not leave its new settings beside
+    the previous run's scores for match to accept."""
+    comp = 3
+    likelihood = _fitted_cc_pipeline(tmp_path, comp)
+    assert esr.fitting.test_all_Fisher.load_scoring_settings(
+        comp, likelihood) == {'use_det_I': True, 'snap_choice': 1}
+
+    def interrupted(*args, **kwargs):
+        raise RuntimeError('interrupted')
+
+    monkeypatch.setattr(esr.fitting.test_all_Fisher, 'combine_temp_files',
+                        interrupted)
+    with pytest.raises(RuntimeError, match='interrupted'):
+        esr.fitting.test_all_Fisher.main(
+            comp, likelihood, use_det_I=False, snap_choice=0)
+    assert esr.fitting.test_all_Fisher.load_scoring_settings(
+        comp, likelihood) is None
+    with pytest.raises(ValueError, match='No saved Fisher settings'):
+        esr.fitting.match.main(comp, likelihood)
 
 
 def test_legacy_diagonal_settings_reproduce_published_values(
