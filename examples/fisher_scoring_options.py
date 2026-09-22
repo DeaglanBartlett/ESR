@@ -78,12 +78,16 @@ likelihood = GaussLikelihood(data_file, run_name, data_dir=work_dir,
                              base_out_dir=work_dir)
 
 #  (2) Generate the catalogue if it is not already on disk
+#  Catalogue generation is itself collective MPI code, so every rank has to
+#  enter it: rank 0 decides whether it is needed and tells the others.
+catalogue_missing = None
 if rank == 0:
-    if not os.path.isfile(os.path.join(likelihood.fn_dir, f'compl_{comp}',
-                                       f'unique_equations_{comp}.txt')):
-        for c in range(1, comp + 1):
-            esr.generation.duplicate_checker.main('core_maths', c)
-comm.Barrier()
+    catalogue_missing = not os.path.isfile(os.path.join(
+        likelihood.fn_dir, f'compl_{comp}', f'unique_equations_{comp}.txt'))
+catalogue_missing = comm.bcast(catalogue_missing, root=0)
+if catalogue_missing:
+    for c in range(1, comp + 1):
+        esr.generation.duplicate_checker.main('core_maths', c)
 
 #  (3) Fit once (the maximum-likelihood fits do not depend on the scoring
 #  options), then score, match and rank once per setting
