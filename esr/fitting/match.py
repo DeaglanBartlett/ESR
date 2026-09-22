@@ -565,7 +565,9 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
 
             if has_degenerate_eig:
                 pass  # mandatory snap — degenerate Hessian
-            elif k == 0 or DL_snap >= DL_nosnap:
+            elif not use_det_I:
+                pass  # published rule, as in test_all_Fisher.convert_params
+            elif DL_snap >= DL_nosnap:
                 # Well-conditioned but snapping didn't help — revert
                 p = np.copy(ptrue)
                 negloglike_all[i] = negloglike_orig

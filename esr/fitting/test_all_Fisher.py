@@ -614,7 +614,9 @@ def _score_projected_eigenbasis(Hmat, theta, negloglike, use_det_I,
     if has_degenerate:
         # Mandatory snap — the unsnapped determinant is not trustworthy.
         return theta_snapped, negloglike_snapped, k, codelen_snap
-    if k > 0 and negloglike_snapped + codelen_snap < negloglike + codelen_nosnap:
+    # A snap that removes every direction (k = 0, codelength 0) is judged by the
+    # same comparison: the zero vector is a legitimate, parameter-free fit.
+    if negloglike_snapped + codelen_snap < negloglike + codelen_nosnap:
         return theta_snapped, negloglike_snapped, k, codelen_snap
     # Well-conditioned Hessian but snapping did not help — keep all directions.
     return theta, negloglike, int(np.sum(good)), codelen_nosnap
@@ -695,7 +697,10 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
             transforms the retained vector back, re-evaluating the likelihood at
             that point *in the original parameterisation*; only the snap decision
             and the codelength are expressed in the eigenbasis. This requires
-            ``use_det_I=True``.
+            ``use_det_I=True``. With ``use_det_I=True`` a snap is kept only if it
+            lowers the description length, unless a degenerate direction makes
+            it mandatory; with ``use_det_I=False`` every candidate is snapped
+            whenever the likelihood stays finite, as in the published method.
 
     Returns:
         :params (list): the corrected maximum likelihood values of the parameters
@@ -924,8 +929,18 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
             # determinant, where the smaller its eigenvalue the shorter the code
             # it produces, so the DL comparison cannot be trusted here.
             pass
-        elif k == 0 or DL_snap >= DL_nosnap:
-            # Well-conditioned Hessian but snapping didn't help — revert
+        elif not use_det_I:
+            # The published diagonal formula has no precision floor: a parameter
+            # kept at t = |theta|/sigma standard errors costs ln t - ln(3)/2,
+            # negative below one precision step, while removing it costs t**2/2
+            # in -log(L), so the comparison would never snap it. The published
+            # rule applies instead: such a parameter is removed whenever the
+            # likelihood allows.
+            pass
+        elif DL_snap >= DL_nosnap:
+            # Well-conditioned Hessian but snapping didn't help — revert. A
+            # snap that removes every parameter (k = 0, codelength 0) is judged
+            # by the same comparison.
             theta_ML = theta_ML_orig
             negloglike = negloglike_orig
             k = nparam

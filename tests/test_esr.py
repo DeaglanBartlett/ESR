@@ -1151,6 +1151,100 @@ def test_unremovable_degenerate_direction_gives_an_infinite_codelen(tmp_path):
         f'a degenerate fit that cannot be snapped was scored anyway: {codelen}')
 
 
+def _null_slope_fit(tmp_path, offset):
+    """a0*x at its exact ML point on data with no slope, a0 = offset * sigma_a0.
+
+    The noise has its projection onto x removed and the slope is placed at a
+    fixed number of standard errors from zero, so the ML point is known exactly.
+    Returns what convert_params needs, plus -log(L) at the fit and at a0 = 0.
+    """
+    import sympy
+    from esr.fitting.sympy_symbols import x as xsym
+
+    rng = np.random.default_rng(1)
+    xvar = np.linspace(1.0, 5.0, 50)
+    yerr = np.full_like(xvar, 0.5)
+    noise = rng.normal(scale=yerr)
+    noise -= xvar * np.sum(xvar * noise) / np.sum(xvar ** 2)
+    a0_ml = offset * yerr[0] / np.sqrt(np.sum(xvar ** 2))
+    np.savetxt(str(tmp_path / 'null_slope.txt'),
+               np.array([xvar, a0_ml * xvar + noise, yerr]).T)
+    likelihood = GaussLikelihood('null_slope.txt', 'null_slope',
+                                 data_dir=str(tmp_path),
+                                 base_out_dir=str(tmp_path))
+
+    fcn = 'a0*x'
+    _, eq, integrated = likelihood.run_sympify(fcn, tmax=5, try_integration=False)
+    eq_numpy = sympy.lambdify([xsym, sympy.Symbol('a0', real=True)], eq, 'numpy')
+    negloglike_ml = likelihood.negloglike(
+        np.array([a0_ml]), eq_numpy, integrated=integrated)
+    negloglike_zero = likelihood.negloglike(
+        np.zeros(1), eq_numpy, integrated=integrated)
+    assert np.isclose(negloglike_zero - negloglike_ml, offset ** 2 / 2)
+    return fcn, eq, integrated, likelihood, a0_ml, negloglike_ml, negloglike_zero
+
+
+@pytest.mark.parametrize('snap_choice', [0, 1, 2])
+@pytest.mark.parametrize('offset, snapped', [(0.3, True), (1.5, False)])
+def test_snap_removing_every_parameter_is_judged_by_description_length(
+        tmp_path, snap_choice, offset, snapped):
+    """Under the determinant, a snap that leaves no parameters is decided like
+    any other snap.
+
+    For a0*x fitted to data with no slope, a0 lies within one precision step of
+    zero. Kept, it costs exactly ln 2 through the precision floor; snapped, it
+    costs nothing but -log(L) rises by (a0/sigma_a0)**2 / 2. So the snap should
+    win at 0.3 sigma (0.045 < ln 2) and lose at 1.5 sigma (1.125 > ln 2), and
+    both outcomes are the description-length comparison, not a special case.
+    """
+    from esr.fitting.test_all_Fisher import convert_params
+
+    fcn, eq, integrated, likelihood, a0_ml, negloglike_ml, negloglike_zero = \
+        _null_slope_fit(tmp_path, offset)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')     # snap_choice=0 warns with the det
+        params, negloglike, _, codelen = convert_params(
+            fcn, eq, integrated, np.array([a0_ml]), likelihood, negloglike_ml,
+            max_param=1, use_det_I=True, snap_choice=snap_choice)
+    if snapped:
+        assert codelen == 0.0
+        assert np.all(params == 0.0)
+        assert np.isclose(negloglike, negloglike_zero)
+    else:
+        assert np.isclose(codelen, np.log(2.0), atol=1e-4)
+        assert np.isclose(params[0], a0_ml)
+        assert np.isclose(negloglike, negloglike_ml)
+
+
+@pytest.mark.parametrize('offset', [0.3, 1.5, 3.0, 4.0])
+def test_published_diagonal_snaps_every_parameter_below_one_precision_step(
+        tmp_path, offset):
+    """use_det_I=False reproduces the published snapping rule.
+
+    The published diagonal formula has no precision floor, so a parameter kept
+    at t standard errors costs ln t - ln(3)/2, which is negative below one
+    precision step (t < sqrt(12)). Judged by the description length, the snap
+    would then never win. The published method instead removes every such
+    parameter, and these are the numbers the main branch gives for this fit.
+    """
+    from esr.fitting.test_all_Fisher import convert_params
+
+    fcn, eq, integrated, likelihood, a0_ml, negloglike_ml, negloglike_zero = \
+        _null_slope_fit(tmp_path, offset)
+    params, negloglike, _, codelen = convert_params(
+        fcn, eq, integrated, np.array([a0_ml]), likelihood, negloglike_ml,
+        max_param=1, use_det_I=False, snap_choice=0)
+    if offset < np.sqrt(12.0):
+        assert codelen == 0.0
+        assert np.all(params == 0.0)
+        assert np.isclose(negloglike, negloglike_zero)
+    else:
+        assert np.isclose(codelen, np.log(offset) - 0.5 * np.log(3.0),
+                          atol=1e-4)
+        assert np.isclose(params[0], a0_ml)
+        assert np.isclose(negloglike, negloglike_ml)
+
+
 def test_likelihood_catalogue_cache_invalidates_on_grouping_change(tmp_path):
     """The catalogue is built on the simplifier's grouping, so it has to be
     rebuilt when that grouping changes.

@@ -117,8 +117,13 @@ with fewer than one precision step, and maps each such direction back to the
 original parameter with the largest projection. The description length is
 still evaluated in the original parameter basis. With ``snap_choice=0``, the
 corresponding decision uses each diagonal element :math:`H_{ii}` independently.
-Snapping is retained only if it improves the description length, except when a
-degenerate Hessian direction makes snapping mandatory.
+With ``use_det_I=True``, snapping is retained only if it improves the
+description length, except when a degenerate Hessian direction makes snapping
+mandatory. With ``use_det_I=False`` every parameter with fewer than one
+precision step is snapped whenever the likelihood stays finite, as in the
+published method: the diagonal formula has no precision floor, so a parameter
+kept below one step would receive a negative codelength and the comparison
+would never remove it.
 
 With ``snap_choice=2`` (projected eigenbasis), ESR instead zeros the weak
 *projected* coordinate :math:`b_j=(V^{\top}\theta)_j` itself and transforms the
