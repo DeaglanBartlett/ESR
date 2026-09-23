@@ -41,9 +41,9 @@ from mpi4py import MPI
 
 import esr.generation.duplicate_checker
 import esr.fitting.test_all
-import esr.fitting.test_all_Fisher
+import esr.fitting.test_all_fisher
 import esr.fitting.match
-import esr.fitting.combine_DL
+import esr.fitting.combine_dl
 from esr.fitting.likelihood import GaussLikelihood
 from esr.fitting.sympy_symbols import x as xsym
 
@@ -79,7 +79,7 @@ class ShapeLikelihood(GaussLikelihood):
             if normalisation.is_number and normalisation == 0:
                 return fcn_i, eq, integrated
             eq = sympy.cancel(sympy.simplify(eq / normalisation))
-        except Exception:
+        except Exception:  # noqa: BLE001
             #  A function that cannot be normalised is left as it is; the
             #  catalogue build reports any such failures.
             pass
@@ -123,15 +123,15 @@ for use_catalogue in [False, True]:
     esr.fitting.test_all.main(comp, likelihood)
     elapsed = time.time() - start
 
-    esr.fitting.test_all_Fisher.main(comp, likelihood,
+    esr.fitting.test_all_fisher.main(comp, likelihood,
                                      use_det_I=True, snap_choice=1)
     esr.fitting.match.main(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
 
     if rank == 0:
-        n_fitted = sum(1 for _ in open(
-            esr.fitting.test_all.function_catalogue_path(
-                comp, likelihood, unique=True)))
+        with open(esr.fitting.test_all.function_catalogue_path(
+                comp, likelihood, unique=True)) as f:
+            n_fitted = sum(1 for _ in f)
         shutil.copy(os.path.join(likelihood.out_dir, f'final_{comp}.dat'),
                     os.path.join(work_dir, f'final_{comp}_{tag}.dat'))
         summary[use_catalogue] = (n_fitted, elapsed)

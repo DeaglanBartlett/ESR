@@ -1,16 +1,17 @@
-import numpy as np
 import os
 import sys
 import tempfile
+from collections import OrderedDict
 from contextlib import contextmanager
-from pympler import asizeof
+
+import numpy as np
 import psutil
 from psutil._common import bytes2human
-from collections import OrderedDict
+from pympler import asizeof
 
 
 @contextmanager
-def atomic_write(path, mode='w', **kwargs):
+def atomic_write(path, mode="w", **kwargs):
     """Write to a temporary file then atomically rename it over ``path``.
 
     Prevents a concurrent reader -- for example a separate process or a
@@ -28,7 +29,7 @@ def atomic_write(path, mode='w', **kwargs):
         :f: a writable file handle for the temporary file
     """
     directory = os.path.dirname(os.path.abspath(path))
-    fd, tmp = tempfile.mkstemp(dir=directory, prefix='.tmp_', suffix='.part')
+    fd, tmp = tempfile.mkstemp(dir=directory, prefix=".tmp_", suffix=".part")
     try:
         with os.fdopen(fd, mode, **kwargs) as f:
             yield f
@@ -44,7 +45,7 @@ def atomic_write(path, mode='w', **kwargs):
 
 
 def split_idx(Ntotal, r, indices_or_sections):
-    """ Returns the rth set indices for numpy.array_split(a,indices_or_sections)
+    """Returns the rth set indices for numpy.array_split(a,indices_or_sections)
     where len(a) = Ntotal
 
     Args:
@@ -63,12 +64,11 @@ def split_idx(Ntotal, r, indices_or_sections):
         # indices_or_sections is a scalar, not an array.
         Nsections = int(indices_or_sections)
         if Nsections <= 0:
-            raise ValueError(
-                'number sections must be larger than 0.') from None
+            raise ValueError("number sections must be larger than 0.") from None
         Neach_section, extras = divmod(Ntotal, Nsections)
-        section_sizes = ([0] +
-                         extras * [Neach_section+1] +
-                         (Nsections-extras) * [Neach_section])
+        section_sizes = (
+            [0] + extras * [Neach_section + 1] + (Nsections - extras) * [Neach_section]
+        )
         div_points = np.array(section_sizes, dtype=np.intp).cumsum()
 
     imin = div_points[r]
@@ -76,7 +76,7 @@ def split_idx(Ntotal, r, indices_or_sections):
     if imin >= imax:
         i = []
     else:
-        i = [imin, imax-1]
+        i = [imin, imax - 1]
 
     return i
 
@@ -92,9 +92,9 @@ def pprint_ntuple(nt):
     """
     for name in nt._fields:
         value = getattr(nt, name)
-        if name != 'percent':
+        if name != "percent":
             value = bytes2human(value)
-        print('\t%-10s : %7s' % (name.capitalize(), value))
+        print(f"\t{name.capitalize():<10} : {value:>7}")
     sys.stdout.flush()
 
 
@@ -108,9 +108,8 @@ def using_mem(point=""):
         None
 
     """
-    print('\n%s:' % point)
+    print(f"\n{point}:")
     pprint_ntuple(psutil.virtual_memory())
-    return
 
 
 def locals_size(loc):
@@ -130,20 +129,18 @@ def locals_size(loc):
     for i, x in enumerate(keys):
         try:
             mem[i] = asizeof.asizeof(loc[x])
-        except Exception:
+        except Exception:  # noqa: BLE001
             mem[i] = 0
 
     j = np.argsort(-mem)
 
     value = bytes2human(mem.sum())
-    print('\n\t%-15s : %7s' % ('LOCALS', value))
+    print(f'\n\t{"LOCALS":<15} : {value:>7}')
     for i in j:
         if mem[i] > 0:
             value = bytes2human(mem[i])
-            print('\t%-15s : %7s' % (keys[i], value))
+            print(f"\t{keys[i]:<15} : {value:>7}")
         sys.stdout.flush()
-
-    return
 
 
 def get_unique_indexes(L):

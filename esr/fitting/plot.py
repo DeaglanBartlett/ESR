@@ -1,16 +1,17 @@
 import csv
-from mpi4py import MPI
+import os
 import warnings
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 import sympy
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import matplotlib as mpl
-import os
+from matplotlib import cm
+from mpi4py import MPI
 
-from esr.fitting.sympy_symbols import x, a0
+from esr.fitting import test_all
+from esr.fitting.sympy_symbols import a0, x
 from esr.fitting.utils import fitting_paths, set_recursionlimit_for_comp
-import esr.fitting.test_all as test_all
 
 # Suppress the numpy/scipy RuntimeWarnings raised while evaluating functions for
 # plotting, but leave other categories (including ESR's own diagnostics and
@@ -22,7 +23,9 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 
-def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscale='linear'):
+def main(
+    comp, likelihood, tmax=5, try_integration=False, xscale="linear", yscale="linear"
+):
     """Plot best 50 functions at given complexity against data and save plot to file
 
     Args:
@@ -41,7 +44,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     if rank != 0:
         return
 
-    print('\nMaking plots', flush=True)
+    print("\nMaking plots", flush=True)
 
     vmin = 1e-3
     vmax = 1
@@ -51,7 +54,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     set_recursionlimit_for_comp(comp)
 
     if not os.path.isdir(likelihood.fig_dir):
-        print('Making:', likelihood.fig_dir)
+        print("Making:", likelihood.fig_dir)
         os.mkdir(likelihood.fig_dir)
 
     count = 0
@@ -60,8 +63,8 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     all_DL = []
     max_param = None
 
-    with open(fitting_paths(comp, likelihood)['final'], "r") as f:
-        reader = csv.reader(f, delimiter=';')
+    with open(fitting_paths(comp, likelihood)["final"], "r") as f:
+        reader = csv.reader(f, delimiter=";")
 
         for row in reader:
             try:
@@ -92,12 +95,12 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
     params = np.array(params, dtype=float)
     DL = np.array(all_DL, dtype=float)
     if not np.any(np.isfinite(DL)):
-        print('Add DL are infinite, so skipping plot')
+        print("Add DL are infinite, so skipping plot")
         return
     DL_min = np.nanmin(DL)
     alpha = DL_min - DL
     alpha = np.exp(alpha)
-    m = (alpha > vmin)
+    m = alpha > vmin
     fcn_list = [d for i, d in enumerate(fcn_list) if m[i]]
     params = params[m, :]
     alpha = alpha[m]
@@ -109,13 +112,14 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
 
     for i in range(min(len(fcn_list), nfun)):
 
-        fcn_i = fcn_list[i].replace('\'', '')
+        fcn_i = fcn_list[i].replace("'", "")
 
-        print('%i of %i:' % (i+1, len(fcn_list)), fcn_i)
+        print(f"{i+1} of {len(fcn_list)}:", fcn_i)
 
         try:
             fcn_i, eq, integrated = likelihood.run_sympify(
-                fcn_i, tmax=tmax, try_integration=try_integration)
+                fcn_i, tmax=tmax, try_integration=try_integration
+            )
             #  A likelihood transformation can drop or relabel parameters, and
             #  the stored values are in the canonical basis the fit used, so the
             #  curve must be drawn from the canonicalised expression and the
@@ -128,14 +132,15 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
             if k == 0:
                 eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
             elif k > 1:
-                all_a = ' '.join([f'a{i}' for i in range(k)])
+                all_a = " ".join([f"a{i}" for i in range(k)])
                 all_a = list(sympy.symbols(all_a, real=True))
                 eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
             else:
                 eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
             ypred = likelihood.get_pred(
-                likelihood.xvar, measured, eq_numpy, integrated=integrated)
-        except Exception:
+                likelihood.xvar, measured, eq_numpy, integrated=integrated
+            )
+        except Exception:  # noqa: BLE001
             #  Retry numerically if the analytic integration was the problem.
             #  Anything left unplottable is skipped: falling through would draw
             #  the previous function's curve under this function's label.
@@ -143,51 +148,78 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
                 continue
             try:
                 fcn_i, eq, integrated = likelihood.run_sympify(
-                    fcn_i, tmax=tmax, try_integration=False)
+                    fcn_i, tmax=tmax, try_integration=False
+                )
                 eq, active_params = test_all.canonicalize_parameter_symbols(eq)
                 k = len(active_params)
                 measured = params[i, :k]
                 if k == 0:
                     eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
                 elif k > 1:
-                    all_a = list(sympy.symbols(
-                        ' '.join(f'a{j}' for j in range(k)), real=True))
-                    eq_numpy = sympy.lambdify(
-                        [x] + all_a, eq, modules=["numpy"])
+                    all_a = list(
+                        sympy.symbols(" ".join(f"a{j}" for j in range(k)), real=True)
+                    )
+                    eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
                 else:
                     eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                 ypred = likelihood.get_pred(
-                    likelihood.xvar, measured, eq_numpy, integrated=integrated)
-            except Exception:
+                    likelihood.xvar, measured, eq_numpy, integrated=integrated
+                )
+            except Exception as e:  # noqa: BLE001
+                print(f"Failed to plot {fcn_i}: {e}", flush=True)
                 continue
 
         if np.isscalar(ypred):
-            ax1.plot(likelihood.xvar, [ypred]*len(likelihood.xvar),
-                     color=cmap(norm(alpha[i])), zorder=len(fcn_list)-i)
+            ax1.plot(
+                likelihood.xvar,
+                [ypred] * len(likelihood.xvar),
+                color=cmap(norm(alpha[i])),
+                zorder=len(fcn_list) - i,
+            )
         else:
-            ax1.plot(likelihood.xvar, ypred, color=cmap(
-                norm(alpha[i])), zorder=len(fcn_list)-i)
+            ax1.plot(
+                likelihood.xvar,
+                ypred,
+                color=cmap(norm(alpha[i])),
+                zorder=len(fcn_list) - i,
+            )
 
-    if hasattr(likelihood, 'yerr'):
-        ax1.errorbar(likelihood.xvar, likelihood.yvar, yerr=likelihood.yerr, fmt='.',
-                     markersize=5, zorder=len(fcn_list)+1, capsize=1, elinewidth=1, color='k', alpha=1)
+    if hasattr(likelihood, "yerr"):
+        ax1.errorbar(
+            likelihood.xvar,
+            likelihood.yvar,
+            yerr=likelihood.yerr,
+            fmt=".",
+            markersize=5,
+            zorder=len(fcn_list) + 1,
+            capsize=1,
+            elinewidth=1,
+            color="k",
+            alpha=1,
+        )
     else:
-        ax1.plot(likelihood.xvar, likelihood.yvar, '.',
-                 color='k', ms=5, zorder=len(fcn_list)+1, alpha=1)
-    ax1.set_xlabel(r'$x$')
+        ax1.plot(
+            likelihood.xvar,
+            likelihood.yvar,
+            ".",
+            color="k",
+            ms=5,
+            zorder=len(fcn_list) + 1,
+            alpha=1,
+        )
+    ax1.set_xlabel(r"$x$")
     ax1.set_ylabel(likelihood.ylabel)
     ax1.set_xscale(xscale)
     ax1.set_yscale(yscale)
-    if xscale != 'log':
+    if xscale != "log":
         ax1.set_xlim(0, None)
     ax1.set_ylim(likelihood.yvar.min() * 0.9, likelihood.yvar.max() * 1.1)
 
     ax2 = fig.add_axes([0.85, 0.10, 0.05, 0.85])
-    cb1 = mpl.colorbar.ColorbarBase(
-        ax2, cmap=cmap, norm=norm, orientation='vertical')
-    cb1.set_label(r'$\exp \left( MDL - DL \right)$')
+    cb1 = mpl.colorbar.ColorbarBase(ax2, cmap=cmap, norm=norm, orientation="vertical")
+    cb1.set_label(r"$\exp \left( MDL - DL \right)$")
     fig.tight_layout()
-    fig.savefig(likelihood.fig_dir + '/plot_%i.png' % comp)
+    fig.savefig(f"{likelihood.fig_dir}/plot_{comp}.png")
     fig.clf()
     plt.close(fig)
 

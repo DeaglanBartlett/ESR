@@ -1,5 +1,6 @@
 sympy
 myst-parser
+myst-nb
 numpy
 scipy
 matplotlib

@@ -1,23 +1,30 @@
-import numpy as np
-import sympy
+import ast
+import csv
+import gc
+import hashlib
+import itertools
+import os
+import pprint
 import signal
 import sys
-import itertools
-import hashlib
-from mpi4py import MPI
-from contextlib import contextmanager
-import csv
-import ast
-import gc
 from collections import OrderedDict
-import pprint
-import os
-import esr.generation.utils as utils
-from esr.generation.custom_printer import ESRPrinter
+from contextlib import contextmanager
+
+import numpy as np
+import sympy
+from mpi4py import MPI
+
 from esr.fitting.sympy_symbols import (
-    sympy_locs, square, cube, pow_abs, sqrt_abs, log_abs,
-    x as _fprint_x_sym
+    cube,
+    log_abs,
+    pow_abs,
+    sqrt_abs,
+    square,
+    sympy_locs,
 )
+from esr.fitting.sympy_symbols import x as _fprint_x_sym
+from esr.generation import utils
+from esr.generation.custom_printer import ESRPrinter
 
 # ---------------------------------------------------------------------------
 # Numerical fingerprinting diagnostics
@@ -33,7 +40,7 @@ _FPRINT_MAX_PARAMS = 20
 
 _FPRINT_X_POINTS = _FPRINT_RNG.uniform(0.2, 5.0, _FPRINT_N_POINTS)
 _FPRINT_PARAM_POINTS = {
-    f'a{i}': _FPRINT_RNG.uniform(0.5, 3.0, _FPRINT_N_POINTS)
+    f"a{i}": _FPRINT_RNG.uniform(0.5, 3.0, _FPRINT_N_POINTS)
     for i in range(_FPRINT_MAX_PARAMS)
 }
 
@@ -63,8 +70,12 @@ def numerical_fingerprint(expr, max_param=None):
 
     # Identify symbols in the expression
     param_symbols = sorted(
-        [s for s in expr.free_symbols if s.name.startswith('a') and s.name[1:].isdigit()],
-        key=lambda s: int(s.name[1:])
+        [
+            s
+            for s in expr.free_symbols
+            if s.name.startswith("a") and s.name[1:].isdigit()
+        ],
+        key=lambda s: int(s.name[1:]),
     )
     has_x = _fprint_x_sym in expr.free_symbols
 
@@ -86,7 +97,7 @@ def numerical_fingerprint(expr, max_param=None):
 
     try:
         f_numpy = sympy.lambdify(args, expr, modules=["numpy"])
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
     # Evaluate at all points at once (vectorized)
@@ -97,7 +108,7 @@ def numerical_fingerprint(expr, max_param=None):
         call_args.append(_FPRINT_PARAM_POINTS[p.name])
 
     try:
-        with np.errstate(all='ignore'):
+        with np.errstate(all="ignore"):
             if len(call_args) == 0:
                 # Constant expression
                 result = np.full(_FPRINT_N_POINTS, float(expr))
@@ -108,7 +119,7 @@ def numerical_fingerprint(expr, max_param=None):
                 result = np.full(_FPRINT_N_POINTS, float(result))
             elif len(result) == 1 and _FPRINT_N_POINTS > 1:
                 result = np.full(_FPRINT_N_POINTS, result[0])
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
     # Count failures (non-finite values)
@@ -180,18 +191,19 @@ def numerical_duplicate_candidates(uniq_fun, max_param=None, verbose=True):
             indexes ``uniq_fun``.
     """
     if rank == 0 and verbose:
-        print('\nNumerical duplicate diagnostic (candidate groups only)', flush=True)
+        print("\nNumerical duplicate diagnostic (candidate groups only)", flush=True)
 
     n_orig = len(uniq_fun)
     hash_indexes = OrderedDict()
 
     for i, fstr in enumerate(uniq_fun):
         if rank == 0 and verbose and (i % 500 == 0):
-            print(f'\t{i} of {n_orig}', flush=True)
+            print(f"\t{i} of {n_orig}", flush=True)
 
         try:
             expr = sympy.sympify(fstr, locals=sympy_locs)
-        except Exception:
+        except Exception:  # noqa: BLE001
+            expr = None
             continue
 
         fp = numerical_fingerprint(expr, max_param=max_param)
@@ -200,18 +212,22 @@ def numerical_duplicate_candidates(uniq_fun, max_param=None, verbose=True):
             hash_indexes.setdefault(h, []).append(i)
 
     candidate_groups = [
-        (h, indexes) for h, indexes in hash_indexes.items()
-        if len(indexes) > 1
+        (h, indexes) for h, indexes in hash_indexes.items() if len(indexes) > 1
     ]
 
     if rank == 0 and verbose:
         n_flagged = sum(len(indexes) - 1 for _, indexes in candidate_groups)
-        print(f'\tFound {len(candidate_groups)} candidate groups containing '
-              f'{n_flagged} additional expressions '
-              f'({n_flagged}/{n_orig} = {100*n_flagged/max(n_orig,1):.1f}%)',
-              flush=True)
-        print('\tNOTE: candidates are not removed; verify exact model '
-              'equivalence before any catalogue change.', flush=True)
+        print(
+            f"\tFound {len(candidate_groups)} candidate groups containing "
+            f"{n_flagged} additional expressions "
+            f"({n_flagged}/{n_orig} = {100*n_flagged/max(n_orig,1):.1f}%)",
+            flush=True,
+        )
+        print(
+            "\tNOTE: candidates are not removed; verify exact model "
+            "equivalence before any catalogue change.",
+            flush=True,
+        )
 
     return candidate_groups
 
@@ -227,7 +243,7 @@ class TimeoutException(Exception):
 
 @contextmanager
 def time_limit(seconds):
-    """ Check function call does not exceed allotted time
+    """Check function call does not exceed allotted time
 
     Args:
         :seconds (float): maximum time function can run in seconds
@@ -238,6 +254,7 @@ def time_limit(seconds):
 
     def signal_handler(signum, frame):
         raise TimeoutException("Timed out")
+
     signal.signal(signal.SIGALRM, signal_handler)
     # Use setitimer (not alarm) so a float ``seconds`` such as 5.0 works;
     # signal.alarm requires an integer and would raise TypeError otherwise.
@@ -249,7 +266,7 @@ def time_limit(seconds):
 
 
 def get_max_param(all_fun, verbose=True):
-    """ Find maximum number of free parameters in list of functions
+    """Find maximum number of free parameters in list of functions
 
     Args:
         :all_fun (list): list of strings containing functions
@@ -264,18 +281,17 @@ def get_max_param(all_fun, verbose=True):
     with_ai = all_fun.copy()
     while len(with_ai) > 0:
         max_param += 1
-        with_ai = [f for f in with_ai if 'a%i' % max_param in f]
-    if max_param < 0:
-        max_param = 0
+        with_ai = [f for f in with_ai if f"a{max_param}" in f]
+    max_param = max(max_param, 0)
     if verbose and rank == 0:
-        print('\nMax number of parameters:', max_param)
+        print("\nMax number of parameters:", max_param)
     sys.stdout.flush()
 
     return max_param
 
 
 def count_params(all_fun, max_param):
-    """ Count the number of free parameters in each member of a list of functions
+    """Count the number of free parameters in each member of a list of functions
 
     Args:
         :all_fun (list): list of strings containing functions
@@ -286,19 +302,19 @@ def count_params(all_fun, max_param):
     """
 
     nparam = np.zeros(len(all_fun), dtype=int)
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f"a{i}" for i in range(max_param)]
 
     for i in range(len(nparam)):
-        for j in range(max_param-1, -1, -1):
+        for j in range(max_param - 1, -1, -1):
             if param_list[j] in all_fun[i]:
-                nparam[i] = j+1
+                nparam[i] = j + 1
                 break
 
     return nparam
 
 
 def make_changes(all_fun, all_sym, all_inv_subs, str_fun, sym_fun, inv_subs_fun):
-    """ Update global variables of functions and symbolic expressions by combining rank
+    """Update global variables of functions and symbolic expressions by combining rank
     calculations
 
     Args:
@@ -330,7 +346,7 @@ def make_changes(all_fun, all_sym, all_inv_subs, str_fun, sym_fun, inv_subs_fun)
         start_idx = np.cumsum(start_idx)
     start_idx = comm.bcast(start_idx, root=0)
 
-    chidx = [i for i in range(len(str_fun)) if str_fun[i] != all_fun[imin+i]]
+    chidx = [i for i in range(len(str_fun)) if str_fun[i] != all_fun[imin + i]]
     str_changes = [str_fun[c] for c in chidx]
     sym_changes = [sym_fun[c] for c in chidx]
     inv_changes = [inv_subs_fun[c] for c in chidx]
@@ -358,7 +374,9 @@ def make_changes(all_fun, all_sym, all_inv_subs, str_fun, sym_fun, inv_subs_fun)
     return all_fun, all_sym, all_inv_subs
 
 
-def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memory=False, save_sympy=True):
+def initial_sympify(
+    all_fun, max_param, verbose=True, parallel=True, track_memory=False, save_sympy=True
+):
     """Convert list of strings of functions into list of sympy objects
 
     Args:
@@ -378,12 +396,12 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
         if track_memory:
             utils.using_mem("start initial sympify")
             utils.locals_size(locals())
-        print('\nSympy simplify')
+        print("\nSympy simplify")
     sys.stdout.flush()
 
-    x, x0, y = sympy.symbols('x x0 y', positive=True)
+    x, x0, y = sympy.symbols("x x0 y", positive=True)
     if max_param > 0:
-        param_list = ['a%i' % i for i in range(max_param)]
+        param_list = [f"a{i}" for i in range(max_param)]
         all_a = sympy.symbols(" ".join(param_list), real=True)
         if max_param == 1:
             all_a = [all_a]
@@ -395,14 +413,14 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
 
     if max_param > 0:
         for i in range(len(all_a)):
-            locs["a%i" % i] = all_a[i]
+            locs[f"a{i}"] = all_a[i]
 
     if parallel:
         i = np.atleast_1d(utils.split_idx(len(all_fun), rank, size))
         if len(i) == 0:
             str_fun = []
         else:
-            str_fun = all_fun[i[0]:i[-1]+1]
+            str_fun = all_fun[i[0] : i[-1] + 1]
     else:
         str_fun = all_fun
 
@@ -415,13 +433,12 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
     for i in range(len(str_fun)):
         try:
             s = sympy.sympify(str_fun[i], locals=locs)
-        except Exception:
-            print('Making %s a zoo' % str_fun[i])
+        except Exception:  # noqa: BLE001
+            print(f"Making {str_fun[i]} a zoo")
             s = sympy.zoo
         str_fun[i] = p.doprint(s)
-        if save_sympy:
-            if str_fun[i] not in sym_fun:
-                sym_fun[str_fun[i]] = s
+        if save_sympy and str_fun[i] not in sym_fun:
+            sym_fun[str_fun[i]] = s
 
     # We have to gather these, although won't do this again
     if parallel:
@@ -437,7 +454,7 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
         # Now send each rank to everyone else
         all_fun = [None] * start_idx[-1]
         for r in range(size):
-            all_fun[start_idx[r]:start_idx[r+1]] = comm.bcast(str_fun, root=r)
+            all_fun[start_idx[r] : start_idx[r + 1]] = comm.bcast(str_fun, root=r)
         str_fun = all_fun
 
         if save_sympy:
@@ -455,7 +472,9 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
     return str_fun, sym_fun
 
 
-def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, tmax=1, check_perm=False):
+def sympy_simplify(
+    all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, tmax=1, check_perm=False
+):
     """Simplify equations and find duplicates.
 
     Args:
@@ -483,7 +502,7 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
     esrp = ESRPrinter()
 
     if max_param > 0:
-        param_list = ['a%i' % i for i in range(max_param)]
+        param_list = [f"a{i}" for i in range(max_param)]
         all_a = sympy.symbols(" ".join(param_list), real=True)
         if max_param == 1:
             all_a = [all_a]
@@ -496,9 +515,9 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
         sym_fun = []
         inv_subs_fun = []
     else:
-        str_fun = all_fun[i[0]:i[-1]+1]
-        sym_fun = all_sym[i[0]:i[-1]+1]
-        inv_subs_fun = all_inv_subs[i[0]:i[-1]+1]
+        str_fun = all_fun[i[0] : i[-1] + 1]
+        sym_fun = all_sym[i[0] : i[-1] + 1]
+        inv_subs_fun = all_inv_subs[i[0] : i[-1] + 1]
 
     identity_subs = {a: a for a in all_a}
 
@@ -508,49 +527,52 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
     if max_param > 1:
         for c in comb:
             #  Second number = 0 if normal subs, = 1 if abs subs
-            all_expr = [[all_a[c[0]] + all_a[c[1]], 0],
-                        [all_a[c[0]] - all_a[c[1]], 0],
-                        [all_a[c[1]] - all_a[c[0]], 0],
-                        [all_a[c[0]] * all_a[c[1]], 0],
-                        [all_a[c[0]] / all_a[c[1]], 0],
-                        [all_a[c[1]] / all_a[c[0]], 0],
-                        [all_a[c[0]] + sympy.Abs(all_a[c[1]]), 0],
-                        [all_a[c[0]] - sympy.Abs(all_a[c[1]]), 0],
-                        [sympy.Abs(all_a[c[1]]) - all_a[c[0]], 0],
-                        [all_a[c[0]] * sympy.Abs(all_a[c[1]]), 0],
-                        [all_a[c[0]] / sympy.Abs(all_a[c[1]]), 0],
-                        [all_a[c[1]] / sympy.Abs(all_a[c[0]]), 0],
-                        [all_a[c[1]] + sympy.Abs(all_a[c[0]]), 0],
-                        [all_a[c[1]] - sympy.Abs(all_a[c[0]]), 0],
-                        [sympy.Abs(all_a[c[0]]) - all_a[c[1]], 0],
-                        [all_a[c[1]] * sympy.Abs(all_a[c[0]]), 0],
-                        [all_a[c[1]] / sympy.Abs(all_a[c[0]]), 0],
-                        [all_a[c[0]] / sympy.Abs(all_a[c[1]]), 0],
-                        [sympy.Abs(all_a[c[0]]) * sympy.Abs(all_a[c[1]]), 1],
-                        [sympy.Abs(all_a[c[0]]) + sympy.Abs(all_a[c[1]]), 1],
-                        [sympy.Abs(all_a[c[0]]) - sympy.Abs(all_a[c[1]]), 0],
-                        [sympy.Abs(all_a[c[1]]) - sympy.Abs(all_a[c[0]]), 0],
-                        [sympy.Abs(all_a[c[0]]) / sympy.Abs(all_a[c[1]]), 1],
-                        [sympy.Abs(all_a[c[1]]) / sympy.Abs(all_a[c[0]]), 1],
-                        [pow_abs(all_a[c[1]], all_a[c[0]]), 1],
-                        [pow_abs(all_a[c[0]], all_a[c[1]]), 1],
-                        [pow_abs(all_a[c[1]], sympy.Abs(all_a[c[0]])), 1],
-                        [pow_abs(all_a[c[0]], sympy.Abs(all_a[c[1]])), 1],
-                        ]
+            all_expr = [
+                [all_a[c[0]] + all_a[c[1]], 0],
+                [all_a[c[0]] - all_a[c[1]], 0],
+                [all_a[c[1]] - all_a[c[0]], 0],
+                [all_a[c[0]] * all_a[c[1]], 0],
+                [all_a[c[0]] / all_a[c[1]], 0],
+                [all_a[c[1]] / all_a[c[0]], 0],
+                [all_a[c[0]] + sympy.Abs(all_a[c[1]]), 0],
+                [all_a[c[0]] - sympy.Abs(all_a[c[1]]), 0],
+                [sympy.Abs(all_a[c[1]]) - all_a[c[0]], 0],
+                [all_a[c[0]] * sympy.Abs(all_a[c[1]]), 0],
+                [all_a[c[0]] / sympy.Abs(all_a[c[1]]), 0],
+                [all_a[c[1]] / sympy.Abs(all_a[c[0]]), 0],
+                [all_a[c[1]] + sympy.Abs(all_a[c[0]]), 0],
+                [all_a[c[1]] - sympy.Abs(all_a[c[0]]), 0],
+                [sympy.Abs(all_a[c[0]]) - all_a[c[1]], 0],
+                [all_a[c[1]] * sympy.Abs(all_a[c[0]]), 0],
+                [all_a[c[1]] / sympy.Abs(all_a[c[0]]), 0],
+                [all_a[c[0]] / sympy.Abs(all_a[c[1]]), 0],
+                [sympy.Abs(all_a[c[0]]) * sympy.Abs(all_a[c[1]]), 1],
+                [sympy.Abs(all_a[c[0]]) + sympy.Abs(all_a[c[1]]), 1],
+                [sympy.Abs(all_a[c[0]]) - sympy.Abs(all_a[c[1]]), 0],
+                [sympy.Abs(all_a[c[1]]) - sympy.Abs(all_a[c[0]]), 0],
+                [sympy.Abs(all_a[c[0]]) / sympy.Abs(all_a[c[1]]), 1],
+                [sympy.Abs(all_a[c[1]]) / sympy.Abs(all_a[c[0]]), 1],
+                [pow_abs(all_a[c[1]], all_a[c[0]]), 1],
+                [pow_abs(all_a[c[0]], all_a[c[1]]), 1],
+                [pow_abs(all_a[c[1]], sympy.Abs(all_a[c[0]])), 1],
+                [pow_abs(all_a[c[0]], sympy.Abs(all_a[c[1]])), 1],
+            ]
 
             for i in range(len(str_fun)):
                 orig_fun = str_fun[i]
                 orig_sym = sym_fun[i]
                 try:
                     with time_limit(tmax):
-                        if (all_a[c[0]] in sym_fun[i].free_symbols) and (all_a[c[1]] in sym_fun[i].free_symbols):
+                        if (all_a[c[0]] in sym_fun[i].free_symbols) and (
+                            all_a[c[1]] in sym_fun[i].free_symbols
+                        ):
                             #  Make sure symbols only appear once in sym version
                             if sym_fun[i].count(all_a[c[1]]) == 1:
                                 if sym_fun[i].count(all_a[c[0]]) == 1:
                                     v = 1
                                     keep = False
                                 else:
-                                    v = None    # Don't have to ignore this combination
+                                    v = None  # Don't have to ignore this combination
                                     keep = True
                             # or str_fun[i].count(param_list[c[0]]) == 1:
                             elif sym_fun[i].count(all_a[c[0]]) == 1:
@@ -558,7 +580,7 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                                     v = 0
                                     keep = False
                                 else:
-                                    v = None    # Don't have to ignore this combination
+                                    v = None  # Don't have to ignore this combination
                                     keep = True
                             else:
                                 v = None
@@ -570,48 +592,63 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                                         f1 = str(sym_fun[i])
                                         if expr[1] == 0:
                                             sym_fun[i] = sym_fun[i].subs(
-                                                expr[0], all_a[c[v]])
+                                                expr[0], all_a[c[v]]
+                                            )
                                             f2 = str(sym_fun[i])
                                             if inv_subs_fun[i] is None:
                                                 if keep:
                                                     inv_subs_fun[i] = [
-                                                        str({expr[0]: all_a[c[v]]})]
+                                                        str({expr[0]: all_a[c[v]]})
+                                                    ]
                                                 else:
-                                                    inv_subs_fun[i] = [
-                                                        str(np.nan)]
+                                                    inv_subs_fun[i] = [str(np.nan)]
                                             else:
                                                 if keep:
                                                     inv_subs_fun[i].append(
-                                                        str({expr[0]: all_a[c[v]]}))
+                                                        str({expr[0]: all_a[c[v]]})
+                                                    )
                                                 else:
-                                                    inv_subs_fun[i].append(
-                                                        str(np.nan))
+                                                    inv_subs_fun[i].append(str(np.nan))
                                         elif expr[1] == 1:
                                             sym_fun[i] = sym_fun[i].subs(
-                                                expr[0], sympy.Abs(all_a[c[v]], evaluate=False))
+                                                expr[0],
+                                                sympy.Abs(all_a[c[v]], evaluate=False),
+                                            )
                                             f2 = str(sym_fun[i])
                                             if inv_subs_fun[i] is None:
                                                 if keep:
                                                     inv_subs_fun[i] = [
-                                                        str({expr[0]: sympy.Abs(all_a[c[v]])})]
+                                                        str(
+                                                            {
+                                                                expr[0]: sympy.Abs(
+                                                                    all_a[c[v]]
+                                                                )
+                                                            }
+                                                        )
+                                                    ]
                                                 else:
-                                                    inv_subs_fun[i] = [
-                                                        str(np.nan)]
+                                                    inv_subs_fun[i] = [str(np.nan)]
                                             else:
                                                 if keep:
                                                     inv_subs_fun[i].append(
-                                                        str({expr[0]: sympy.Abs(all_a[c[v]])}))
+                                                        str(
+                                                            {
+                                                                expr[0]: sympy.Abs(
+                                                                    all_a[c[v]]
+                                                                )
+                                                            }
+                                                        )
+                                                    )
                                                 else:
-                                                    inv_subs_fun[i].append(
-                                                        str(np.nan))
+                                                    inv_subs_fun[i].append(str(np.nan))
                                         if expand_fun:
                                             str_fun[i] = esrp.doprint(
-                                                sym_fun[i].expand())
+                                                sym_fun[i].expand()
+                                            )
                                         else:
-                                            str_fun[i] = esrp.doprint(
-                                                sym_fun[i])
+                                            str_fun[i] = esrp.doprint(sym_fun[i])
                 except TimeoutException:
-                    print('TIMED OUT:', orig_fun)
+                    print("TIMED OUT:", orig_fun)
                     str_fun[i] = orig_fun
                     sym_fun[i] = orig_sym
 
@@ -627,111 +664,201 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                     if expand_fun:
                         sym_fun[i] = sympy.expand_log(sym_fun[i])
 
-                    numbers = [atom for atom in sym_fun[i].atoms(
-                    ) if atom.is_number and atom.is_finite]
+                    numbers = [
+                        atom
+                        for atom in sym_fun[i].atoms()
+                        if atom.is_number and atom.is_finite
+                    ]
                     even = [n for n in numbers if n.is_Integer and n.is_even]
                     odd = [n for n in numbers if n.is_Integer and n.is_odd]
 
                     for j in range(len(param_list)):
                         if str_fun[i].count(param_list[j]) > 0:
                             all_expr = [
-                                [n*all_a[j], all_a[j], 0, str({all_a[j]: all_a[j]/n})] for n in numbers]
-                            all_expr += [[all_a[j]**n, sympy.Abs(all_a[j], evaluate=False), 0, str(
-                                {all_a[j]: pow_abs(all_a[j], 1/n)})] for n in even]
-                            all_expr += [[all_a[j]**n, all_a[j], 0,
-                                          str({all_a[j]: all_a[j] ** (1/n)})] for n in odd]
-                            all_expr += [[all_a[j]**n * sympy.Abs(all_a[j]), sympy.Abs(
-                                all_a[j], evaluate=False), 0, str({all_a[j]: pow_abs(all_a[j], 1/(n+1))})] for n in even]
-                            all_expr += [[all_a[j]**n * sympy.Abs(all_a[j]), all_a[j], 0, str(
-                                {all_a[j]: pow_abs(all_a[j], 1/(n+1)) * sympy.sign(all_a[j])})] for n in odd]
-                            all_expr += [[square(all_a[j]), sympy.Abs(all_a[j], evaluate=False), 0, str({all_a[j]: sqrt_abs(all_a[j])})],
-                                         [cube(all_a[j]), all_a[j], 0, str(
-                                             {all_a[j]: all_a[j]**(1/3)})],
-                                         [square(sympy.Abs(all_a[j])), sympy.Abs(
-                                             all_a[j], evaluate=False), 0, str({all_a[j]: sqrt_abs(all_a[j])})],
-                                         [cube(sympy.Abs(all_a[j])), sympy.Abs(all_a[j], evaluate=False), 0, str(
-                                             {all_a[j]: pow_abs(all_a[j], 1/3)})],
-                                         [sqrt_abs(all_a[j]), sympy.Abs(all_a[j], evaluate=False), 0, str(
-                                             {all_a[j]: square(all_a[j])})],
-                                         [log_abs(all_a[j]), all_a[j], 1, str(
-                                             {all_a[j]: sympy.exp(all_a[j])})],
-                                         [sympy.exp(all_a[j]), sympy.Abs(all_a[j], evaluate=False), 0, str(
-                                             {all_a[j]: log_abs(all_a[j])})]
-                                         ]
+                                [
+                                    n * all_a[j],
+                                    all_a[j],
+                                    0,
+                                    str({all_a[j]: all_a[j] / n}),
+                                ]
+                                for n in numbers
+                            ]
+                            all_expr += [
+                                [
+                                    all_a[j] ** n,
+                                    sympy.Abs(all_a[j], evaluate=False),
+                                    0,
+                                    str({all_a[j]: pow_abs(all_a[j], 1 / n)}),
+                                ]
+                                for n in even
+                            ]
+                            all_expr += [
+                                [
+                                    all_a[j] ** n,
+                                    all_a[j],
+                                    0,
+                                    str({all_a[j]: all_a[j] ** (1 / n)}),
+                                ]
+                                for n in odd
+                            ]
+                            all_expr += [
+                                [
+                                    all_a[j] ** n * sympy.Abs(all_a[j]),
+                                    sympy.Abs(all_a[j], evaluate=False),
+                                    0,
+                                    str({all_a[j]: pow_abs(all_a[j], 1 / (n + 1))}),
+                                ]
+                                for n in even
+                            ]
+                            all_expr += [
+                                [
+                                    all_a[j] ** n * sympy.Abs(all_a[j]),
+                                    all_a[j],
+                                    0,
+                                    str(
+                                        {
+                                            all_a[j]: pow_abs(all_a[j], 1 / (n + 1))
+                                            * sympy.sign(all_a[j])
+                                        }
+                                    ),
+                                ]
+                                for n in odd
+                            ]
+                            all_expr += [
+                                [
+                                    square(all_a[j]),
+                                    sympy.Abs(all_a[j], evaluate=False),
+                                    0,
+                                    str({all_a[j]: sqrt_abs(all_a[j])}),
+                                ],
+                                [
+                                    cube(all_a[j]),
+                                    all_a[j],
+                                    0,
+                                    str({all_a[j]: all_a[j] ** (1 / 3)}),
+                                ],
+                                [
+                                    square(sympy.Abs(all_a[j])),
+                                    sympy.Abs(all_a[j], evaluate=False),
+                                    0,
+                                    str({all_a[j]: sqrt_abs(all_a[j])}),
+                                ],
+                                [
+                                    cube(sympy.Abs(all_a[j])),
+                                    sympy.Abs(all_a[j], evaluate=False),
+                                    0,
+                                    str({all_a[j]: pow_abs(all_a[j], 1 / 3)}),
+                                ],
+                                [
+                                    sqrt_abs(all_a[j]),
+                                    sympy.Abs(all_a[j], evaluate=False),
+                                    0,
+                                    str({all_a[j]: square(all_a[j])}),
+                                ],
+                                [
+                                    log_abs(all_a[j]),
+                                    all_a[j],
+                                    1,
+                                    str({all_a[j]: sympy.exp(all_a[j])}),
+                                ],
+                                [
+                                    sympy.exp(all_a[j]),
+                                    sympy.Abs(all_a[j], evaluate=False),
+                                    0,
+                                    str({all_a[j]: log_abs(all_a[j])}),
+                                ],
+                            ]
 
                             for expr in all_expr:
                                 if sym_fun[i].has(expr[0]):
                                     ss = str(sym_fun[i]).replace(" ", "")
                                     ee = str(expr[0]).replace(" ", "")
                                     # Make sure variable only appears in this form in the sym version
-                                    if ss.count(param_list[j]) in [1, ss.count(ee), ee.count(param_list[j])]:
+                                    if ss.count(param_list[j]) in [
+                                        1,
+                                        ss.count(ee),
+                                        ee.count(param_list[j]),
+                                    ]:
                                         f0 = sym_fun[i].copy()
-                                        sym_fun[i] = sym_fun[i].subs(
-                                            {expr[0]: expr[1]})
+                                        sym_fun[i] = sym_fun[i].subs({expr[0]: expr[1]})
 
                                         try:
 
                                             if expr[2] == 0:
-                                                if 'zoo' in str(expr[3]):
+                                                if "zoo" in str(expr[3]):
                                                     #  Don't make this substitution
                                                     sym_fun[i] = f0.copy()
                                                 else:
                                                     if inv_subs_fun[i] is None:
-                                                        inv_subs_fun[i] = [
-                                                            expr[3]]
+                                                        inv_subs_fun[i] = [expr[3]]
                                                     else:
-                                                        inv_subs_fun[i].append(
-                                                            expr[3])
+                                                        inv_subs_fun[i].append(expr[3])
 
                                             elif expr[2] == 1:
                                                 # These cases can be tricky with Abs
                                                 s = {expr[1]: expr[0]}
-                                                f1 = sym_fun[i].subs(
-                                                    {sympy.Abs(all_a[j]): all_a[j]}).subs(s)
+                                                f1 = (
+                                                    sym_fun[i]
+                                                    .subs(
+                                                        {sympy.Abs(all_a[j]): all_a[j]}
+                                                    )
+                                                    .subs(s)
+                                                )
                                                 if f0.equals(f1):
                                                     #  It worked, so append original subs
                                                     if inv_subs_fun[i] is None:
-                                                        inv_subs_fun[i] = [
-                                                            expr[3]]
+                                                        inv_subs_fun[i] = [expr[3]]
                                                     else:
-                                                        inv_subs_fun[i].append(
-                                                            expr[3])
+                                                        inv_subs_fun[i].append(expr[3])
                                                 else:
-                                                    s = {expr[1]: sympy.Abs(
-                                                        expr[0], evaluate=False)}
-                                                    f2 = sym_fun[i].subs(
-                                                        {sympy.Abs(all_a[j]): all_a[j]}).subs(s)
+                                                    s = {
+                                                        expr[1]: sympy.Abs(
+                                                            expr[0], evaluate=False
+                                                        )
+                                                    }
+                                                    f2 = (
+                                                        sym_fun[i]
+                                                        .subs(
+                                                            {
+                                                                sympy.Abs(
+                                                                    all_a[j]
+                                                                ): all_a[j]
+                                                            }
+                                                        )
+                                                        .subs(s)
+                                                    )
                                                     if f0.equals(f2):
                                                         if inv_subs_fun[i] is None:
-                                                            inv_subs_fun[i] = [
-                                                                expr[3]]
+                                                            inv_subs_fun[i] = [expr[3]]
                                                         else:
                                                             inv_subs_fun[i].append(
-                                                                expr[3])
+                                                                expr[3]
+                                                            )
                                                     else:
                                                         # Can't undo the simplification, so we won't do it
                                                         sym_fun[i] = f0.copy()
-                                        except Exception:
-                                            print('Bad comparison:', f0, f1)
+                                        except Exception:  # noqa: BLE001
+                                            print("Bad comparison:", f0, f1)
                                             sys.stdout.flush()
                                             sym_fun[i] = f0.copy()
 
                                         if expand_fun:
                                             str_fun[i] = esrp.doprint(
-                                                sym_fun[i].expand())
+                                                sym_fun[i].expand()
+                                            )
                                         else:
-                                            str_fun[i] = esrp.doprint(
-                                                sym_fun[i])
+                                            str_fun[i] = esrp.doprint(sym_fun[i])
 
                                         break
             except TimeoutException:
-                print('TIMED OUT:', orig_fun)
+                print("TIMED OUT:", orig_fun)
                 str_fun[i] = orig_fun
                 sym_fun[i] = orig_sym
 
     comm.Barrier()
-    all_fun, all_sym, all_inv_subs = make_changes(all_fun, all_sym, all_inv_subs,
-                                                  str_fun, sym_fun, inv_subs_fun)
+    all_fun, all_sym, all_inv_subs = make_changes(
+        all_fun, all_sym, all_inv_subs, str_fun, sym_fun, inv_subs_fun
+    )
 
     i = np.atleast_1d(utils.split_idx(len(all_inv_subs), rank, size))
     if len(i) == 0:
@@ -739,9 +866,9 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
         sym_fun = []
         inv_subs_fun = []
     else:
-        str_fun = all_fun[i[0]:i[-1]+1]
-        sym_fun = all_sym[i[0]:i[-1]+1]
-        inv_subs_fun = all_inv_subs[i[0]:i[-1]+1]
+        str_fun = all_fun[i[0] : i[-1] + 1]
+        sym_fun = all_sym[i[0] : i[-1] + 1]
+        inv_subs_fun = all_inv_subs[i[0] : i[-1] + 1]
 
     change_indices = []
     ref_indices = []
@@ -750,26 +877,27 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
     # Check permutations and inverses of constants
     comm.Barrier()
     if max_param > 1 and check_perm:
-        use_a = list(all_a) + [1/a for a in all_a]
-        perm = list(itertools.permutations(
-            np.flip(np.arange(len(use_a))), len(all_a)))
+        use_a = list(all_a) + [1 / a for a in all_a]
+        perm = list(itertools.permutations(np.flip(np.arange(len(use_a))), len(all_a)))
 
         for i in range(len(str_fun)):
             orig_fun = str_fun[i]
             orig_sym = sym_fun[i]
             s = list(sym_fun[i].free_symbols)
             s = list(set(s).intersection(all_a))
-            perm = list(itertools.permutations(
-                np.flip(np.arange(len(s))), len(s)))
+            perm = list(itertools.permutations(np.flip(np.arange(len(s))), len(s)))
             perm.remove(tuple(range(len(s))))
-            try_subs = [{s[i]: s[p[i]]
-                         for i in range(len(p)) if i != p[i]} for p in perm]
+            try_subs = [
+                {s[i]: s[p[i]] for i in range(len(p)) if i != p[i]} for p in perm
+            ]
             try:
                 with time_limit(tmax):
                     for p in range(len(try_subs)):
-                        if all([a in sym_fun[i].free_symbols for a in list(try_subs[p].keys())]):
-                            expr = sym_fun[i].subs(
-                                try_subs[p], simultaneous=True)
+                        if all(
+                            a in sym_fun[i].free_symbols
+                            for a in list(try_subs[p].keys())
+                        ):
+                            expr = sym_fun[i].subs(try_subs[p], simultaneous=True)
                             if expand_fun:
                                 str_expand = esrp.doprint(expr.expand())
                             else:
@@ -783,7 +911,7 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                                     new_inv_subs.append(str(try_subs[p]))
                                     break
             except TimeoutException:
-                print('TIMED OUT:', orig_fun)
+                print("TIMED OUT:", orig_fun)
                 str_fun[i] = orig_fun
                 sym_fun[i] = orig_sym
 
@@ -802,7 +930,9 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
 
         for i in range(len(change_indices)):
             # Check we haven't already made the change
-            if (ref_indices[i] not in change_indices[:i]) and (change_indices[i] not in change_indices[:i]):
+            if (ref_indices[i] not in change_indices[:i]) and (
+                change_indices[i] not in change_indices[:i]
+            ):
                 all_fun[change_indices[i]] = all_fun[ref_indices[i]]
                 all_sym[change_indices[i]] = all_sym[ref_indices[i]]
                 if all_inv_subs[change_indices[i]] is None:
@@ -815,9 +945,9 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
             sym_fun = []
             inv_subs_fun = []
         else:
-            str_fun = all_fun[i[0]:i[-1]+1]
-            sym_fun = all_sym[i[0]:i[-1]+1]
-            inv_subs_fun = all_inv_subs[i[0]:i[-1]+1]
+            str_fun = all_fun[i[0] : i[-1] + 1]
+            sym_fun = all_sym[i[0] : i[-1] + 1]
+            inv_subs_fun = all_inv_subs[i[0] : i[-1] + 1]
 
     comm.Barrier()
     if max_param > 0:
@@ -847,11 +977,10 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                                     if n != m:
                                         change_indices.append(n)
                                         ref_indices.append(m)
-                                        new_inv_subs.append(
-                                            str({all_a[j]: -all_a[j]}))
+                                        new_inv_subs.append(str({all_a[j]: -all_a[j]}))
                                         break
             except TimeoutException:
-                print('TIMED OUT:', orig_fun)
+                print("TIMED OUT:", orig_fun)
                 str_fun[i] = orig_fun
                 sym_fun[i] = orig_sym
 
@@ -869,7 +998,9 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
 
         for i in range(len(change_indices)):
             # Check we haven't already made the change
-            if (ref_indices[i] not in change_indices[:i]) and (change_indices[i] not in change_indices[:i]):
+            if (ref_indices[i] not in change_indices[:i]) and (
+                change_indices[i] not in change_indices[:i]
+            ):
                 all_fun[change_indices[i]] = all_fun[ref_indices[i]]
                 all_sym[change_indices[i]] = all_sym[ref_indices[i]]
                 if all_inv_subs[change_indices[i]] is None:
@@ -882,9 +1013,9 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
             sym_fun = []
             inv_subs_fun = []
         else:
-            str_fun = all_fun[i[0]:i[-1]+1]
-            sym_fun = all_sym[i[0]:i[-1]+1]
-            inv_subs_fun = all_inv_subs[i[0]:i[-1]+1]
+            str_fun = all_fun[i[0] : i[-1] + 1]
+            sym_fun = all_sym[i[0] : i[-1] + 1]
+            inv_subs_fun = all_inv_subs[i[0] : i[-1] + 1]
 
         # Check parameters are in correct order
         comm.Barrier()
@@ -895,14 +1026,13 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                 with time_limit(tmax):
                     vars = list(sym_fun[i].free_symbols)
                     vars = [str(v) for v in vars]
-                    param_list = ['a%i' % i for i in range(max_param)]
+                    param_list = [f"a{j}" for j in range(max_param)]
                     common = list(set(param_list).intersection(vars))
                     if len(common) > 0:
                         common.sort()
-                        if common[-1] != param_list[len(common)-1]:
+                        if common[-1] != param_list[len(common) - 1]:
                             common = [int(v[1:]) for v in common]
-                            s = {all_a[common[i]]: all_a[i]
-                                 for i in range(len(common))}
+                            s = {all_a[common[i]]: all_a[i] for i in range(len(common))}
                             sym_fun[i] = sym_fun[i].subs(s, simultaneous=True)
                             if expand_fun:
                                 str_fun[i] = esrp.doprint(sym_fun[i].expand())
@@ -914,7 +1044,7 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                                 else:
                                     inv_subs_fun[i].append(str(s))
             except TimeoutException:
-                print('TIMED OUT:', orig_fun)
+                print("TIMED OUT:", orig_fun)
                 str_fun[i] = orig_fun
                 sym_fun[i] = orig_sym
 
@@ -926,13 +1056,14 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
 
     comm.Barrier()
 
-    all_fun, all_sym, all_inv_subs = make_changes(all_fun, all_sym, all_inv_subs,
-                                                  str_fun, sym_fun, inv_subs_fun)
+    all_fun, all_sym, all_inv_subs = make_changes(
+        all_fun, all_sym, all_inv_subs, str_fun, sym_fun, inv_subs_fun
+    )
 
     return all_fun, all_sym, all_inv_subs
 
 
-def expand_or_factor(all_sym, tmax=1, method='expand'):
+def expand_or_factor(all_sym, tmax=1, method="expand"):
     """Run the sympy expand or factor functions
 
     Args:
@@ -954,21 +1085,21 @@ def expand_or_factor(all_sym, tmax=1, method='expand'):
 
     p = ESRPrinter()
     if len(i) > 0:
-        for j in range(i[0], i[-1]+1):
+        for j in range(i[0], i[-1] + 1):
             if vals[j] is sympy.nan:
                 continue
             try:
                 with time_limit(tmax):
-                    if method == 'expand':
+                    if method == "expand":
                         v = vals[j].expand()
-                    elif method == 'factor':
+                    elif method == "factor":
                         v = vals[j].powsimp()
                         v = v.factor()
                     if p.doprint(v) != keys[j]:
                         change_idx.append(j)
                         change_vals.append(v)
             except TimeoutException:
-                print('Terminated expanding:', j, rank, vals[j])
+                print("Terminated expanding:", j, rank, vals[j])
 
     change_vals = comm.gather(change_vals, root=0)
     change_idx = comm.gather(change_idx, root=0)
@@ -984,7 +1115,9 @@ def expand_or_factor(all_sym, tmax=1, method='expand'):
     return all_sym
 
 
-def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_memory=False):
+def do_sympy(
+    all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_memory=False
+):
     """Run the duplicate checking procedure
 
     Args:
@@ -1020,7 +1153,7 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
         old_nuniq = new_nuniq
 
         if rank == 0:
-            print('Optimisation', count, old_nuniq, len(all_fun))
+            print("Optimisation", count, old_nuniq, len(all_fun))
         sys.stdout.flush()
 
         if rank == 0 and track_memory:
@@ -1029,7 +1162,7 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
 
         # (1) Get unique functions and matches
         if rank == 0:
-            print('\tGetting unique functions')
+            print("\tGetting unique functions")
         sys.stdout.flush()
 
         uniq, match = utils.get_unique_indexes(all_fun)
@@ -1039,13 +1172,13 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
             if track_memory:
                 utils.using_mem("end")
                 utils.locals_size(locals())
-            print('\tGetting unique sympy')
+            print("\tGetting unique sympy")
         sys.stdout.flush()
 
         all_sym = [all_sym[u] for u in uniq_fun]
 
         if rank == 0:
-            print('\tGetting unique inverse subs')
+            print("\tGetting unique inverse subs")
         sys.stdout.flush()
 
         uniq_inv_subs = [all_inv_subs[i] for i in uniq.values()]
@@ -1056,21 +1189,24 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
         # (2) Simplify the unique functions
         add_inv_subs = [None] * len(uniq_inv_subs)
         nparam = count_params(uniq_fun, max_param)
-        for i in range(max_param+1):
+        for i in range(max_param + 1):
             if rank == 0:
-                print('\t\tnparam = %i' % i)
+                print(f"\t\tnparam = {i}")
             sys.stdout.flush()
 
-            check_perm = (count != 0)
+            check_perm = count != 0
 
             m = nparam == i
             j = np.atleast_1d(np.squeeze(np.argwhere(m)))
             f = [uniq_fun[jj] for jj in j]
             e = [all_sym[jj] for jj in j]
-            t = [None if uniq_inv_subs[jj] is None else uniq_inv_subs[jj].copy()
-                 for jj in j]
+            t = [
+                None if uniq_inv_subs[jj] is None else uniq_inv_subs[jj].copy()
+                for jj in j
+            ]
             f, e, t = sympy_simplify(
-                f, e, t, i, expand_fun=False, tmax=search_tmax, check_perm=check_perm)
+                f, e, t, i, expand_fun=False, tmax=search_tmax, check_perm=check_perm
+            )
             for k in range(len(t)):
                 old_fun = uniq_fun[j[k]]
                 uniq_fun[j[k]] = f[k]
@@ -1078,7 +1214,7 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
                 if uniq_inv_subs[j[k]] is None:
                     add_inv_subs[j[k]] = t[k]
                 else:
-                    add_inv_subs[j[k]] = t[k][len(uniq_inv_subs[j[k]]):]
+                    add_inv_subs[j[k]] = t[k][len(uniq_inv_subs[j[k]]) :]
 
         del f, e, t, m, j, k, uniq_inv_subs, nparam
         gc.collect()
@@ -1092,14 +1228,13 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
                 if all_inv_subs[i] is None:
                     all_inv_subs[i] = add_inv_subs[m].copy()
                 else:
-                    all_inv_subs[i] = all_inv_subs[i].copy() + \
-                        add_inv_subs[m].copy()
+                    all_inv_subs[i] = all_inv_subs[i].copy() + add_inv_subs[m].copy()
 
         del add_inv_subs, match
         gc.collect()
 
         if rank == 0:
-            print('\tMaking dict')
+            print("\tMaking dict")
         sys.stdout.flush()
 
         all_sym = dict(zip(uniq_fun, all_sym))
@@ -1112,17 +1247,16 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
 
         if rank == 0:
 
-            print('\tPrinting inv_subs to file')
-            data = [i for i in range(len(all_inv_subs))
-                    if all_inv_subs[i] is not None]
-            with open(dirname + '/inv_idx_%i_round_%i.txt' % (compl, count), "w") as f:
+            print("\tPrinting inv_subs to file")
+            data = [i for i in range(len(all_inv_subs)) if all_inv_subs[i] is not None]
+            with open(f"{dirname}/inv_idx_{compl}_round_{count}.txt", "w") as f:
                 for i in data:
                     print(i, file=f)
 
-            print('\tPrinting inv to file')
+            print("\tPrinting inv to file")
             data = [all_inv_subs[i] for i in data]
-            with open(dirname + '/inv_subs_%i_round_%i.txt' % (compl, count), "w") as f:
-                writer = csv.writer(f, delimiter=';')
+            with open(f"{dirname}/inv_subs_{compl}_round_{count}.txt", "w") as f:
+                writer = csv.writer(f, delimiter=";")
                 writer.writerows(data)
 
             del data
@@ -1142,15 +1276,15 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
 
     #  Expand functions
     if rank == 0:
-        print('\nExpanding')
+        print("\nExpanding")
     sys.stdout.flush()
-    all_sym = expand_or_factor(all_sym, tmax=expand_tmax, method='expand')
+    all_sym = expand_or_factor(all_sym, tmax=expand_tmax, method="expand")
     count = 0
     old_nuniq = 0
 
     # Now replace functions by their expanded form
     if rank == 0:
-        print('\nRewriting')
+        print("\nRewriting")
     sys.stdout.flush()
 
     while old_nuniq != new_nuniq:
@@ -1159,7 +1293,7 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
         old_nuniq = new_nuniq
 
         if rank == 0:
-            print('Optimisation', count, new_nuniq, len(all_fun))
+            print("Optimisation", count, new_nuniq, len(all_fun))
         sys.stdout.flush()
 
         if rank == 0 and track_memory:
@@ -1168,7 +1302,7 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
 
         # (1) Get unique functions and matches
         if rank == 0:
-            print('\tGetting unique functions')
+            print("\tGetting unique functions")
         sys.stdout.flush()
 
         uniq, match = utils.get_unique_indexes(all_fun)
@@ -1178,13 +1312,13 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
             if track_memory:
                 utils.using_mem("end")
                 utils.locals_size(locals())
-            print('\tGetting unique sympy')
+            print("\tGetting unique sympy")
         sys.stdout.flush()
 
         all_sym = [all_sym[u] for u in uniq_fun]
 
         if rank == 0:
-            print('\tGetting unique inverse subs')
+            print("\tGetting unique inverse subs")
         sys.stdout.flush()
 
         uniq_inv_subs = [all_inv_subs[i] for i in uniq.values()]
@@ -1195,9 +1329,9 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
         # (2) Simplify the unique functions
         add_inv_subs = [None] * len(uniq_inv_subs)
         nparam = count_params(uniq_fun, max_param)
-        for i in range(max_param+1):
+        for i in range(max_param + 1):
             if rank == 0:
-                print('\t\tnparam = %i' % i)
+                print(f"\t\tnparam = {i}")
             sys.stdout.flush()
 
             check_perm = True
@@ -1206,10 +1340,11 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
             j = np.atleast_1d(np.squeeze(np.argwhere(m)))
             f = [uniq_fun[jj] for jj in j]
             e = [all_sym[jj] for jj in j]
-            t = [None if uniq_inv_subs[jj] is None else uniq_inv_subs[jj].copy()
-                 for jj in j]
-            f, e, t = sympy_simplify(
-                f, e, t, i, expand_fun=True, tmax=search_tmax)
+            t = [
+                None if uniq_inv_subs[jj] is None else uniq_inv_subs[jj].copy()
+                for jj in j
+            ]
+            f, e, t = sympy_simplify(f, e, t, i, expand_fun=True, tmax=search_tmax)
             for k in range(len(t)):
                 old_fun = uniq_fun[j[k]]
                 uniq_fun[j[k]] = f[k]
@@ -1217,7 +1352,7 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
                 if uniq_inv_subs[j[k]] is None:
                     add_inv_subs[j[k]] = t[k]
                 else:
-                    add_inv_subs[j[k]] = t[k][len(uniq_inv_subs[j[k]]):]
+                    add_inv_subs[j[k]] = t[k][len(uniq_inv_subs[j[k]]) :]
 
         del f, e, t, m, j, k, uniq_inv_subs, nparam
         gc.collect()
@@ -1231,14 +1366,13 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
                 if all_inv_subs[i] is None:
                     all_inv_subs[i] = add_inv_subs[m].copy()
                 else:
-                    all_inv_subs[i] = all_inv_subs[i].copy() + \
-                        add_inv_subs[m].copy()
+                    all_inv_subs[i] = all_inv_subs[i].copy() + add_inv_subs[m].copy()
 
         del add_inv_subs, match
         gc.collect()
 
         if rank == 0:
-            print('\tMaking dict')
+            print("\tMaking dict")
         sys.stdout.flush()
 
         all_sym = dict(zip(uniq_fun, all_sym))
@@ -1251,17 +1385,20 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
 
         if rank == 0:
 
-            print('\tPrinting inv_subs to file')
-            data = [i for i in range(len(all_inv_subs))
-                    if all_inv_subs[i] is not None]
-            with open(dirname + '/inv_idx_%i_round_%i.txt' % (compl, round1_count + count), "w") as f:
+            print("\tPrinting inv_subs to file")
+            data = [i for i in range(len(all_inv_subs)) if all_inv_subs[i] is not None]
+            with open(
+                f"{dirname}/inv_idx_{compl}_round_{round1_count + count}.txt", "w"
+            ) as f:
                 for i in data:
                     print(i, file=f)
 
-            print('\tPrinting inv to file')
+            print("\tPrinting inv to file")
             data = [all_inv_subs[i] for i in data]
-            with open(dirname + '/inv_subs_%i_round_%i.txt' % (compl, round1_count + count), "w") as f:
-                writer = csv.writer(f, delimiter=';')
+            with open(
+                f"{dirname}/inv_subs_{compl}_round_{round1_count + count}.txt", "w"
+            ) as f:
+                writer = csv.writer(f, delimiter=";")
                 writer.writerows(data)
 
             del data
@@ -1274,9 +1411,9 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
         count += 1
 
     if rank == 0:
-        print('\nFinal factorisation')
+        print("\nFinal factorisation")
     sys.stdout.flush()
-    all_sym = expand_or_factor(all_sym, tmax=expand_tmax, method='factor')
+    all_sym = expand_or_factor(all_sym, tmax=expand_tmax, method="factor")
 
     if rank == 0 and track_memory:
         utils.using_mem("END")
@@ -1298,19 +1435,17 @@ def get_all_dup(max_param):
 
     if max_param == 0:
         return []
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f"a{i}" for i in range(max_param)]
     all_a = sympy.symbols(" ".join(param_list), real=True)
     if max_param == 1:
         all_a = [all_a]
 
     all_dup = [str({a: -a}) for a in all_a]
-    all_dup += [str({a: 1/a}) for a in all_a]
+    all_dup += [str({a: 1 / a}) for a in all_a]
 
     comb = list(itertools.combinations(np.flip(np.arange(max_param)), 2))
-    all_dup += [str({all_a[c[0]]: all_a[c[1]], all_a[c[1]]: all_a[c[0]]})
-                for c in comb]
-    all_dup += [str({all_a[c[1]]: all_a[c[0]], all_a[c[0]]: all_a[c[1]]})
-                for c in comb]
+    all_dup += [str({all_a[c[0]]: all_a[c[1]], all_a[c[1]]: all_a[c[0]]}) for c in comb]
+    all_dup += [str({all_a[c[1]]: all_a[c[0]], all_a[c[0]]: all_a[c[1]]}) for c in comb]
 
     return all_dup
 
@@ -1336,9 +1471,9 @@ def simplify_inv_subs(inv_subs, all_dup):
 
     while i < len(inv_subs) - 1:
         if inv_subs[i] in all_dup:
-            if inv_subs[i+1] == inv_subs[i]:
+            if inv_subs[i + 1] == inv_subs[i]:
                 del_idx.append(i)
-                del_idx.append(i+1)
+                del_idx.append(i + 1)
                 i += 2
             else:
                 i += 1
@@ -1362,7 +1497,7 @@ def count_lines(fname):
     Returns:
         :int: number of lines in the file
     """
-    with open(fname, 'r') as f:
+    with open(fname, "r") as f:
         return sum(1 for _ in f)
 
 
@@ -1374,11 +1509,10 @@ def get_line_range(n_lines):
         :n_lines (int): total number of lines in the file
 
     Returns:
-        :tuple: (imin, imax) where imin is the first line index for this rank and 
+        :tuple: (imin, imax) where imin is the first line index for this rank and
             imax is the exclusive last line index for this rank
     """
-    counts = [n_lines // size + (1 if i < n_lines % size else 0)
-              for i in range(size)]
+    counts = [n_lines // size + (1 if i < n_lines % size else 0) for i in range(size)]
     offsets = np.cumsum([0] + counts[:-1])
     imin = offsets[rank]
     imax = imin + counts[rank]  # exclusive
@@ -1395,9 +1529,9 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
         :bcast_res (bool, default=True): whether to allow all ranks to have the substitutions (True) or just the 0th rank (False)
 
     Returns:
-        :all_subs (dict): dict of substitutions required to convert between all and unique functions. 
-            Each item is either a dictionary with sympy objects as keys and values (use_sympy=True) or 
-            a string version of this dictionary (use_sympy=False). If bcast_res=True, then all ranks have this dict, 
+        :all_subs (dict): dict of substitutions required to convert between all and unique functions.
+            Each item is either a dictionary with sympy objects as keys and values (use_sympy=True) or
+            a string version of this dictionary (use_sympy=False). If bcast_res=True, then all ranks have this dict,
             otherwise all ranks receive a chunk of the dict corresponding to their rank.
 
     """
@@ -1410,16 +1544,16 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
 
     imin, imax = get_line_range(n_lines)
     all_subs = {}  # Use a dict instead of a list
-    with open(fname, 'r') as f:
+    with open(fname, "r") as f:
         for i, line in enumerate(f):
             if i >= imax:
                 break
             if i >= imin:
-                sub = line.strip().split(';')
-                if sub != ['']:
+                sub = line.strip().split(";")
+                if sub != [""]:
                     all_subs[i] = sub
 
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f"a{i}" for i in range(max_param)]
     all_a = sympy.symbols(" ".join(param_list), real=True)
     if max_param == 1:
         all_a = [all_a]
@@ -1428,25 +1562,25 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
 
     if max_param > 0:
         for i in range(len(all_a)):
-            locs["a%i" % i] = all_a[i]
+            locs[f"a{i}"] = all_a[i]
 
-    for i in all_subs.keys():
-        for j in range(len(all_subs[i])):
-            all_subs[i][j] = all_subs[i][j].replace("{", "{'")
-            all_subs[i][j] = all_subs[i][j].replace("}", "'}")
-            all_subs[i][j] = all_subs[i][j].replace(", ", "', '")
-            all_subs[i][j] = all_subs[i][j].replace(": ", "': '")
-            if all_subs[i][j] == 'nan':
-                all_subs[i][j] = np.nan
+    for i, subs in all_subs.items():
+        for j, sub in enumerate(subs):
+            sub = sub.replace("{", "{'")
+            sub = sub.replace("}", "'}")
+            sub = sub.replace(", ", "', '")
+            sub = sub.replace(": ", "': '")
+            if sub == "nan":
+                subs[j] = np.nan
             else:
-                d = ast.literal_eval(all_subs[i][j])
+                d = ast.literal_eval(sub)
                 k = list(d.keys())
                 v = list(d.values())
                 k = [sympy.sympify(kk, locals=locs) for kk in k]
                 v = [sympy.sympify(vv, locals=locs) for vv in v]
-                all_subs[i][j] = dict(zip(k, v))
+                subs[j] = dict(zip(k, v))
                 if not use_sympy:
-                    all_subs[i][j] = str(all_subs[i][j])
+                    subs[j] = str(subs[j])
     comm.Barrier()
 
     if bcast_res:
@@ -1493,9 +1627,15 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4, full_fisher=False):
 
     max_param = len(p_meas)
 
-    if np.nan in inv_subs:
-        invalid_fish = (np.full((max_param, max_param), np.nan)
-                        if full_fisher else np.full(max_param, np.nan))
+    inv_subs_values = inv_subs.values() if isinstance(inv_subs, dict) else inv_subs
+    if any(
+        isinstance(v, (float, np.floating)) and np.isnan(v) for v in inv_subs_values
+    ):
+        invalid_fish = (
+            np.full((max_param, max_param), np.nan)
+            if full_fisher
+            else np.full(max_param, np.nan)
+        )
         return np.full(max_param, np.nan), invalid_fish
 
     fish = np.zeros((n, n))
@@ -1503,7 +1643,7 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4, full_fisher=False):
     fish = (fish + fish.T) - np.diag(np.diag(fish))
     fish = fish[:max_param, :max_param]
 
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f"a{i}" for i in range(max_param)]
     all_a = sympy.symbols(" ".join(param_list), real=True)
     if max_param == 1:
         all_a = [all_a]
@@ -1517,10 +1657,10 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4, full_fisher=False):
     if max_param == 1:
         p_lam = sympy.lambdify(all_a[0], str(p))
     else:
-        p_lam = sympy.lambdify(all_a[:len(p_meas)], p)
+        p_lam = sympy.lambdify(all_a[: len(p_meas)], p)
     p_new = p_lam(*p_meas)
 
-    j_lam = sympy.lambdify(all_a[:len(p_meas)], jac)
+    j_lam = sympy.lambdify(all_a[: len(p_meas)], jac)
     j = j_lam(*p_meas)
     jinv = np.linalg.inv(j)
 
@@ -1546,8 +1686,8 @@ def check_results(dirname, compl, tmax=10):
     """
 
     if rank == 0:
-        print('\tLoading all equations', flush=True)
-        with open(dirname + '/all_equations_%i.txt' % compl, 'r') as f:
+        print("\tLoading all equations", flush=True)
+        with open(f"{dirname}/all_equations_{compl}.txt", "r") as f:
             all_fun = f.read().splitlines()
         max_param = get_max_param(all_fun)
     else:
@@ -1556,14 +1696,13 @@ def check_results(dirname, compl, tmax=10):
     max_param = comm.bcast(max_param, root=0)
 
     if rank == 0:
-        print('\tLoading inverse subs')
-        with open(dirname + '/inv_subs_%i.txt' % compl, 'r') as f:
-            reader = csv.reader(f, delimiter=';')
+        print("\tLoading inverse subs")
+        with open(f"{dirname}/inv_subs_{compl}.txt", "r") as f:
+            reader = csv.reader(f, delimiter=";")
             inv_subs = [row for row in reader]
 
         # Only need functions with non-trivial inverse subs
-        shufidx = np.array(
-            [i for i in range(len(inv_subs)) if len(inv_subs[i]) != 0])
+        shufidx = np.array([i for i in range(len(inv_subs)) if len(inv_subs[i]) != 0])
         np.random.seed(1234)
         #  Shuffle to make each rank more similar
         np.random.shuffle(shufidx)
@@ -1582,8 +1721,8 @@ def check_results(dirname, compl, tmax=10):
     imax = comm.gather(imax, root=0)
 
     if rank == 0:
-        all_fun = [all_fun[imin[i]:imax[i]] for i in range(size)]
-        inv_subs = [inv_subs[imin[i]:imax[i]] for i in range(size)]
+        all_fun = [all_fun[imin[i] : imax[i]] for i in range(size)]
+        inv_subs = [inv_subs[imin[i] : imax[i]] for i in range(size)]
     else:
         all_fun = None
         inv_subs = None
@@ -1593,8 +1732,8 @@ def check_results(dirname, compl, tmax=10):
     all_nparam = count_params(all_fun, max_param)
 
     if rank == 0:
-        print('\tLoading unique equations', flush=True)
-        with open(dirname + '/unique_equations_%i.txt' % compl, 'r') as f:
+        print("\tLoading unique equations", flush=True)
+        with open(f"{dirname}/unique_equations_{compl}.txt", "r") as f:
             uniq_fun = f.read().splitlines()
     else:
         uniq_fun = None
@@ -1602,22 +1741,22 @@ def check_results(dirname, compl, tmax=10):
     uniq_nparam = count_params(uniq_fun, max_param)
 
     if rank == 0:
-        print('\tLoading matches')
-        matches = np.loadtxt(dirname + '/matches_%i.txt' % compl).astype(int)
+        print("\tLoading matches")
+        matches = np.loadtxt(f"{dirname}/matches_{compl}.txt").astype(int)
         matches = matches[shufidx]
         matches = np.array_split(matches, size)
     else:
         matches = None
     matches = comm.scatter(matches, root=0)
 
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f"a{i}" for i in range(max_param)]
     all_a = sympy.symbols(" ".join(param_list), real=True)
     if max_param == 1:
         all_a = [all_a]
     locs = sympy_locs
     if max_param > 0:
         for i in range(len(all_a)):
-            locs["a%i" % i] = all_a[i]
+            locs[f"a{i}"] = all_a[i]
 
     to_change = []
     imin, imax = utils.split_idx(nfun, rank, size)
@@ -1630,9 +1769,8 @@ def check_results(dirname, compl, tmax=10):
         s1 = sympy.sympify(all_fun[i], locals=locs)
         try:
             s2 = sympy.sympify(uniq_fun[matches[i]], locals=locs)
-        except Exception:
-            print(
-                f'Could not check {uniq_fun[matches[i]]} so will keep equation')
+        except Exception:  # noqa: BLE001
+            print(f"Could not check {uniq_fun[matches[i]]} so will keep equation")
             s2 = None
 
         p = sympy.Array(sympy.symbols(" ".join(param_list), real=True))
@@ -1656,8 +1794,8 @@ def check_results(dirname, compl, tmax=10):
                 s1 = s1.subs(sub, simultaneous=True)
                 if (not str(s1) == str(s2)) and (not s1.equals(s2)):
                     raise ValueError
-        except Exception:
-            to_change.append([i+imin, all_fun[i]])
+        except Exception:  # noqa: BLE001
+            to_change.append([i + imin, all_fun[i]])
 
     del inv_subs, all_fun
     gc.collect()
@@ -1673,20 +1811,20 @@ def check_results(dirname, compl, tmax=10):
             r[0] = shufidx[r[0]]
         del shufidx
 
-        print('\nNeed to change %i functions' % len(to_change))
+        print(f"\nNeed to change {len(to_change)} functions")
         for r in to_change:
             print(r)
 
-        print('\nLoading all equations', flush=True)
-        with open(dirname + '/all_equations_%i.txt' % compl, 'r') as f:
+        print("\nLoading all equations", flush=True)
+        with open(f"{dirname}/all_equations_{compl}.txt", "r") as f:
             all_fun = f.read().splitlines()
         for r in to_change:
             r[1] = all_fun[r[0]]
         del all_fun
         gc.collect()
 
-        print('\nAppending new unique equations')
-        with open(dirname + '/unique_equations_%i.txt' % compl, 'r') as f:
+        print("\nAppending new unique equations")
+        with open(f"{dirname}/unique_equations_{compl}.txt", "r") as f:
             uniq_fun = f.read().splitlines()
         nuniq = len(uniq_fun)
 
@@ -1694,46 +1832,42 @@ def check_results(dirname, compl, tmax=10):
         new_uniq, new_match = utils.get_unique_indexes(new_fun)
         new_uniq_fun = list(new_uniq.keys())
 
-        with open(dirname + '/unique_equations_%i.txt' % compl, 'w') as f:
+        with open(f"{dirname}/unique_equations_{compl}.txt", "w") as f:
             w = 80
             pp = pprint.PrettyPrinter(width=w, stream=f)
 
             for s in uniq_fun:
-                if len(s + '\n') > w / 2:
+                if len(s + "\n") > w / 2:
                     w = 2 * len(s)
                     pp = pprint.PrettyPrinter(width=w, stream=f)
                 pp.pprint(s)
 
             for s in new_uniq_fun:
-                if len(s + '\n') > w / 2:
+                if len(s + "\n") > w / 2:
                     w = 2 * len(s)
                     pp = pprint.PrettyPrinter(width=w, stream=f)
                 pp.pprint(s)
         del uniq_fun
         gc.collect()
-        s = "sed 's/.$//; s/^.//' %s/%s%i.txt > %s/temp_%i.txt" % (
-            dirname, 'unique_equations_', compl, dirname, compl)
+        s = f"sed 's/.$//; s/^.//' {dirname}/unique_equations_{compl}.txt > {dirname}/temp_{compl}.txt"
         os.system(s)
-        s = "mv %s/temp_%i.txt %s/%s%i.txt" % (dirname,
-                                               compl, dirname, 'unique_equations_', compl)
+        s = f"mv {dirname}/temp_{compl}.txt {dirname}/unique_equations_{compl}.txt"
         os.system(s)
 
-        print('\nChanging inverse subs')
-        with open(dirname + '/inv_subs_%i.txt' % compl, 'r') as f:
-            reader = csv.reader(f, delimiter=';')
+        print("\nChanging inverse subs")
+        with open(f"{dirname}/inv_subs_{compl}.txt", "r") as f:
+            reader = csv.reader(f, delimiter=";")
             inv_subs = [row for row in reader]
         for r in to_change:
             inv_subs[r[0]] = ""
-        with open(dirname + '/inv_subs_%i.txt' % compl, 'w') as f:
-            writer = csv.writer(f, delimiter=';')
+        with open(f"{dirname}/inv_subs_{compl}.txt", "w") as f:
+            writer = csv.writer(f, delimiter=";")
             writer.writerows(inv_subs)
         del inv_subs
         gc.collect()
 
-        print('\nChanging matches')
-        matches = np.loadtxt(dirname + '/matches_%i.txt' % compl).astype(int)
+        print("\nChanging matches")
+        matches = np.loadtxt(f"{dirname}/matches_{compl}.txt").astype(int)
         for i in range(len(to_change)):
             matches[to_change[i][0]] = nuniq + new_match[to_change[i][1]]
-        np.savetxt(dirname + '/matches_%i.txt' % compl, matches)
-
-    return
+        np.savetxt(f"{dirname}/matches_{compl}.txt", matches)

@@ -9,6 +9,7 @@ setup(
     author_email='deaglan.bartlett@physics.ox.ac.uk',
     license='MIT licence',
     packages=find_packages(),
+    python_requires='>=3.9',
     install_requires=['sympy',
                       'myst-parser',
                       'myst-nb',
@@ -33,5 +34,9 @@ setup(
         'License :: MIT License',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
 )

@@ -29,7 +29,7 @@ def is_float(string):
     try:
         float(eval(string))
         return True
-    except Exception:
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -52,13 +52,15 @@ class Node:
         return new_node
 
     def is_used(self):
-        if (self.type == 0) and (self.parent is None):
-            return False
-        elif (self.type == 1) and (self.left is None):
-            return False
-        elif (self.type == 2) and (self.left is None) and (self.right is None):
-            return False
-        return True
+        return not (
+            self.type == 0
+            and self.parent is None
+            or self.type == 1
+            and self.left is None
+            or self.type == 2
+            and self.left is None
+            and self.right is None
+        )
 
     def assign_op(self, op):
         self.op = op
@@ -93,34 +95,74 @@ class DecoratedNode:
             else:
                 self.val = None
 
-            if self.op == 'Pow' and fun.args[1] == 2 and 'square' in basis_functions[1]:
-                self.op = 'Square'
-                self.children = [DecoratedNode(
-                    fun.args[0], basis_functions, parent_op=self.op, parent=self)]
-            elif self.op == 'Pow' and fun.args[1] == 3 and 'cube' in basis_functions[1]:
-                self.op = 'Cube'
-                self.children = [DecoratedNode(
-                    fun.args[0], basis_functions, parent_op=self.op, parent=self)]
-            elif self.op == 'Pow' and fun.args[1] == 1/2 and ('sqrt' in basis_functions[1] or 'sqrt_abs' in basis_functions[1]):
-                self.op = 'Sqrt'
-                self.children = [DecoratedNode(
-                    fun.args[0], basis_functions, parent_op=self.op, parent=self)]
-            elif self.op == 'Mul' and len(fun.args) == 2 and fun.args[1].__class__.__name__ == 'Pow' and fun.args[1].args[1] == -1:
-                self.op = 'Div'
-                self.children = [DecoratedNode(fun.args[0], basis_functions, parent_op=self.op, parent=self),
-                                 DecoratedNode(fun.args[1].args[0], basis_functions, parent_op=self.op, parent=self)]
-            elif self.op == 'Pow' and fun.args[1] == -1 and 'inv' in basis_functions[1]:
-                self.op = 'Inv'
-                self.children = [DecoratedNode(
-                    fun.args[0], basis_functions, parent_op=self.op, parent=self)]
+            if self.op == "Pow" and fun.args[1] == 2 and "square" in basis_functions[1]:
+                self.op = "Square"
+                self.children = [
+                    DecoratedNode(
+                        fun.args[0], basis_functions, parent_op=self.op, parent=self
+                    )
+                ]
+            elif self.op == "Pow" and fun.args[1] == 3 and "cube" in basis_functions[1]:
+                self.op = "Cube"
+                self.children = [
+                    DecoratedNode(
+                        fun.args[0], basis_functions, parent_op=self.op, parent=self
+                    )
+                ]
+            elif (
+                self.op == "Pow"
+                and fun.args[1] == 1 / 2
+                and ("sqrt" in basis_functions[1] or "sqrt_abs" in basis_functions[1])
+            ):
+                self.op = "Sqrt"
+                self.children = [
+                    DecoratedNode(
+                        fun.args[0], basis_functions, parent_op=self.op, parent=self
+                    )
+                ]
+            elif (
+                self.op == "Mul"
+                and len(fun.args) == 2
+                and fun.args[1].__class__.__name__ == "Pow"
+                and fun.args[1].args[1] == -1
+            ):
+                self.op = "Div"
+                self.children = [
+                    DecoratedNode(
+                        fun.args[0], basis_functions, parent_op=self.op, parent=self
+                    ),
+                    DecoratedNode(
+                        fun.args[1].args[0],
+                        basis_functions,
+                        parent_op=self.op,
+                        parent=self,
+                    ),
+                ]
+            elif self.op == "Pow" and fun.args[1] == -1 and "inv" in basis_functions[1]:
+                self.op = "Inv"
+                self.children = [
+                    DecoratedNode(
+                        fun.args[0], basis_functions, parent_op=self.op, parent=self
+                    )
+                ]
             else:
-                if (len(fun.args) > 2):
+                if len(fun.args) > 2:
                     f = fun.as_two_terms()
-                    self.children = [DecoratedNode(f[0], basis_functions, parent_op=self.op, parent=self),
-                                     DecoratedNode(f[1], basis_functions, parent_op=self.op, parent=self)]
+                    self.children = [
+                        DecoratedNode(
+                            f[0], basis_functions, parent_op=self.op, parent=self
+                        ),
+                        DecoratedNode(
+                            f[1], basis_functions, parent_op=self.op, parent=self
+                        ),
+                    ]
                 else:
-                    self.children = [DecoratedNode(
-                        a, basis_functions, parent_op=self.op, parent=self) for a in fun.args]
+                    self.children = [
+                        DecoratedNode(
+                            a, basis_functions, parent_op=self.op, parent=self
+                        )
+                        for a in fun.args
+                    ]
 
     def from_node_list(self, idx, nodes, basis_functions, parent_op=None, parent=None):
 
@@ -139,16 +181,33 @@ class DecoratedNode:
             self.val = nodes[idx].val
 
         if nodes[idx].right is not None:
-            self.children = [DecoratedNode(
-                None, basis_functions), DecoratedNode(None, basis_functions)]
+            self.children = [
+                DecoratedNode(None, basis_functions),
+                DecoratedNode(None, basis_functions),
+            ]
             self.children[0].from_node_list(
-                nodes[idx].left, nodes, basis_functions, parent_op=nodes[idx].op, parent=self)
+                nodes[idx].left,
+                nodes,
+                basis_functions,
+                parent_op=nodes[idx].op,
+                parent=self,
+            )
             self.children[1].from_node_list(
-                nodes[idx].right, nodes, basis_functions, parent_op=nodes[idx].op, parent=self)
+                nodes[idx].right,
+                nodes,
+                basis_functions,
+                parent_op=nodes[idx].op,
+                parent=self,
+            )
         elif nodes[idx].left is not None:
             self.children = [DecoratedNode(None, basis_functions)]
             self.children[0].from_node_list(
-                nodes[idx].left, nodes, basis_functions, parent_op=nodes[idx].op, parent=self)
+                nodes[idx].left,
+                nodes,
+                basis_functions,
+                parent_op=nodes[idx].op,
+                parent=self,
+            )
         else:
             self.children = []
 
@@ -156,7 +215,7 @@ class DecoratedNode:
         try:
             f = float(self.val)
             return f == float(1)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
     def count_nodes(self, basis_functions):
@@ -166,42 +225,63 @@ class DecoratedNode:
         return len(self.to_list(basis_functions))
 
     def to_list(self, basis_functions):
-        """
-
-        """
         if self.degree == 0:
             return [str(self.val)]
         elif self.degree == 1:
             return [self.op] + self.children[0].to_list(basis_functions)
         #  Sqrt(x) instead of pow(x, 1/2)
-        elif self.op == "Pow" and (self.children[1].type == sympy.core.numbers.Half) and (("sqrt" in basis_functions[1]) or ("sqrt_abs" in basis_functions[1])):
-            if ("sqrt" in basis_functions[1]):
+        elif (
+            self.op == "Pow"
+            and (self.children[1].type == sympy.core.numbers.Half)
+            and (("sqrt" in basis_functions[1]) or ("sqrt_abs" in basis_functions[1]))
+        ):
+            if "sqrt" in basis_functions[1]:
                 return ["sqrt"] + self.children[0].to_list(basis_functions)
             else:
                 return ["sqrt_abs"] + self.children[0].to_list(basis_functions)
         #  Square(x) instead of pow(x, 2) if possible
-        elif self.op == "Pow" and (self.children[1].val == str(2)) and "square" in basis_functions[1]:
+        elif (
+            self.op == "Pow"
+            and (self.children[1].val == str(2))
+            and "square" in basis_functions[1]
+        ):
             return ["square"] + self.children[0].to_list(basis_functions)
         # pow(x,2) instead of Square(x) if necessary
         elif self.op == "Square" and "square" not in basis_functions[1]:
             return ["pow"] + self.children[0].to_list(basis_functions) + ["2"]
         #  Cube(x) instead of pow(x, 3)
-        elif self.op == "Pow" and (self.children[1].val == str(3)) and "cube" in basis_functions[1]:
+        elif (
+            self.op == "Pow"
+            and (self.children[1].val == str(3))
+            and "cube" in basis_functions[1]
+        ):
             return ["cube"] + self.children[0].to_list(basis_functions)
         # pow(x,2) instead of Square(x) if necessary
         elif self.op == "Cube" and "cube" not in basis_functions[1]:
             return ["pow"] + self.children[0].to_list(basis_functions) + ["3"]
         #  Inv(x) instead of pow(x, -1)
-        elif self.op == "Pow" and (self.children[1].type == sympy.core.numbers.NegativeOne) and ("inv" in basis_functions[1]):
+        elif (
+            self.op == "Pow"
+            and (self.children[1].type == sympy.core.numbers.NegativeOne)
+            and ("inv" in basis_functions[1])
+        ):
             return ["Inv"] + self.children[0].to_list(basis_functions)
         # Deal with * inv = /
-        elif self.op == "Mul" and self.children[0].op == "Pow" and (self.children[1].type == sympy.core.numbers.NegativeOne) and ("/" in basis_functions[2]):
-            return ["Mul"] + self.children[1].to_list(basis_functions)
-        # Deal with / inv = *
-        elif self.op == "Div" and self.children[0].op == "Pow" and (self.children[1].type == sympy.core.numbers.NegativeOne) and ("*" in basis_functions[2]):
+        elif (
+            self.op == "Mul"
+            and self.children[0].op == "Pow"
+            and (self.children[1].type == sympy.core.numbers.NegativeOne)
+            and ("/" in basis_functions[2])
+            or self.op == "Div"
+            and self.children[0].op == "Pow"
+            and (self.children[1].type == sympy.core.numbers.NegativeOne)
+            and ("*" in basis_functions[2])
+        ):
             return ["Mul"] + self.children[1].to_list(basis_functions)
         #  Multiply or divide by one doesn't do anything
-        elif self.op == "Mul" and (self.children[0].is_unity() or self.children[1].is_unity()):
+        elif self.op == "Mul" and (
+            self.children[0].is_unity() or self.children[1].is_unity()
+        ):
             if self.children[0].is_unity():
                 return self.children[1].to_list(basis_functions)
             else:
@@ -211,11 +291,26 @@ class DecoratedNode:
             return self.children[0].to_list(basis_functions)
         elif self.op == "Div" and (self.children[0] == 1 or self.children[1] == 1):
             pass
-        elif self.op == "Add" and self.children[1].op == "Mul" and (self.children[1].children[0].op == "NegativeOne" or self.children[1].children[1].op == "NegativeOne"):
+        elif (
+            self.op == "Add"
+            and self.children[1].op == "Mul"
+            and (
+                self.children[1].children[0].op == "NegativeOne"
+                or self.children[1].children[1].op == "NegativeOne"
+            )
+        ):
             if self.children[1].children[0].op == "NegativeOne":
-                return ["Sub"] + self.children[0].to_list(basis_functions) + self.children[1].children[1].to_list(basis_functions)
+                return (
+                    ["Sub"]
+                    + self.children[0].to_list(basis_functions)
+                    + self.children[1].children[1].to_list(basis_functions)
+                )
             else:
-                return ["Sub"] + self.children[0].to_list(basis_functions) + self.children[1].children[0].to_list(basis_functions)
+                return (
+                    ["Sub"]
+                    + self.children[0].to_list(basis_functions)
+                    + self.children[1].children[0].to_list(basis_functions)
+                )
         else:
             r = [self.op]
             for c in self.children:
@@ -273,14 +368,14 @@ class DecoratedNode:
         if self.parent is not None and len(self.parent.children) > 1:
             p = [tuple([c.op for c in self.parent.children])]
         else:
-            p = [(self.op, 'None')]
+            p = [(self.op, "None")]
         for c in self.children:
             p += c.get_siblings()
         return p
 
 
 def check_tree(s):
-    """ Given a candidate string of 0, 1 and 2s, see whether one can make a function out of this
+    """Given a candidate string of 0, 1 and 2s, see whether one can make a function out of this
 
     Args:
         :s (str): string comprised of 0, 1 and 2 representing tree of nullary, unary and binary nodes
@@ -293,14 +388,14 @@ def check_tree(s):
 
     tree = [Node(t) for t in s]
 
-    for i in range(len(s)-1):
+    for i in range(len(s) - 1):
 
         success = False
 
         if (tree[i].type == 2) or (tree[i].type == 1):
             # Add to the left if possible
-            tree[i].left = i+1
-            tree[i+1].parent = i
+            tree[i].left = i + 1
+            tree[i + 1].parent = i
             success = True
         else:
             #  try to go up the tree
@@ -310,10 +405,10 @@ def check_tree(s):
 
                 if (tree[j].type == 2) and (tree[j].right is None):
                     # Add to right of node if possible
-                    tree[j].right = i+1
-                    tree[i+1].parent = j
+                    tree[j].right = i + 1
+                    tree[i + 1].parent = j
                     success = True
-                elif (tree[j].parent is None):
+                elif tree[j].parent is None:
                     #  Check if can't move up the tree any higher
                     break
 
@@ -338,7 +433,7 @@ def check_tree(s):
                 success = False
 
         # This will allow us to delete any trees which start with this
-        part_considered = s[:i+2]
+        part_considered = s[: i + 2]
 
     else:
         success = True
@@ -348,7 +443,7 @@ def check_tree(s):
 
 
 def get_allowed_shapes(compl):
-    """ Find the shapes of all allowed trees containing compl nodes
+    """Find the shapes of all allowed trees containing compl nodes
 
     Args:
         :compl (int): complexity of tree = number of nodes
@@ -359,8 +454,9 @@ def get_allowed_shapes(compl):
 
     if rank == 0:
         #  Make all graphs with this complexity
-        cand = np.array([list(t) for t in itertools.product(
-            '012', repeat=compl)], dtype=int)
+        cand = np.array(
+            [list(t) for t in itertools.product("012", repeat=compl)], dtype=int
+        )
 
         # Graph cannot start with a type0 node
         if compl > 1:
@@ -378,12 +474,12 @@ def get_allowed_shapes(compl):
         for i in range(cand.shape[0]):
             if not msk[i]:
                 pass
-            success, part_considered, tree = check_tree(cand[i, :])
+            success, part_considered, _tree = check_tree(cand[i, :])
             if not success:
                 msk[i] = False
 
                 # Remove other candidates where this string appears at the start
-                m = cand[:, :len(part_considered)] == part_considered[None, :]
+                m = cand[:, : len(part_considered)] == part_considered[None, :]
                 m = np.prod(m, axis=1)
                 msk[np.where(m)] = False
 
@@ -409,18 +505,31 @@ def node_to_string(idx, tree, labels):
     """
 
     if len(tree) == 0:
-        return '0'
+        return "0"
     elif tree[idx].type == 0:
         return labels[idx]
     elif tree[idx].type == 1:
-        return labels[idx] + '(' + node_to_string(tree[idx].left, tree, labels) + ')'
+        return labels[idx] + "(" + node_to_string(tree[idx].left, tree, labels) + ")"
     elif tree[idx].type == 2:
-        if labels[idx] in ['*', '/', '-', '+']:
-            return '(' + node_to_string(tree[idx].left, tree, labels) + ')' + labels[idx] + \
-                '(' + node_to_string(tree[idx].right, tree, labels) + ')'
+        if labels[idx] in ["*", "/", "-", "+"]:
+            return (
+                "("
+                + node_to_string(tree[idx].left, tree, labels)
+                + ")"
+                + labels[idx]
+                + "("
+                + node_to_string(tree[idx].right, tree, labels)
+                + ")"
+            )
         else:
-            return labels[idx] + '(' + node_to_string(tree[idx].left, tree, labels) + \
-                ',' + node_to_string(tree[idx].right, tree, labels) + ')'
+            return (
+                labels[idx]
+                + "("
+                + node_to_string(tree[idx].left, tree, labels)
+                + ","
+                + node_to_string(tree[idx].right, tree, labels)
+                + ")"
+            )
     return
 
 
@@ -438,10 +547,10 @@ def string_to_expr(s, kern=False, evaluate=False, locs=None):
 
     """
 
-    s = s.replace('[', '(')
-    s = s.replace(']', ')')
-    s = s.replace('Sqrt', 'sqrt')
-    s = s.replace('*^', '*10^')
+    s = s.replace("[", "(")
+    s = s.replace("]", ")")
+    s = s.replace("Sqrt", "sqrt")
+    s = s.replace("*^", "*10^")
 
     if locs is None:
         locs = sympy_locs
@@ -470,40 +579,68 @@ def check_operators(nodes, basis_functions):
         :all_in_basis (bool): Whether all functions in tree are in basis
     """
 
-    sympy_numerics = ['Number', 'Float', 'Rational', 'Integer', 'AlgebraicNumber',
-                      'NumberSymbol', 'RealNumber', 'igcd', 'ilcm', 'seterr', 'Zero',
-                      'One', 'NegativeOne', 'Half', 'NaN', 'Infinity', 'NegativeInfinity',
-                      'ComplexInfinity', 'Exp1', 'ImaginaryUnit', 'Pi', 'EulerGamma',
-                      'Catalan', 'GoldenRatio', 'TribonacciConstant', 'mod_inverse']
+    sympy_numerics = [
+        "Number",
+        "Float",
+        "Rational",
+        "Integer",
+        "AlgebraicNumber",
+        "NumberSymbol",
+        "RealNumber",
+        "igcd",
+        "ilcm",
+        "seterr",
+        "Zero",
+        "One",
+        "NegativeOne",
+        "Half",
+        "NaN",
+        "Infinity",
+        "NegativeInfinity",
+        "ComplexInfinity",
+        "Exp1",
+        "ImaginaryUnit",
+        "Pi",
+        "EulerGamma",
+        "Catalan",
+        "GoldenRatio",
+        "TribonacciConstant",
+        "mod_inverse",
+    ]
     sympy_numerics = [s.lower() for s in sympy_numerics]
 
     labels = nodes.to_list(basis_functions)
 
     for i in range(len(labels)):
-        if labels[i] == 'Add' and '+' in basis_functions[2]:
-            labels[i] = '+'
-        elif labels[i] == 'Sub' and '-' in basis_functions[2]:
-            labels[i] = '-'
-        elif labels[i] == 'Mul' and '*' in basis_functions[2]:
-            labels[i] = '*'
-        elif labels[i] == 'Div' and '/' in basis_functions[2]:
-            labels[i] = '/'
-        elif labels[i].lower() in sympy_numerics or is_float(labels[i]):
-            labels[i] = 'a'
-        elif labels[i].startswith('a') and labels[i][1:].isdigit():
-            labels[i] = 'a'
-        elif labels[i].startswith('x') and labels[i][1:].isdigit():
-            labels[i] = 'x'
+        if labels[i] == "Add" and "+" in basis_functions[2]:
+            labels[i] = "+"
+        elif labels[i] == "Sub" and "-" in basis_functions[2]:
+            labels[i] = "-"
+        elif labels[i] == "Mul" and "*" in basis_functions[2]:
+            labels[i] = "*"
+        elif labels[i] == "Div" and "/" in basis_functions[2]:
+            labels[i] = "/"
+        elif (
+            labels[i].lower() in sympy_numerics
+            or is_float(labels[i])
+            or labels[i].startswith("a")
+            and labels[i][1:].isdigit()
+        ):
+            labels[i] = "a"
+        elif labels[i].startswith("x") and labels[i][1:].isdigit():
+            labels[i] = "x"
         else:
             labels[i] = labels[i].lower()
 
     flat_basis = [item for sublist in basis_functions for item in sublist]
-    all_in_basis = all([ll in flat_basis for ll in labels])
+    all_in_basis = all(ll in flat_basis for ll in labels)
 
     return all_in_basis
 
 
-def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, check_ops=False):
+def string_to_node(
+    s, basis_functions, locs=None, evalf=False, allow_eval=True, check_ops=False
+):
     """Convert a string giving function into a tree with labels
 
     Args:
@@ -536,7 +673,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
             c[i] = nodes[i].count_nodes(basis_functions)
             if check_ops:
                 all_in_basis[i] = check_operators(nodes[i], basis_functions)
-        except Exception:
+        except Exception:  # noqa: BLE001
             c[i] = np.nan
 
     i = 1
@@ -548,7 +685,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
         c[i] = nodes[i].count_nodes(basis_functions)
         if check_ops:
             all_in_basis[i] = check_operators(nodes[i], basis_functions)
-    except Exception:
+    except Exception:  # noqa: BLE001
         c[i] = np.nan
 
     i = 2
@@ -560,7 +697,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
         c[i] = nodes[i].count_nodes(basis_functions)
         if check_ops:
             all_in_basis[i] = check_operators(nodes[i], basis_functions)
-    except Exception:
+    except Exception:  # noqa: BLE001
         c[i] = np.nan
 
     i = 3
@@ -572,7 +709,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
         c[i] = nodes[i].count_nodes(basis_functions)
         if check_ops:
             all_in_basis[i] = check_operators(nodes[i], basis_functions)
-    except Exception:
+    except Exception:  # noqa: BLE001
         c[i] = np.nan
 
     if check_ops and any(all_in_basis):
@@ -601,7 +738,7 @@ def update_tree(tree, labels, try_idx, basis_functions):
     """
 
     pow_set = ["square", "cube", "sqrt_abs", "inv"]
-    pow_num = {"square": '*2', "cube": '*3', "sqrt_abs": '/2', "inv": '*-1'}
+    pow_num = {"square": "*2", "cube": "*3", "sqrt_abs": "/2", "inv": "*-1"}
     exp_set = ["log_abs", "exp", "pow_abs"]
     #  log_abs comes first, exp comes second, pow_abs can go in either order
     exp_ord = {"log_abs": 1, "exp": 2, "pow_abs": 3}
@@ -621,68 +758,90 @@ def update_tree(tree, labels, try_idx, basis_functions):
             if labels[i] in common_exp:
                 if (exp_ord[labels[i]] == 1) or (exp_ord[labels[i]] == 3):
                     success = False
-                    if (i < len(labels) - 1) and (labels[i+1] in common_pow):
+                    if (i < len(labels) - 1) and (labels[i + 1] in common_pow):
                         special_idx.append(i)
                         j = 0
                         success = False
-                        s = '*1'
+                        s = "*1"
                         while not success:
                             j += 1
-                            if (i >= len(labels) - j):
+                            if i >= len(labels) - j:
                                 success = True
-                            elif labels[i+j] in common_pow:
+                            elif labels[i + j] in common_pow:
                                 n = sympy.sympify(
-                                    (s + pow_num[labels[i+j]][0] + '(' + pow_num[labels[i+j]][1:] + ')')[1:])
-                                if n.is_integer or (1/n).is_integer:
-                                    s += pow_num[labels[i+j]][0] + \
-                                        '(' + pow_num[labels[i+j]][1:] + ')'
+                                    (
+                                        s
+                                        + pow_num[labels[i + j]][0]
+                                        + "("
+                                        + pow_num[labels[i + j]][1:]
+                                        + ")"
+                                    )[1:]
+                                )
+                                if n.is_integer or (1 / n).is_integer:
+                                    s += (
+                                        pow_num[labels[i + j]][0]
+                                        + "("
+                                        + pow_num[labels[i + j]][1:]
+                                        + ")"
+                                    )
                                 else:
                                     success = True
                             else:
                                 success = True
-                        diff1_idx.append(j-1)
+                        diff1_idx.append(j - 1)
                         diff2_idx.append(0)
 
                         n = sympy.sympify(s[1:])
                         if n.is_integer:
-                            s = '*' + str(n)
+                            s = "*" + str(n)
                         else:
-                            s = '/' + str(1/n)
+                            s = "/" + str(1 / n)
                         num1.append(s)
                         num2.append(None)
 
                 if (exp_ord[labels[i]] == 2) or (exp_ord[labels[i]] == 3):
                     success = False
-                    if (i > 0) and (labels[i-1] in common_pow):
+                    if (i > 0) and (labels[i - 1] in common_pow):
                         if i not in special_idx:
                             special_idx.append(i)
                         j = 0
                         success = False
-                        s = '*1'
+                        s = "*1"
                         while not success:
                             j += 1
                             if (i - j) < 0:
                                 success = True
-                            elif labels[i-j] in common_pow:
+                            elif labels[i - j] in common_pow:
                                 n = sympy.sympify(
-                                    (s + pow_num[labels[i-j]][0] + '(' + pow_num[labels[i-j]][1:] + ')')[1:])
-                                if n.is_integer or (1/n).is_integer:
-                                    s += pow_num[labels[i-j]][0] + \
-                                        '(' + pow_num[labels[i-j]][1:] + ')'
+                                    (
+                                        s
+                                        + pow_num[labels[i - j]][0]
+                                        + "("
+                                        + pow_num[labels[i - j]][1:]
+                                        + ")"
+                                    )[1:]
+                                )
+                                if n.is_integer or (1 / n).is_integer:
+                                    s += (
+                                        pow_num[labels[i - j]][0]
+                                        + "("
+                                        + pow_num[labels[i - j]][1:]
+                                        + ")"
+                                    )
                                 else:
                                     success = True
                             else:
                                 success = True
                         if len(diff2_idx) != len(special_idx):
                             diff1_idx.append(0)
-                            diff2_idx.append(j-1)
+                            diff2_idx.append(j - 1)
                         else:
-                            diff2_idx[-1] = j-1
+                            diff2_idx[-1] = j - 1
                         n = sympy.sympify(s[1:])
                         if n.is_integer:
-                            s = '*' + str(n)
+                            s = "*" + str(n)
                         else:
-                            s = '/' + str(1/n)
+                            s = "/" + str(1 / n)
                         if len(num2) != len(special_idx):
                             num1.append(None)
                             num2.append(s)
@@ -696,44 +855,48 @@ def update_tree(tree, labels, try_idx, basis_functions):
     if len(special_idx) > try_idx:
 
         i = special_idx[try_idx]
-        if (exp_ord[labels[i]] == 1):
+        if exp_ord[labels[i]] == 1:
             n = num1[try_idx]
             d = diff1_idx[try_idx]
-        elif (exp_ord[labels[i]] == 2):
+        elif exp_ord[labels[i]] == 2:
             n = num2[try_idx]
             d = diff2_idx[try_idx]
-        elif (exp_ord[labels[i]] == 3):
+        elif exp_ord[labels[i]] == 3:
             n1 = num1[try_idx]
             n2 = num2[try_idx]
             d1 = diff1_idx[try_idx]
             d2 = diff2_idx[try_idx]
 
-        if (exp_ord[labels[i]] == 3) and (n1 is None or n1[0] in basis_functions[2]) and (n2 is None or n2[0] in basis_functions[2]):
+        if (
+            (exp_ord[labels[i]] == 3)
+            and (n1 is None or n1[0] in basis_functions[2])
+            and (n2 is None or n2[0] in basis_functions[2])
+        ):
 
             # Combine the two numbers
-            s = '*1'
+            s = "*1"
             if n1 is not None:
                 s += n1
             if n2 is not None:
                 s += n2
             s = sympy.sympify(s[1:])
             if s.is_integer:
-                n = '*' + str(s)
+                n = "*" + str(s)
             else:
-                n = '/' + str(1/s)
+                n = "/" + str(1 / s)
 
             orig_parents = np.array([t.parent for t in tree])
             orig_shape = [t.type for t in tree]
 
             # Start of exponent
-            j = np.argwhere(orig_parents[i+2:] == i)
+            j = np.argwhere(orig_parents[i + 2 :] == i)
             j = j[0, 0] + i + 2
 
             # End of exponent
             if tree[i].parent is None:
                 k = len(labels)
             else:
-                k = np.argwhere(orig_parents[i+2:] <= tree[i].parent)
+                k = np.argwhere(orig_parents[i + 2 :] <= tree[i].parent)
                 if len(k) == 0:
                     k = len(labels)
                 else:
@@ -742,39 +905,49 @@ def update_tree(tree, labels, try_idx, basis_functions):
             if int(n[1:]) == 1:
                 new_labels = (
                     # First part of tree (up to the d2 operators which make number)
-                    labels[:i-d2] +
+                    labels[: i - d2]
+                    +
                     # The pow comes next
-                    [labels[i]] +
+                    [labels[i]]
+                    +
                     # Skip the d1 operators which give the number
-                    labels[i+d1+1:]
+                    labels[i + d1 + 1 :]
                 )
-                new_shape = orig_shape[:i-d2] + \
-                    [orig_shape[i]] + \
-                    orig_shape[i+d1+1:]
+                new_shape = (
+                    orig_shape[: i - d2] + [orig_shape[i]] + orig_shape[i + d1 + 1 :]
+                )
             else:
                 new_labels = (
                     # First part of tree (up to the d2 operators which make number)
-                    labels[:i-d2] +
+                    labels[: i - d2]
+                    +
                     # The pow comes next
-                    [labels[i]] +
+                    [labels[i]]
+                    +
                     # Skip the d2 operators which give the number
-                    labels[i+d1+1:j] +
+                    labels[i + d1 + 1 : j]
+                    +
                     # Add in a * or /
-                    [n[0]] +
+                    [n[0]]
+                    +
                     # The original exponent on left of * or /
-                    labels[j:k] +
+                    labels[j:k]
+                    +
                     # Put number at right of * or /
-                    [n[1:]] +
+                    [n[1:]]
+                    +
                     # Rest of tree
                     labels[k:]
                 )
-                new_shape = orig_shape[:i-d2] + \
-                    [orig_shape[i]] + \
-                    orig_shape[i+d1+1:j] + \
-                    [2] + \
-                    orig_shape[j:k] + \
-                    [0] + \
-                    orig_shape[k:]
+                new_shape = (
+                    orig_shape[: i - d2]
+                    + [orig_shape[i]]
+                    + orig_shape[i + d1 + 1 : j]
+                    + [2]
+                    + orig_shape[j:k]
+                    + [0]
+                    + orig_shape[k:]
+                )
 
             nadded += 1
 
@@ -783,7 +956,7 @@ def update_tree(tree, labels, try_idx, basis_functions):
             orig_parents = np.array([t.parent for t in tree])
             orig_shape = [t.type for t in tree]
             if i > 0:
-                j = np.argwhere(orig_parents[i+1:] <= tree[i].parent)
+                j = np.argwhere(orig_parents[i + 1 :] <= tree[i].parent)
                 if len(j) == 0:
                     j = len(labels)
                 else:
@@ -791,50 +964,80 @@ def update_tree(tree, labels, try_idx, basis_functions):
             else:
                 j = len(labels)
 
-            if (i > 0) and (labels[orig_parents[i]] in ["+", "-"]) and n.startswith('*-') and exp_ord[labels[i]] == 1:
+            if (
+                (i > 0)
+                and (labels[orig_parents[i]] in ["+", "-"])
+                and n.startswith("*-")
+                and exp_ord[labels[i]] == 1
+            ):
                 inv_op = "-" if (labels[orig_parents[i]] == "+") else "+"
-                if (tree[orig_parents[i]].right == i) and (inv_op in basis_functions[2]):
+                if (tree[orig_parents[i]].right == i) and (
+                    inv_op in basis_functions[2]
+                ):
 
                     if int(n[2:]) == 1:
                         new_labels = (
                             # First part of tree
-                            labels[:orig_parents[i]] + [inv_op] +
+                            labels[: orig_parents[i]]
+                            + [inv_op]
+                            +
                             # Left part of + unchanged
-                            labels[orig_parents[i]+1:i] +
+                            labels[orig_parents[i] + 1 : i]
+                            +
                             # Skip the d operators which give the number
-                            [labels[i]] + labels[i+d+1:]
+                            [labels[i]]
+                            + labels[i + d + 1 :]
                         )
-                        new_shape = orig_shape[:i] + [orig_shape[i]] + \
-                            orig_shape[i+d+1:j] + orig_shape[j:]
+                        new_shape = (
+                            orig_shape[:i]
+                            + [orig_shape[i]]
+                            + orig_shape[i + d + 1 : j]
+                            + orig_shape[j:]
+                        )
                     else:
                         new_labels = (
                             # First part of tree
-                            labels[:orig_parents[i]] + [inv_op] +
+                            labels[: orig_parents[i]]
+                            + [inv_op]
+                            +
                             # Left part of + unchanged
-                            labels[orig_parents[i]+1:i] +
+                            labels[orig_parents[i] + 1 : i]
+                            +
                             # Add * or / to right of +
-                            [n[0]] +
+                            [n[0]]
+                            +
                             # Put "log_abs" at left of * or /
-                            [labels[i]] +
+                            [labels[i]]
+                            +
                             # Skip the d operators which give the number
-                            labels[i+d+1:j] +
+                            labels[i + d + 1 : j]
+                            +
                             # Put number at right of * or / and add rest of tree
-                            [n[2:]] + labels[j:]
+                            [n[2:]]
+                            + labels[j:]
                         )
-                        new_shape = orig_shape[:orig_parents[i]] + [2] + \
-                            orig_shape[orig_parents[i]+1:i] + \
-                            [2] + \
-                            [orig_shape[i]] + \
-                            orig_shape[i+d+1:j] + \
-                            [0] + orig_shape[j:]
+                        new_shape = (
+                            orig_shape[: orig_parents[i]]
+                            + [2]
+                            + orig_shape[orig_parents[i] + 1 : i]
+                            + [2]
+                            + [orig_shape[i]]
+                            + orig_shape[i + d + 1 : j]
+                            + [0]
+                            + orig_shape[j:]
+                        )
 
                     nadded += 1
 
-                elif (labels[orig_parents[i]] == "+") and (inv_op in basis_functions[2]):
+                elif (labels[orig_parents[i]] == "+") and (
+                    inv_op in basis_functions[2]
+                ):
 
                     # Index of where right side of + ends
                     k = np.argwhere(
-                        orig_parents[tree[orig_parents[i]].right+1:] <= tree[i].parent)
+                        orig_parents[tree[orig_parents[i]].right + 1 :]
+                        <= tree[i].parent
+                    )
                     if len(k) == 0:
                         k = len(labels)
                     else:
@@ -843,42 +1046,61 @@ def update_tree(tree, labels, try_idx, basis_functions):
                     if int(n[2:]) == 1:
                         new_labels = (
                             # First part of tree
-                            labels[:orig_parents[i]] + [inv_op] +
+                            labels[: orig_parents[i]]
+                            + [inv_op]
+                            +
                             # Move right part of + to the left
-                            labels[tree[orig_parents[i]].right:k] +
+                            labels[tree[orig_parents[i]].right : k]
+                            +
                             # Put "log_abs" at start of right of +
-                            labels[orig_parents[i]+1:i+1] +
+                            labels[orig_parents[i] + 1 : i + 1]
+                            +
                             #  Skip the d operators which give the number
-                            labels[i+d+1:tree[orig_parents[i]].right] +
+                            labels[i + d + 1 : tree[orig_parents[i]].right]
+                            +
                             # Rest of tree
                             labels[k:]
                         )
-                        new_shape = orig_shape[:orig_parents[i]] + [2] + \
-                            orig_shape[tree[orig_parents[i]].right:k] + \
-                            orig_shape[orig_parents[i]+1:i+1] + \
-                            orig_shape[i+d+1:tree[orig_parents[i]].right] + \
-                            orig_shape[k:]
+                        new_shape = (
+                            orig_shape[: orig_parents[i]]
+                            + [2]
+                            + orig_shape[tree[orig_parents[i]].right : k]
+                            + orig_shape[orig_parents[i] + 1 : i + 1]
+                            + orig_shape[i + d + 1 : tree[orig_parents[i]].right]
+                            + orig_shape[k:]
+                        )
                     else:
                         new_labels = (
                             # First part of tree
-                            labels[:orig_parents[i]] + [inv_op] +
+                            labels[: orig_parents[i]]
+                            + [inv_op]
+                            +
                             # Move right part of + to the left
-                            labels[tree[orig_parents[i]].right:k] +
+                            labels[tree[orig_parents[i]].right : k]
+                            +
                             # Add * or / to right of +
-                            [n[0]] +
+                            [n[0]]
+                            +
                             # Put "log_abs" at left of * or /
-                            labels[orig_parents[i]+1:i+1] +
+                            labels[orig_parents[i] + 1 : i + 1]
+                            +
                             # Skip the d operators which give the number
-                            labels[i+d+1:tree[orig_parents[i]].right] +
+                            labels[i + d + 1 : tree[orig_parents[i]].right]
+                            +
                             # Put number at right of * or / and add rest of tree
-                            [n[2:]] + labels[k:]
+                            [n[2:]]
+                            + labels[k:]
                         )
-                        new_shape = orig_shape[:orig_parents[i]] + [2] + \
-                            orig_shape[tree[orig_parents[i]].right:k] + \
-                            [2] + \
-                            orig_shape[orig_parents[i]+1:i+1] + \
-                            orig_shape[i+d+1:tree[orig_parents[i]].right] + \
-                            [0] + orig_shape[k:]
+                        new_shape = (
+                            orig_shape[: orig_parents[i]]
+                            + [2]
+                            + orig_shape[tree[orig_parents[i]].right : k]
+                            + [2]
+                            + orig_shape[orig_parents[i] + 1 : i + 1]
+                            + orig_shape[i + d + 1 : tree[orig_parents[i]].right]
+                            + [0]
+                            + orig_shape[k:]
+                        )
 
                     nadded += 1
                 else:
@@ -887,43 +1109,50 @@ def update_tree(tree, labels, try_idx, basis_functions):
                     #  (2) F - G -> (-n)*H - G
                     new_labels = []
                     new_shape = []
-                    if (inv_op in basis_functions[2]):
+                    if inv_op in basis_functions[2]:
                         new_labels.append(
                             # First part of tree
-                            labels[:orig_parents[i]] +
+                            labels[: orig_parents[i]]
+                            +
                             # Add *(-1) before + or -
-                            ['*', '-1', inv_op] +
+                            ["*", "-1", inv_op]
+                            +
                             # * or / the first term
-                            [n[0], n[2:]] +
+                            [n[0], n[2:]]
+                            +
                             # Put "log_abs" at right of * or /
-                            [labels[i]] +
+                            [labels[i]]
+                            +
                             # Skip the d operators which give the number
-                            labels[i+d+1:]
+                            labels[i + d + 1 :]
                         )
                         new_shape.append(
-                            orig_shape[:orig_parents[i]] +
-                            [2, 0, 2] +
-                            [2, 0] +
-                            [orig_shape[i]] +
-                            orig_shape[i+d+1:]
+                            orig_shape[: orig_parents[i]]
+                            + [2, 0, 2]
+                            + [2, 0]
+                            + [orig_shape[i]]
+                            + orig_shape[i + d + 1 :]
                         )
                         nadded += 1
 
                     new_labels.append(
                         # First part of tree
-                        labels[:orig_parents[i]+1] +
+                        labels[: orig_parents[i] + 1]
+                        +
                         # * or / the first term
-                        [n[0], n[1:]] +
+                        [n[0], n[1:]]
+                        +
                         # Put "log_abs" at right of * or /
-                        [labels[i]] +
+                        [labels[i]]
+                        +
                         # Skip the d operators which give the number
-                        labels[i+d+1:]
+                        labels[i + d + 1 :]
                     )
                     new_shape.append(
-                        orig_shape[:orig_parents[i]+1] +
-                        [2, 0] +
-                        [orig_shape[i]] +
-                        orig_shape[i+d+1:]
+                        orig_shape[: orig_parents[i] + 1]
+                        + [2, 0]
+                        + [orig_shape[i]]
+                        + orig_shape[i + d + 1 :]
                     )
                     nadded += 1
 
@@ -932,64 +1161,78 @@ def update_tree(tree, labels, try_idx, basis_functions):
                     if int(n[1:]) == 1:
                         new_labels = (
                             # First part of tree
-                            labels[:i+1] +
+                            labels[: i + 1]
+                            +
                             # Skip the d operators which give the number
-                            labels[i+d+1:]
+                            labels[i + d + 1 :]
                         )
-                        new_shape = orig_shape[:i+1] + \
-                            orig_shape[i+d+1:]
+                        new_shape = orig_shape[: i + 1] + orig_shape[i + d + 1 :]
                     else:
                         new_labels = (
                             # First part of tree
-                            labels[:i] +
+                            labels[:i]
+                            +
                             # * or / the "log_abs"
-                            [n[0]] +
+                            [n[0]]
+                            +
                             # Put "log_abs" at left of tree
-                            [labels[i]] +
+                            [labels[i]]
+                            +
                             # Skip the d operators which give the number
-                            labels[i+d+1:j] +
+                            labels[i + d + 1 : j]
+                            +
                             # Put number at right of * or /
-                            [n[1:]] +
+                            [n[1:]]
+                            +
                             #  Rest of tree
                             labels[j:]
                         )
-                        new_shape = orig_shape[:i] + \
-                            [2] + \
-                            [orig_shape[i]] + \
-                            orig_shape[i+d+1:j] + \
-                            [0] + \
-                            orig_shape[j:]
+                        new_shape = (
+                            orig_shape[:i]
+                            + [2]
+                            + [orig_shape[i]]
+                            + orig_shape[i + d + 1 : j]
+                            + [0]
+                            + orig_shape[j:]
+                        )
                 elif exp_ord[labels[i]] == 2:
                     if int(n[1:]) == 1:
                         new_labels = (
                             # First part of tree (up to the d operators which make number)
-                            labels[:i-d] +
+                            labels[: i - d]
+                            +
                             # The rest of the tree
                             labels[i:]
                         )
-                        new_shape = orig_shape[:i-d] + \
-                            orig_shape[i:]
+                        new_shape = orig_shape[: i - d] + orig_shape[i:]
                     else:
                         new_labels = (
                             # First part of tree (up to the d operators which make number)
-                            labels[:i-d] +
+                            labels[: i - d]
+                            +
                             # The exp comes next
-                            [labels[i]] +
+                            [labels[i]]
+                            +
                             # * or / the argument of "exp"
-                            [n[0]] +
+                            [n[0]]
+                            +
                             # First part of argument of "exp" on left of * or /
-                            labels[i+1:j] +
+                            labels[i + 1 : j]
+                            +
                             # Put number at right of * or /
-                            [n[1:]] +
+                            [n[1:]]
+                            +
                             # Rest of tree
                             labels[j:]
                         )
-                        new_shape = orig_shape[:i-d] + \
-                            [orig_shape[i]] + \
-                            [2] + \
-                            orig_shape[i+1:j] + \
-                            [0] + \
-                            orig_shape[j:]
+                        new_shape = (
+                            orig_shape[: i - d]
+                            + [orig_shape[i]]
+                            + [2]
+                            + orig_shape[i + 1 : j]
+                            + [0]
+                            + orig_shape[j:]
+                        )
 
                 nadded += 1
 
@@ -1020,10 +1263,12 @@ def update_sums(tree, labels, try_idx, basis_functions):
         return new_labels, new_shape, nadded
 
     # Find all the +s or -s which aren't children of other +s or -s
-    plus_idx = [i for i in range(
-        len(labels)) if labels[i] == "+" or labels[i] == "-"]
-    plus_idx = [i for i in plus_idx if (tree[i].parent is None) or (
-        labels[tree[i].parent] not in ["+", "-"])]
+    plus_idx = [i for i in range(len(labels)) if labels[i] == "+" or labels[i] == "-"]
+    plus_idx = [
+        i
+        for i in plus_idx
+        if (tree[i].parent is None) or (labels[tree[i].parent] not in ["+", "-"])
+    ]
 
     if try_idx >= len(plus_idx):
         return new_labels, new_shape, nadded
@@ -1070,15 +1315,12 @@ def update_sums(tree, labels, try_idx, basis_functions):
             idx_list = []
             for k in range(len(temp_list)):
                 if type(temp_list[k][0]) in [str, np.str_]:
-                    sum_list += [temp_list[k]] * \
-                        int(labels[tree[j].left].lstrip("-"))
-                    idx_list += [temp_idx[k]] * \
-                        int(labels[tree[j].left].lstrip("-"))
+                    sum_list += [temp_list[k]] * int(labels[tree[j].left].lstrip("-"))
+                    idx_list += [temp_idx[k]] * int(labels[tree[j].left].lstrip("-"))
                 else:
                     for s in temp_list[k]:
                         sum_list += s * int(labels[tree[j].left].lstrip("-"))
-                        idx_list += temp_idx[k] * \
-                            int(labels[tree[j].left].lstrip("-"))
+                        idx_list += temp_idx[k] * int(labels[tree[j].left].lstrip("-"))
         elif labels[j] == "*" and labels[tree[j].right].lstrip("-").isdigit():
             temp_list, temp_idx, r2 = get_sum(tree[j].left, r)
             if r2:
@@ -1088,17 +1330,14 @@ def update_sums(tree, labels, try_idx, basis_functions):
             for k in range(len(temp_list)):
                 temp_idx[k][-1] = tree[j].right + 1
                 if type(temp_list[k][0]) in [str, np.str_]:
-                    sum_list += [temp_list[k]] * \
-                        int(labels[tree[j].right].lstrip("-"))
-                    idx_list += [temp_idx[k]] * \
-                        int(labels[tree[j].right].lstrip("-"))
+                    sum_list += [temp_list[k]] * int(labels[tree[j].right].lstrip("-"))
+                    idx_list += [temp_idx[k]] * int(labels[tree[j].right].lstrip("-"))
                 else:
                     for s in temp_list[k]:
                         sum_list += s * int(labels[tree[j].right].lstrip("-"))
-                        idx_list += temp_idx[k] * \
-                            int(labels[tree[j].right].lstrip("-"))
+                        idx_list += temp_idx[k] * int(labels[tree[j].right].lstrip("-"))
         else:
-            k = np.argwhere(orig_parents[j+1:] <= tree[j].parent) + j + 1
+            k = np.argwhere(orig_parents[j + 1 :] <= tree[j].parent) + j + 1
             if len(k) == 0:
                 k = len(labels)
             else:
@@ -1118,7 +1357,7 @@ def update_sums(tree, labels, try_idx, basis_functions):
     if last_child == len(tree) - 1:
         end_idx = len(tree)
     else:
-        end_idx = np.argwhere(np.array(orig_parents[last_child+1:]) < i)  # p
+        end_idx = np.argwhere(np.array(orig_parents[last_child + 1 :]) < i)  # p
         if len(end_idx) == 0:
             end_idx = len(tree)
         else:
@@ -1132,13 +1371,16 @@ def update_sums(tree, labels, try_idx, basis_functions):
         n = 1
         k = all_start[j]
         neg_const.append(False)
-        if k is not None and labels[k] in ["*", "/"]:
-            if labels[tree[k].left].lstrip("-").isdigit() and labels[tree[k].left].startswith("-"):
-                n *= -1
-                neg_const[-1] = True
-            elif labels[tree[k].right].lstrip("-").isdigit() and labels[tree[k].right].startswith("-"):
-                n *= -1
-                neg_const[-1] = True
+        if (
+            k is not None
+            and labels[k] in ["*", "/"]
+            and labels[tree[k].left].lstrip("-").isdigit()
+            and labels[tree[k].left].startswith("-")
+            or labels[tree[k].right].lstrip("-").isdigit()
+            and labels[tree[k].right].startswith("-")
+        ):
+            n *= -1
+            neg_const[-1] = True
 
         if (labels[k] == "-") and (tree[k].right == all_idx[j][0]):
             n *= -1
@@ -1147,9 +1389,13 @@ def update_sums(tree, labels, try_idx, basis_functions):
             if (labels[tree[k].parent] == "-") and (tree[tree[k].parent].right == k):
                 n *= -1
             if labels[tree[k].parent] in ["*", "/"]:
-                if labels[tree[tree[k].parent].left].lstrip("-").isdigit() and labels[tree[tree[k].parent].left].startswith("-"):
+                if labels[tree[tree[k].parent].left].lstrip("-").isdigit() and labels[
+                    tree[tree[k].parent].left
+                ].startswith("-"):
                     n *= -1
-                elif labels[tree[tree[k].parent].right].lstrip("-").isdigit() and labels[tree[tree[k].parent].right].startswith("-"):
+                elif labels[tree[tree[k].parent].right].lstrip(
+                    "-"
+                ).isdigit() and labels[tree[tree[k].parent].right].startswith("-"):
                     n *= -1
                     neg_const[-1] = True
             k = tree[k].parent
@@ -1159,9 +1405,9 @@ def update_sums(tree, labels, try_idx, basis_functions):
     s = []
     for ss in all_s:
         if len(ss) > 0 and isinstance(ss[0], list):
-            s.append(tuple(list(**s)))
+            s.append(tuple(**s))
         else:
-            s.append(tuple(list(ss)))
+            s.append(tuple(ss))
     s = sorted(set(s), key=s.index)
     s = [list(ss) for ss in s]
 
@@ -1184,8 +1430,9 @@ def update_sums(tree, labels, try_idx, basis_functions):
             n_uni = []
             t_uni = []
             for a in uni:
-                nrep = [all_sign[b]
-                        for b in range(len(all_sign)) if (all_s[a] == all_s[b])]
+                nrep = [
+                    all_sign[b] for b in range(len(all_sign)) if (all_s[a] == all_s[b])
+                ]
                 len_nrep = len(nrep)
                 nrep = sum(nrep)
 
@@ -1195,100 +1442,164 @@ def update_sums(tree, labels, try_idx, basis_functions):
                     right_idx = tree[tree[all_idx[a][0]].parent].right
                     if tree[tree[all_idx[a][0]].parent].left == all_idx[a][0]:
                         if nrep == 1:
-                            l_uni = labels[all_idx[a][0]:all_idx[a][1]] + l_uni
-                            t_uni = [tt.type for tt in tree[all_idx[a]
-                                                            [0]:all_idx[a][1]]] + t_uni
-                            n_uni = n_uni + ['+']
-                        elif nrep != 0:
-                            l_uni = [
-                                '*', str(nrep)] + labels[all_idx[a][0]:all_idx[a][1]] + l_uni
+                            l_uni = labels[all_idx[a][0] : all_idx[a][1]] + l_uni
                             t_uni = [
-                                2, 0] + [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-                            n_uni = n_uni + ['+']
+                                tt.type for tt in tree[all_idx[a][0] : all_idx[a][1]]
+                            ] + t_uni
+                            n_uni = n_uni + ["+"]
+                        elif nrep != 0:
+                            l_uni = (
+                                ["*", str(nrep)]
+                                + labels[all_idx[a][0] : all_idx[a][1]]
+                                + l_uni
+                            )
+                            t_uni = (
+                                [2, 0]
+                                + [
+                                    tt.type
+                                    for tt in tree[all_idx[a][0] : all_idx[a][1]]
+                                ]
+                                + t_uni
+                            )
+                            n_uni = n_uni + ["+"]
                     else:
-                        if labels[left_idx].lstrip("-").isdigit() and labels[left_idx].startswith("-"):
+                        if labels[left_idx].lstrip("-").isdigit() and labels[
+                            left_idx
+                        ].startswith("-"):
                             x = labels[left_idx].lstrip("-")
                             if x == str(1) and nrep == 1:
-                                l_uni = labels[left_idx +
-                                               1:all_idx[a][1]] + l_uni
+                                l_uni = labels[left_idx + 1 : all_idx[a][1]] + l_uni
                                 t_uni = [
-                                    tt.type for tt in tree[left_idx+1:all_idx[a][1]]] + t_uni
+                                    tt.type for tt in tree[left_idx + 1 : all_idx[a][1]]
+                                ] + t_uni
                             else:
-                                l_uni = labels[all_idx[a][0]:left_idx] + \
-                                    ["*", str(abs(nrep))] + \
-                                    labels[left_idx+1:all_idx[a][1]] + l_uni
-                                t_uni = [tt.type for tt in tree[all_idx[a][0]:left_idx]] + \
-                                        [2, 0] + \
-                                        [tt.type for tt in tree[left_idx +
-                                                                1:all_idx[a][1]]] + t_uni
+                                l_uni = (
+                                    labels[all_idx[a][0] : left_idx]
+                                    + ["*", str(abs(nrep))]
+                                    + labels[left_idx + 1 : all_idx[a][1]]
+                                    + l_uni
+                                )
+                                t_uni = (
+                                    [tt.type for tt in tree[all_idx[a][0] : left_idx]]
+                                    + [2, 0]
+                                    + [
+                                        tt.type
+                                        for tt in tree[left_idx + 1 : all_idx[a][1]]
+                                    ]
+                                    + t_uni
+                                )
                         elif right_idx is None:
                             if nrep == 1:
-                                l_uni = labels[left_idx -
-                                               1:all_idx[a][1]] + l_uni
+                                l_uni = labels[left_idx - 1 : all_idx[a][1]] + l_uni
                                 t_uni = [
-                                    tt.type for tt in tree[left_idx-1:all_idx[a][1]]] + t_uni
+                                    tt.type for tt in tree[left_idx - 1 : all_idx[a][1]]
+                                ] + t_uni
                             else:
-                                l_uni = labels[all_idx[a][0]:left_idx-1] + \
-                                    ["*", str(abs(nrep))] + \
-                                    labels[left_idx-1:all_idx[a][1]] + l_uni
-                                t_uni = [tt.type for tt in tree[all_idx[a][0]:left_idx-1]] + \
-                                        [2, 0] + \
-                                        [tt.type for tt in tree[left_idx -
-                                                                1:all_idx[a][1]]] + t_uni
+                                l_uni = (
+                                    labels[all_idx[a][0] : left_idx - 1]
+                                    + ["*", str(abs(nrep))]
+                                    + labels[left_idx - 1 : all_idx[a][1]]
+                                    + l_uni
+                                )
+                                t_uni = (
+                                    [
+                                        tt.type
+                                        for tt in tree[all_idx[a][0] : left_idx - 1]
+                                    ]
+                                    + [2, 0]
+                                    + [
+                                        tt.type
+                                        for tt in tree[left_idx - 1 : all_idx[a][1]]
+                                    ]
+                                    + t_uni
+                                )
                         else:
                             x = labels[right_idx].lstrip("-")
                             if x == str(1) and nrep == 1:
-                                l_uni = labels[all_idx[a][0]+1:right_idx] + \
-                                    labels[right_idx+1:all_idx[a][1]] + l_uni
-                                t_uni = [tt.type for tt in tree[all_idx[a][0]+1:right_idx]] + \
-                                        [tt.type for tt in tree[right_idx +
-                                                                1:all_idx[a][1]]] + t_uni
+                                l_uni = (
+                                    labels[all_idx[a][0] + 1 : right_idx]
+                                    + labels[right_idx + 1 : all_idx[a][1]]
+                                    + l_uni
+                                )
+                                t_uni = (
+                                    [
+                                        tt.type
+                                        for tt in tree[all_idx[a][0] + 1 : right_idx]
+                                    ]
+                                    + [
+                                        tt.type
+                                        for tt in tree[right_idx + 1 : all_idx[a][1]]
+                                    ]
+                                    + t_uni
+                                )
                             elif nrep != 0:
-                                l_uni = labels[all_idx[a][0]:right_idx] + \
-                                    ["*", str(abs(nrep))] + \
-                                    labels[right_idx+1:all_idx[a][1]] + l_uni
-                                t_uni = [tt.type for tt in tree[all_idx[a][0]:right_idx]] + \
-                                        [2, 0] + \
-                                        [tt.type for tt in tree[right_idx +
-                                                                1:all_idx[a][1]]] + t_uni
+                                l_uni = (
+                                    labels[all_idx[a][0] : right_idx]
+                                    + ["*", str(abs(nrep))]
+                                    + labels[right_idx + 1 : all_idx[a][1]]
+                                    + l_uni
+                                )
+                                t_uni = (
+                                    [tt.type for tt in tree[all_idx[a][0] : right_idx]]
+                                    + [2, 0]
+                                    + [
+                                        tt.type
+                                        for tt in tree[right_idx + 1 : all_idx[a][1]]
+                                    ]
+                                    + t_uni
+                                )
                         if all_sign[a] == 1:
-                            n_uni = n_uni + ['+']
+                            n_uni = n_uni + ["+"]
                         else:
-                            n_uni = n_uni + ['-']
+                            n_uni = n_uni + ["-"]
                 elif all_sign[a] == 1:
                     if nrep == 1:
-                        l_uni = labels[all_idx[a][0]:all_idx[a][1]] + l_uni
-                        t_uni = [tt.type for tt in tree[all_idx[a]
-                                                        [0]:all_idx[a][1]]] + t_uni
-                        n_uni = n_uni + ['+']
-                    elif nrep != 0:
-                        l_uni = ['*', str(nrep)] + \
-                            labels[all_idx[a][0]:all_idx[a][1]] + l_uni
+                        l_uni = labels[all_idx[a][0] : all_idx[a][1]] + l_uni
                         t_uni = [
-                            2, 0] + [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-                        n_uni = n_uni + ['+']
+                            tt.type for tt in tree[all_idx[a][0] : all_idx[a][1]]
+                        ] + t_uni
+                        n_uni = n_uni + ["+"]
+                    elif nrep != 0:
+                        l_uni = (
+                            ["*", str(nrep)]
+                            + labels[all_idx[a][0] : all_idx[a][1]]
+                            + l_uni
+                        )
+                        t_uni = (
+                            [2, 0]
+                            + [tt.type for tt in tree[all_idx[a][0] : all_idx[a][1]]]
+                            + t_uni
+                        )
+                        n_uni = n_uni + ["+"]
                 else:
                     if abs(nrep) == 1:
-                        l_uni = labels[all_idx[a][0]:all_idx[a][1]] + l_uni
-                        t_uni = [tt.type for tt in tree[all_idx[a]
-                                                        [0]:all_idx[a][1]]] + t_uni
+                        l_uni = labels[all_idx[a][0] : all_idx[a][1]] + l_uni
+                        t_uni = [
+                            tt.type for tt in tree[all_idx[a][0] : all_idx[a][1]]
+                        ] + t_uni
 
                     elif nrep != 0:
-                        l_uni = ['*', str(abs(nrep))] + \
-                            labels[all_idx[a][0]:all_idx[a][1]] + l_uni
-                        t_uni = [
-                            2, 0] + [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
+                        l_uni = (
+                            ["*", str(abs(nrep))]
+                            + labels[all_idx[a][0] : all_idx[a][1]]
+                            + l_uni
+                        )
+                        t_uni = (
+                            [2, 0]
+                            + [tt.type for tt in tree[all_idx[a][0] : all_idx[a][1]]]
+                            + t_uni
+                        )
                     if nrep > 0:
-                        n_uni = n_uni + ['+']
+                        n_uni = n_uni + ["+"]
                     elif nrep < 0:
-                        n_uni = n_uni + ['-']
+                        n_uni = n_uni + ["-"]
 
             l_rep = []
             t_rep = []
             if ((len(rep) == 1) or ("*" in basis_functions[2])) and (rep_val != 0):
 
                 if rep_val != 1:
-                    l_rep = ['*', str(rep_val)]
+                    l_rep = ["*", str(rep_val)]
                     t_rep = [2, 0]
 
                 for a in range(len(s[j])):
@@ -1306,16 +1617,16 @@ def update_sums(tree, labels, try_idx, basis_functions):
 
                 #  Now remove the +/- 0
                 if len(n_uni) == 0:
-                    L = L + ['0']
+                    L = L + ["0"]
                     t = t + [0]
-                elif n_uni[-1] == '+':
+                elif n_uni[-1] == "+":
                     L = L + n_uni[:-1] + l_uni
-                    t = t + [2] * (len(n_uni)-1) + t_uni
+                    t = t + [2] * (len(n_uni) - 1) + t_uni
                 else:
                     if n_uni == ["-"] * len(n_uni):
                         # If all the things added are negative, we can change the top node
                         # and make them all +'s provided they are on the right of that node
-                        L = L + ["*", "-1"] + ["+"] * (len(n_uni)-1) + l_uni
+                        L = L + ["*", "-1"] + ["+"] * (len(n_uni) - 1) + l_uni
                         t = t + [2, 0] + [2] * (len(n_uni) - 1) + t_uni
                     else:
                         # Otherwise we can move the right hand side of one of the + nodes
@@ -1327,130 +1638,295 @@ def update_sums(tree, labels, try_idx, basis_functions):
                         for k in range(len(uni)):
                             if k != plus_idx:
                                 a = uni[k]
-                                nrep = [all_sign[b] for b in range(
-                                    len(all_sign)) if (all_s[a] == all_s[b])]
+                                nrep = [
+                                    all_sign[b]
+                                    for b in range(len(all_sign))
+                                    if (all_s[a] == all_s[b])
+                                ]
                                 nrep = sum(nrep)
                                 if neg_const[a]:
                                     # If neg_const try to get the version with the - instead of + (or vice versa)
                                     left_idx = tree[all_idx[a][0]].left
                                     right_idx = tree[all_idx[a][0]].right
-                                    if tree[tree[all_idx[a][0]].parent].left == all_idx[a][0]:
+                                    if (
+                                        tree[tree[all_idx[a][0]].parent].left
+                                        == all_idx[a][0]
+                                    ):
                                         if nrep == 1:
-                                            l_uni = labels[all_idx[a]
-                                                           [0]:all_idx[a][1]] + l_uni
+                                            l_uni = (
+                                                labels[all_idx[a][0] : all_idx[a][1]]
+                                                + l_uni
+                                            )
                                             t_uni = [
-                                                tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-                                            n_uni = n_uni + ['+']
+                                                tt.type
+                                                for tt in tree[
+                                                    all_idx[a][0] : all_idx[a][1]
+                                                ]
+                                            ] + t_uni
+                                            n_uni = n_uni + ["+"]
                                         elif nrep != 0:
-                                            l_uni = [
-                                                '*', str(nrep)] + labels[all_idx[a][0]:all_idx[a][1]] + l_uni
-                                            t_uni = [
-                                                2, 0] + [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-                                            n_uni = n_uni + ['+']
+                                            l_uni = (
+                                                ["*", str(nrep)]
+                                                + labels[all_idx[a][0] : all_idx[a][1]]
+                                                + l_uni
+                                            )
+                                            t_uni = (
+                                                [2, 0]
+                                                + [
+                                                    tt.type
+                                                    for tt in tree[
+                                                        all_idx[a][0] : all_idx[a][1]
+                                                    ]
+                                                ]
+                                                + t_uni
+                                            )
+                                            n_uni = n_uni + ["+"]
                                     else:
-                                        if (labels[left_idx].lstrip("-").isdigit() and labels[left_idx].startswith("-")):
+                                        if labels[left_idx].lstrip(
+                                            "-"
+                                        ).isdigit() and labels[left_idx].startswith(
+                                            "-"
+                                        ):
                                             x = labels[left_idx].lstrip("-")
                                             if x == str(1) and nrep == 1:
-                                                l_uni = labels[left_idx +
-                                                               1:all_idx[a][1]] + l_uni
+                                                l_uni = (
+                                                    labels[left_idx + 1 : all_idx[a][1]]
+                                                    + l_uni
+                                                )
                                                 t_uni = [
-                                                    tt.type for tt in tree[left_idx+1:all_idx[a][1]]] + t_uni
+                                                    tt.type
+                                                    for tt in tree[
+                                                        left_idx + 1 : all_idx[a][1]
+                                                    ]
+                                                ] + t_uni
                                             elif nrep != 0:
-                                                l_uni = labels[all_idx[a][0]:left_idx] + \
-                                                    ["*", str(abs(nrep))] + \
-                                                    labels[left_idx +
-                                                           1:all_idx[a][1]] + l_uni
-                                                t_uni = [tt.type for tt in tree[all_idx[a][0]:left_idx]] + \
-                                                        [2, 0] + \
-                                                        [tt.type for tt in tree[left_idx +
-                                                                                1:all_idx[a][1]]] + t_uni
+                                                l_uni = (
+                                                    labels[all_idx[a][0] : left_idx]
+                                                    + ["*", str(abs(nrep))]
+                                                    + labels[
+                                                        left_idx + 1 : all_idx[a][1]
+                                                    ]
+                                                    + l_uni
+                                                )
+                                                t_uni = (
+                                                    [
+                                                        tt.type
+                                                        for tt in tree[
+                                                            all_idx[a][0] : left_idx
+                                                        ]
+                                                    ]
+                                                    + [2, 0]
+                                                    + [
+                                                        tt.type
+                                                        for tt in tree[
+                                                            left_idx + 1 : all_idx[a][1]
+                                                        ]
+                                                    ]
+                                                    + t_uni
+                                                )
                                         elif right_idx is None:
                                             if nrep == 1:
-                                                l_uni = labels[left_idx -
-                                                               1:all_idx[a][1]] + l_uni
+                                                l_uni = (
+                                                    labels[left_idx - 1 : all_idx[a][1]]
+                                                    + l_uni
+                                                )
                                                 t_uni = [
-                                                    tt.type for tt in tree[left_idx-1:all_idx[a][1]]] + t_uni
+                                                    tt.type
+                                                    for tt in tree[
+                                                        left_idx - 1 : all_idx[a][1]
+                                                    ]
+                                                ] + t_uni
                                             else:
-                                                l_uni = labels[all_idx[a][0]:left_idx-1] + \
-                                                    ["*", str(abs(nrep))] + \
-                                                    labels[left_idx -
-                                                           1:all_idx[a][1]] + l_uni
-                                                t_uni = [tt.type for tt in tree[all_idx[a][0]:left_idx-1]] + \
-                                                        [2, 0] + \
-                                                        [tt.type for tt in tree[left_idx -
-                                                                                1:all_idx[a][1]]] + t_uni
+                                                l_uni = (
+                                                    labels[all_idx[a][0] : left_idx - 1]
+                                                    + ["*", str(abs(nrep))]
+                                                    + labels[
+                                                        left_idx - 1 : all_idx[a][1]
+                                                    ]
+                                                    + l_uni
+                                                )
+                                                t_uni = (
+                                                    [
+                                                        tt.type
+                                                        for tt in tree[
+                                                            all_idx[a][0] : left_idx - 1
+                                                        ]
+                                                    ]
+                                                    + [2, 0]
+                                                    + [
+                                                        tt.type
+                                                        for tt in tree[
+                                                            left_idx - 1 : all_idx[a][1]
+                                                        ]
+                                                    ]
+                                                    + t_uni
+                                                )
                                         else:
                                             x = labels[right_idx].lstrip("-")
                                             if x == str(1) and nrep == 1:
-                                                l_uni = labels[all_idx[a][0]+1:right_idx] + \
-                                                    labels[right_idx +
-                                                           1:all_idx[a][1]] + l_uni
-                                                t_uni = [tt.type for tt in tree[all_idx[a][0]+1:right_idx]] + \
-                                                        [tt.type for tt in tree[right_idx +
-                                                                                1:all_idx[a][1]]] + t_uni
+                                                l_uni = (
+                                                    labels[
+                                                        all_idx[a][0] + 1 : right_idx
+                                                    ]
+                                                    + labels[
+                                                        right_idx + 1 : all_idx[a][1]
+                                                    ]
+                                                    + l_uni
+                                                )
+                                                t_uni = (
+                                                    [
+                                                        tt.type
+                                                        for tt in tree[
+                                                            all_idx[a][0]
+                                                            + 1 : right_idx
+                                                        ]
+                                                    ]
+                                                    + [
+                                                        tt.type
+                                                        for tt in tree[
+                                                            right_idx
+                                                            + 1 : all_idx[a][1]
+                                                        ]
+                                                    ]
+                                                    + t_uni
+                                                )
                                             elif nrep != 0:
-                                                l_uni = labels[all_idx[a][0]:right_idx] + \
-                                                    ["*", str(abs(nrep))] + \
-                                                    labels[right_idx +
-                                                           1:all_idx[a][1]] + l_uni
-                                                t_uni = [tt.type for tt in tree[all_idx[a][0]:right_idx]] + \
-                                                        [2, 0] + \
-                                                        [tt.type for tt in tree[right_idx +
-                                                                                1:all_idx[a][1]]] + t_uni
+                                                l_uni = (
+                                                    labels[all_idx[a][0] : right_idx]
+                                                    + ["*", str(abs(nrep))]
+                                                    + labels[
+                                                        right_idx + 1 : all_idx[a][1]
+                                                    ]
+                                                    + l_uni
+                                                )
+                                                t_uni = (
+                                                    [
+                                                        tt.type
+                                                        for tt in tree[
+                                                            all_idx[a][0] : right_idx
+                                                        ]
+                                                    ]
+                                                    + [2, 0]
+                                                    + [
+                                                        tt.type
+                                                        for tt in tree[
+                                                            right_idx
+                                                            + 1 : all_idx[a][1]
+                                                        ]
+                                                    ]
+                                                    + t_uni
+                                                )
                                         if all_sign[a] == 1:
-                                            n_uni = n_uni + ['+']
+                                            n_uni = n_uni + ["+"]
                                         else:
-                                            n_uni = n_uni + ['-']
+                                            n_uni = n_uni + ["-"]
                                 elif all_sign[a] == 1:
                                     if nrep == 1:
-                                        l_uni = labels[all_idx[a]
-                                                       [0]:all_idx[a][1]] + l_uni
+                                        l_uni = (
+                                            labels[all_idx[a][0] : all_idx[a][1]]
+                                            + l_uni
+                                        )
                                         t_uni = [
-                                            tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-                                        n_uni = n_uni + ['+']
+                                            tt.type
+                                            for tt in tree[
+                                                all_idx[a][0] : all_idx[a][1]
+                                            ]
+                                        ] + t_uni
+                                        n_uni = n_uni + ["+"]
                                     elif nrep != 0:
-                                        l_uni = ['*', str(nrep)] + \
-                                            labels[all_idx[a][0]
-                                                :all_idx[a][1]] + l_uni
-                                        t_uni = [
-                                            2, 0] + [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-                                        n_uni = n_uni + ['+']
+                                        l_uni = (
+                                            ["*", str(nrep)]
+                                            + labels[all_idx[a][0] : all_idx[a][1]]
+                                            + l_uni
+                                        )
+                                        t_uni = (
+                                            [2, 0]
+                                            + [
+                                                tt.type
+                                                for tt in tree[
+                                                    all_idx[a][0] : all_idx[a][1]
+                                                ]
+                                            ]
+                                            + t_uni
+                                        )
+                                        n_uni = n_uni + ["+"]
                                 else:
                                     if abs(nrep) == 1:
-                                        l_uni = labels[all_idx[a]
-                                                       [0]:all_idx[a][1]] + l_uni
+                                        l_uni = (
+                                            labels[all_idx[a][0] : all_idx[a][1]]
+                                            + l_uni
+                                        )
                                         t_uni = [
-                                            tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-                                        n_uni = n_uni
+                                            tt.type
+                                            for tt in tree[
+                                                all_idx[a][0] : all_idx[a][1]
+                                            ]
+                                        ] + t_uni
+                                        # n_uni = n_uni
                                     elif nrep != 0:
-                                        l_uni = ['*', str(abs(nrep))] + \
-                                            labels[all_idx[a][0]
-                                                :all_idx[a][1]] + l_uni
-                                        t_uni = [
-                                            2, 0] + [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-                                        n_uni = n_uni
+                                        l_uni = (
+                                            ["*", str(abs(nrep))]
+                                            + labels[all_idx[a][0] : all_idx[a][1]]
+                                            + l_uni
+                                        )
+                                        t_uni = (
+                                            [2, 0]
+                                            + [
+                                                tt.type
+                                                for tt in tree[
+                                                    all_idx[a][0] : all_idx[a][1]
+                                                ]
+                                            ]
+                                            + t_uni
+                                        )
+                                        # n_uni = n_uni
 
                                     if nrep > 0:
-                                        n_uni = n_uni + ['+']
+                                        n_uni = n_uni + ["+"]
                                     elif nrep < 0:
-                                        n_uni = n_uni + ['-']
+                                        n_uni = n_uni + ["-"]
 
                         a = uni[plus_idx]
-                        nrep = [all_sign[b] for b in range(
-                            len(all_sign)) if (all_s[a] == all_s[b])]
+                        nrep = [
+                            all_sign[b]
+                            for b in range(len(all_sign))
+                            if (all_s[a] == all_s[b])
+                        ]
                         nrep = sum(nrep)
                         if nrep == 1:
-                            L = L + n_uni + \
-                                labels[all_idx[a][0]:all_idx[a][1]] + l_uni
-                            t = t + [2] * len(n_uni) + \
-                                [tt.type for tt in tree[all_idx[a]
-                                                        [0]:all_idx[a][1]]] + t_uni
+                            L = (
+                                L
+                                + n_uni
+                                + labels[all_idx[a][0] : all_idx[a][1]]
+                                + l_uni
+                            )
+                            t = (
+                                t
+                                + [2] * len(n_uni)
+                                + [
+                                    tt.type
+                                    for tt in tree[all_idx[a][0] : all_idx[a][1]]
+                                ]
+                                + t_uni
+                            )
                         else:
-                            L = L + n_uni + ['*', str(nrep)] + \
-                                labels[all_idx[a][0]:all_idx[a][1]] + l_uni
-                            t = t + [2] * len(n_uni) + [2, 0] + \
-                                [tt.type for tt in tree[all_idx[a]
-                                                        [0]:all_idx[a][1]]] + t_uni
+                            L = (
+                                L
+                                + n_uni
+                                + ["*", str(nrep)]
+                                + labels[all_idx[a][0] : all_idx[a][1]]
+                                + l_uni
+                            )
+                            t = (
+                                t
+                                + [2] * len(n_uni)
+                                + [2, 0]
+                                + [
+                                    tt.type
+                                    for tt in tree[all_idx[a][0] : all_idx[a][1]]
+                                ]
+                                + t_uni
+                            )
 
             L += labels[end_idx:]
             t += [tt.type for tt in tree[end_idx:]]
@@ -1488,10 +1964,9 @@ def find_additional_trees(tree, labels, basis_functions):
     while len(new_tree) != old_len:
         old_len = len(new_tree)
         for i in range(old_len):
-            L, s, n = update_tree(new_tree[i],
-                                  new_labels[i],
-                                  try_idx[i],
-                                  basis_functions)
+            L, s, n = update_tree(
+                new_tree[i], new_labels[i], try_idx[i], basis_functions
+            )
 
             if (s is not None) and (L not in new_labels):
                 if n == 1:
@@ -1501,7 +1976,7 @@ def find_additional_trees(tree, labels, basis_functions):
                     try_idx.append(0)
                 else:
                     for j in range(n):
-                        if (L[j] not in new_labels):
+                        if L[j] not in new_labels:
                             _, _, t = check_tree(s[j])
                             new_tree.append(t)
                             new_labels.append(L[j])
@@ -1514,54 +1989,76 @@ def find_additional_trees(tree, labels, basis_functions):
     while len(new_tree) != old_len:
         old_len = len(new_tree)
         for i in range(old_len):
-            L, s, n = update_sums(new_tree[i],
-                                  new_labels[i],
-                                  try_idx[i],
-                                  basis_functions)
+            L, s, n = update_sums(
+                new_tree[i], new_labels[i], try_idx[i], basis_functions
+            )
 
             if (s is not None) and (L not in new_labels):
                 if n == 1:
                     _, _, t = check_tree(s)
                     max_param = max(
-                        1, len([a for a in new_labels[i] if a.startswith('a')]))
-                    f = [node_to_string(
-                        0, new_tree[i], new_labels[i]), node_to_string(0, t, L)]
+                        1, len([a for a in new_labels[i] if a.startswith("a")])
+                    )
+                    f = [
+                        node_to_string(0, new_tree[i], new_labels[i]),
+                        node_to_string(0, t, L),
+                    ]
                     try:
                         _, sym = simplifier.initial_sympify(
-                            f, max_param, verbose=False, parallel=False)
+                            f, max_param, verbose=False, parallel=False
+                        )
                         if len(sym) != 1:
-                            print('Maybe bad (not keeping):',
-                                  new_labels[i], '\t', sym[0], '\t', sym[1])
+                            print(
+                                "Maybe bad (not keeping):",
+                                new_labels[i],
+                                "\t",
+                                sym[0],
+                                "\t",
+                                sym[1],
+                            )
                         else:
                             new_tree.append(t)
                             new_labels.append(L)
                             try_idx.append(0)
-                    except Exception:
-                        print('Failed sympy (not keeping):',
-                              new_labels[i], '\t', L)
+                    except Exception:  # noqa: BLE001
+                        print("Failed sympy (not keeping):", new_labels[i], "\t", L)
 
                 else:
                     for j in range(n):
-                        if (L[j] not in new_labels):
+                        if L[j] not in new_labels:
                             _, _, t = check_tree(s[j])
                             max_param = max(
-                                1, len([a for a in new_labels[i] if a.startswith('a')]))
-                            f = [node_to_string(
-                                0, new_tree[i], new_labels[i]), node_to_string(0, t, L[j])]
+                                1, len([a for a in new_labels[i] if a.startswith("a")])
+                            )
+                            f = [
+                                node_to_string(0, new_tree[i], new_labels[i]),
+                                node_to_string(0, t, L[j]),
+                            ]
                             try:
                                 _, sym = simplifier.initial_sympify(
-                                    f, max_param, verbose=False, parallel=False)
+                                    f, max_param, verbose=False, parallel=False
+                                )
                                 # if not sym[0].equals(sym[1]):
                                 if len(sym) != 1:
-                                    print('Maybe bad (not keeping):',
-                                          new_labels[i], '\t', sym[0], '\t', sym[1])
+                                    print(
+                                        "Maybe bad (not keeping):",
+                                        new_labels[i],
+                                        "\t",
+                                        sym[0],
+                                        "\t",
+                                        sym[1],
+                                    )
                                 else:
                                     new_tree.append(t)
                                     new_labels.append(L[j])
                                     try_idx.append(0)
-                            except Exception:
-                                print('Failed sympy (not keeping):',
-                                      new_labels[i], '\t', L[j])
+                            except Exception:  # noqa: BLE001
+                                print(
+                                    "Failed sympy (not keeping):",
+                                    new_labels[i],
+                                    "\t",
+                                    L[j],
+                                )
 
             if n <= 1:
                 try_idx[i] += 1
@@ -1595,11 +2092,11 @@ def shape_to_functions(s, basis_functions):
 
     # Rename parameters so appear in order
     for i in range(len(t0)):
-        indices = [j for j, x in enumerate(t0[i]) if x == 'a']
+        indices = [j for j, x in enumerate(t0[i]) if x == "a"]
         for j in range(len(indices)):
-            t0[i][indices[j]] = 'a%i' % j
+            t0[i][indices[j]] = f"a{j}"
 
-    success, part_considered, tree = check_tree(s)
+    _success, _part_considered, tree = check_tree(s)
 
     all_fun = [None] * (len(t0) * len(t1) * len(t2))
     if rank == 0:
@@ -1608,10 +2105,10 @@ def shape_to_functions(s, basis_functions):
         all_tree = None
 
     pos = 0
-    labels = np.empty(len(s), dtype='U100')
-    m0 = (s == 0)
-    m1 = (s == 1)
-    m2 = (s == 2)
+    labels = np.empty(len(s), dtype="U100")
+    m0 = s == 0
+    m1 = s == 1
+    m2 = s == 2
 
     t0 = np.array(t0)
     t1 = np.array(t1)
@@ -1644,12 +2141,14 @@ def shape_to_functions(s, basis_functions):
 
                 if (pos >= imin) and (pos < imax):
                     new_tree, new_labels = find_additional_trees(
-                        tree, list(labels), basis_functions)
+                        tree, list(labels), basis_functions
+                    )
                     if len(new_tree) > 1:
                         for n in range(1, len(new_tree)):
                             extra_tree.append(new_labels[n].copy())
-                            extra_fun.append(node_to_string(
-                                0, new_tree[n], new_labels[n]))
+                            extra_fun.append(
+                                node_to_string(0, new_tree[n], new_labels[n])
+                            )
                             extra_orig.append(all_fun[pos])
                 pos += 1
 
@@ -1689,8 +2188,8 @@ def labels_to_shape(labels, basis_functions):
     for i, t in enumerate(labels):
         try:
             s[i] = basis_dict[t]
-        except Exception:
-            if (t.startswith('a') and t[1:].isdigit()) or (is_float(t)):
+        except Exception:  # noqa: BLE001
+            if (t.startswith("a") and t[1:].isdigit()) or (is_float(t)):
                 s[i] = 0
             else:
                 raise ValueError
@@ -1709,10 +2208,10 @@ def aifeyn_complexity(tree, param_list):
 
     """
 
-    t = [tt for tt in tree if (tt not in param_list) and (
-        not tt.lstrip("-").isdigit())]  #  Operators
-    n = np.array([int(tt)
-                 for tt in tree if tt.lstrip("-").isdigit()])  # Integers
+    t = [
+        tt for tt in tree if (tt not in param_list) and (not tt.lstrip("-").isdigit())
+    ]  #  Operators
+    n = np.array([int(tt) for tt in tree if tt.lstrip("-").isdigit()])  # Integers
     n[n == 0] = 1  #  So we have log(1) for 0 instead of log(0)
     has_param = int(len(t) != len(tree))  #  Has either an a0 or an integer
     nop = len(set(t)) + has_param
@@ -1741,14 +2240,14 @@ def generate_equations(compl, basis_functions, dirname):
     nfun = np.prod(nfun, axis=1)
 
     if rank == 0:
-        print('\nNumber of topologies:', shapes.shape[0])
+        print("\nNumber of topologies:", shapes.shape[0])
         for i in range(shapes.shape[0]):
             print(shapes[i, :], int(nfun[i]))
         sys.stdout.flush()
 
     nfun = np.sum(nfun)
     if rank == 0:
-        print('\nOriginal number of trees:', int(nfun))
+        print("\nOriginal number of trees:", int(nfun))
     sys.stdout.flush()
 
     all_fun = [None] * len(shapes)
@@ -1759,8 +2258,8 @@ def generate_equations(compl, basis_functions, dirname):
 
     # Clear the files
     if rank == 0:
-        for fname in ['orig_trees', 'extra_trees', 'orig_aifeyn', 'extra_aifeyn']:
-            with open(dirname + '/%s_%i.txt' % (fname, compl), 'w') as f:
+        for fname in ["orig_trees", "extra_trees", "orig_aifeyn", "extra_aifeyn"]:
+            with open(f"{dirname}/{fname}_{compl}.txt", "w") as f:
                 pass
 
     ntree = 0
@@ -1768,55 +2267,54 @@ def generate_equations(compl, basis_functions, dirname):
 
     for i in range(len(shapes)):
         if rank == 0:
-            print('%i of %i' % (i+1, len(shapes)))
+            print(f"{i+1} of {len(shapes)}")
             sys.stdout.flush()
-        all_fun[i], all_tree, extra_fun[i], extra_tree, extra_orig[i] = shape_to_functions(
-            shapes[i], basis_functions)
+        all_fun[i], all_tree, extra_fun[i], extra_tree, extra_orig[i] = (
+            shape_to_functions(shapes[i], basis_functions)
+        )
 
         if rank == 0:
             ntree += len(all_tree)
             nextratree += len(extra_tree)
 
         max_param = simplifier.get_max_param(all_fun[i], verbose=False)
-        param_list = ['a%i' % j for j in range(max_param)]
+        param_list = [f"a{j}" for j in range(max_param)]
 
         if rank == 0:
 
-            with open(dirname + '/orig_trees_%i.txt' % compl, 'a') as f:
+            with open(f"{dirname}/orig_trees_{compl}.txt", "a") as f:
                 w = 80
                 pp = pprint.PrettyPrinter(width=w, stream=f)
                 for t in all_tree:
                     s = str(t)
-                    if len(s + '\n') > w / 2:
+                    if len(s + "\n") > w / 2:
                         w = 2 * len(s)
                         pp = pprint.PrettyPrinter(width=w, stream=f)
                     pp.pprint(s)
 
-            with open(dirname + '/extra_trees_%i.txt' % compl, 'a') as f:
+            with open(f"{dirname}/extra_trees_{compl}.txt", "a") as f:
                 w = 80
                 pp = pprint.PrettyPrinter(width=w, stream=f)
                 for t in extra_tree:
                     s = str(t)
-                    if len(s + '\n') > w / 2:
+                    if len(s + "\n") > w / 2:
                         w = 2 * len(s)
                         pp = pprint.PrettyPrinter(width=w, stream=f)
                     pp.pprint(s)
 
-            with open(dirname + '/orig_aifeyn_%i.txt' % compl, 'a') as f:
+            with open(f"{dirname}/orig_aifeyn_{compl}.txt", "a") as f:
                 for tree in all_tree:
                     print(aifeyn_complexity(tree, param_list), file=f)
 
-            with open(dirname + '/extra_aifeyn_%i.txt' % compl, 'a') as f:
+            with open(f"{dirname}/extra_aifeyn_{compl}.txt", "a") as f:
                 for tree in extra_tree:
                     print(aifeyn_complexity(tree, param_list), file=f)
 
     if rank == 0:
-        s = 'cat %s/orig_trees_%i.txt %s/extra_trees_%i.txt > %s/trees_%i.txt' % (
-            dirname, compl, dirname, compl, dirname, compl)
+        s = f"cat {dirname}/orig_trees_{compl}.txt {dirname}/extra_trees_{compl}.txt > {dirname}/trees_{compl}.txt"
         sys.stdout.flush()
         os.system(s)
-        s = 'cat %s/orig_aifeyn_%i.txt %s/extra_aifeyn_%i.txt > %s/aifeyn_%i.txt' % (
-            dirname, compl, dirname, compl, dirname, compl)
+        s = f"cat {dirname}/orig_aifeyn_{compl}.txt {dirname}/extra_aifeyn_{compl}.txt > {dirname}/aifeyn_{compl}.txt"
         sys.stdout.flush()
         os.system(s)
 
@@ -1827,7 +2325,7 @@ def generate_equations(compl, basis_functions, dirname):
     all_fun = all_fun + extra_fun
 
     if rank == 0:
-        print('\nNew number of trees:', len(all_fun))
+        print("\nNew number of trees:", len(all_fun))
     sys.stdout.flush()
 
     return all_fun, extra_orig

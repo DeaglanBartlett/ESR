@@ -55,10 +55,10 @@ utils
 fitting
 -------
 
-combine_DL
+combine_dl
 ~~~~~~~~~~
 
-.. automodule:: fitting.combine_DL
+.. automodule:: fitting.combine_dl
    :members:
    :undoc-members:
    :show-inheritance:
@@ -118,10 +118,10 @@ test_all
    :show-inheritance:
 
 
-test_all_Fisher
+test_all_fisher
 ~~~~~~~~~~~~~~~
 
-.. automodule:: fitting.test_all_Fisher
+.. automodule:: fitting.test_all_fisher
    :members:
    :undoc-members:
    :show-inheritance:

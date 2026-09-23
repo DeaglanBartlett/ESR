@@ -1,17 +1,15 @@
+import os
+import warnings
+
 import astropy.constants
 import astropy.units as apu
 import numpy as np
 import scipy.integrate
 import sympy
-import os
-import warnings
 
-from esr.fitting.sympy_symbols import (
-    square, cube, sqrt, log, pow, x, a0, a1, a2, inv
-)
-
-from esr.generation.simplifier import time_limit
 import esr.generation.simplifier
+from esr.fitting.sympy_symbols import a0, a1, a2, cube, inv, log, pow, sqrt, square, x
+from esr.generation.simplifier import time_limit
 
 
 class Likelihood:
@@ -37,17 +35,31 @@ class Likelihood:
     # ``test_all.ensure_likelihood_catalogue``.
     use_likelihood_catalogue = False
 
-    def __init__(self, data_file, cov_file, run_name, data_dir=None,
-                 fn_set='core_maths', fn_dir=None, base_out_dir=None):
+    def __init__(
+        self,
+        data_file,
+        cov_file,
+        run_name,
+        data_dir=None,
+        fn_set="core_maths",
+        fn_dir=None,
+        base_out_dir=None,
+    ):
 
-        esr_dir = os.path.abspath(os.path.join(os.path.dirname(
-            esr.generation.simplifier.__file__), '..', '')) + '/'
+        esr_dir = (
+            os.path.abspath(
+                os.path.join(
+                    os.path.dirname(esr.generation.simplifier.__file__), "..", ""
+                )
+            )
+            + "/"
+        )
         if data_dir is None:
-            self.data_dir = esr_dir + '/data/'
+            self.data_dir = esr_dir + "/data/"
         else:
             self.data_dir = data_dir
-        self.data_file = self.data_dir + '/' + data_file
-        self.cov_file = self.data_dir + '/' + cov_file
+        self.data_file = self.data_dir + "/" + data_file
+        self.cov_file = self.data_dir + "/" + cov_file
         # Directory holding the generated function catalogue this likelihood
         # reads from. Override it (and pass the same path to
         # ``duplicate_checker.main(..., fn_dir=...)``) to keep generation and
@@ -55,7 +67,7 @@ class Likelihood:
         if fn_dir is None:
             self.fn_dir = esr_dir + "function_library/" + fn_set + "/"
         else:
-            self.fn_dir = os.path.abspath(fn_dir) + '/'
+            self.fn_dir = os.path.abspath(fn_dir) + "/"
         if data_dir is None:
             self.like_dir = esr_dir + "/fitting/"
         else:
@@ -63,7 +75,7 @@ class Likelihood:
         if not os.path.isdir(self.like_dir):
             os.makedirs(self.like_dir, exist_ok=True)
         self.fnprior_prefix = "aifeyn_"
-        self.combineDL_prefix = "combine_DL_"
+        self.combineDL_prefix = "combine_dl_"
         self.final_prefix = "final_"
 
         # Base directory for all fitting output. Override to isolate the output
@@ -72,7 +84,7 @@ class Likelihood:
         if base_out_dir is None:
             self.base_out_dir = self.like_dir + "/output/"
         else:
-            self.base_out_dir = os.path.abspath(base_out_dir) + '/'
+            self.base_out_dir = os.path.abspath(base_out_dir) + "/"
         self.temp_dir = self.base_out_dir + "/partial_" + run_name
         self.out_dir = self.base_out_dir + "/output_" + run_name
         self.fig_dir = self.base_out_dir + "/figs_" + run_name
@@ -94,12 +106,11 @@ class Likelihood:
         """
         try:
             return eq_numpy(x, *a)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return np.inf
 
     def clear_data(self):
         """Clear data used for numerical integration (not required in most cases)"""
-        pass
 
     def run_sympify(self, fcn_i, **kwargs):
         """Sympify a function
@@ -114,20 +125,24 @@ class Likelihood:
 
         """
 
-        fcn_i = fcn_i.replace('\n', '')
-        fcn_i = fcn_i.replace('\'', '')
+        fcn_i = fcn_i.replace("\n", "")
+        fcn_i = fcn_i.replace("'", "")
 
-        eq = sympy.sympify(fcn_i,
-                           locals={"inv": inv,
-                                   "square": square,
-                                   "cube": cube,
-                                   "sqrt": sqrt,
-                                   "log": log,
-                                   "pow": pow,
-                                   "x": x,
-                                   "a0": a0,
-                                   "a1": a1,
-                                   "a2": a2})
+        eq = sympy.sympify(
+            fcn_i,
+            locals={
+                "inv": inv,
+                "square": square,
+                "cube": cube,
+                "sqrt": sqrt,
+                "log": log,
+                "pow": pow,
+                "x": x,
+                "a0": a0,
+                "a1": a1,
+                "a2": a2,
+            },
+        )
         return fcn_i, eq, False
 
 
@@ -139,17 +154,21 @@ class CCLikelihood(Likelihood):
 
     def __init__(self, fn_dir=None, base_out_dir=None):
 
-        super().__init__('CC_Hubble.dat', 'CC_Hubble.dat', 'cc_dimful',
-                         fn_dir=fn_dir, base_out_dir=base_out_dir)
+        super().__init__(
+            "CC_Hubble.dat",
+            "CC_Hubble.dat",
+            "cc_dimful",
+            fn_dir=fn_dir,
+            base_out_dir=base_out_dir,
+        )
 
-        self.Hfid = 1.
-        self.ylabel = r'$H \left( z \right) \ / \ H_{\rm fid}$'  # for plotting
-        self.xvar, self.yvar, self.yerr = np.genfromtxt(
-            self.data_file, unpack=True)
+        self.Hfid = 1.0
+        self.ylabel = r"$H \left( z \right) \ / \ H_{\rm fid}$"  # for plotting
+        self.xvar, self.yvar, self.yerr = np.genfromtxt(self.data_file, unpack=True)
         self.xvar += 1
         self.yvar /= self.Hfid
         self.yerr /= self.Hfid
-        self.inv_cov = 1 / self.yerr ** 2
+        self.inv_cov = 1 / self.yerr**2
 
     def get_pred(self, zp1, a, eq_numpy, **kwargs):
         """Return the predicted H(z), which is the square root of the functions we are using.
@@ -193,10 +212,11 @@ class PanthLikelihood(Likelihood):
     def __init__(self, fn_dir=None, base_out_dir=None):
 
         super().__init__(
-            '/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES.dat',
-            '/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STAT+SYS.cov',
-            'panth_dimful',
-            fn_dir=fn_dir, base_out_dir=base_out_dir,
+            "/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES.dat",
+            "/DataRelease/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES_STAT+SYS.cov",
+            "panth_dimful",
+            fn_dir=fn_dir,
+            base_out_dir=base_out_dir,
         )
 
         self.Hfid = 1.0 * apu.km / apu.s / apu.Mpc
@@ -225,23 +245,23 @@ class PanthLikelihood(Likelihood):
         #                 if ww[j]:
         #                     C[ii, jj] = val
 
-        self.ylabel = r'$\mu \left( z \right)$'
+        self.ylabel = r"$\mu \left( z \right)$"
         # self.xvar = zCMB.to_numpy() + 1
         # self.yvar = mu_obs.to_numpy()
         # self.inv_cov = np.linalg.inv(C)
         # self.yerr = mu_err.to_numpy()
-        # np.savez(self.data_dir + '/pantheon_data.npz', 
+        # np.savez(self.data_dir + '/pantheon_data.npz',
         #          xvar=self.xvar, yvar=self.yvar, yerr=self.yerr,
         #          inv_cov=self.inv_cov)
 
-        data = np.load(self.data_dir + '/pantheon_data.npz')
-        self.xvar = data['xvar']
-        self.yvar = data['yvar']
-        self.yerr = data['yerr']
-        self.inv_cov = data['inv_cov']
+        data = np.load(self.data_dir + "/pantheon_data.npz")
+        self.xvar = data["xvar"]
+        self.yvar = data["yvar"]
+        self.yerr = data["yerr"]
+        self.inv_cov = data["inv_cov"]
 
         self.mu_const = astropy.constants.c / self.Hfid / (10 * apu.pc)
-        self.mu_const = 5 * np.log10(self.mu_const.to(''))
+        self.mu_const = 5 * np.log10(self.mu_const.to(""))
 
         self.delta_z = 0.02
         self.min_nz = 10
@@ -273,13 +293,18 @@ class PanthLikelihood(Likelihood):
             if self.data_x is None or self.data_mask is None:
                 nx = int(np.ceil((zp1.max() - zp1.min()) / self.delta_z))
                 self.data_x = np.concatenate(
-                    (np.linspace(1, zp1.min(), self.min_nz),
-                     np.linspace(zp1.min() + self.delta_z,
-                                 zp1.max() + self.delta_z, nx),
-                     zp1))
+                    (
+                        np.linspace(1, zp1.min(), self.min_nz),
+                        np.linspace(
+                            zp1.min() + self.delta_z, zp1.max() + self.delta_z, nx
+                        ),
+                        zp1,
+                    )
+                )
                 self.data_x = np.sort(np.unique(self.data_x))
                 self.data_mask = np.squeeze(
-                    np.array([np.where(self.data_x == d)[0] for d in zp1]))
+                    np.array([np.where(self.data_x == d)[0] for d in zp1])
+                )
 
             if len(a) == 0:
                 dL = 1 / np.sqrt(eq_numpy(self.data_x))
@@ -290,8 +315,7 @@ class PanthLikelihood(Likelihood):
             if np.isscalar(dL):
                 dL = np.full(len(self.data_x), dL)
 
-            dL = scipy.integrate.cumulative_trapezoid(
-                dL, x=self.data_x, initial=0)
+            dL = scipy.integrate.cumulative_trapezoid(dL, x=self.data_x, initial=0)
             dL = dL[self.data_mask]
 
         dL *= zp1
@@ -310,12 +334,14 @@ class PanthLikelihood(Likelihood):
             :nll (float): - log(likelihood) for this function and parameters
 
         """
-        mu_pred = self.get_pred(self.xvar, np.atleast_1d(
-            a), eq_numpy, integrated=integrated)
+        mu_pred = self.get_pred(
+            self.xvar, np.atleast_1d(a), eq_numpy, integrated=integrated
+        )
         if not np.all(np.isreal(mu_pred)):
             return np.inf
-        nll = 0.5 * np.dot((mu_pred - self.yvar),
-                           np.dot(self.inv_cov, (mu_pred - self.yvar)))
+        nll = 0.5 * np.dot(
+            (mu_pred - self.yvar), np.dot(self.inv_cov, (mu_pred - self.yvar))
+        )
         if np.isnan(nll):
             return np.inf
         return nll
@@ -335,20 +361,24 @@ class PanthLikelihood(Likelihood):
 
         """
 
-        fcn_i = fcn_i.replace('\n', '')
-        fcn_i = fcn_i.replace('\'', '')
+        fcn_i = fcn_i.replace("\n", "")
+        fcn_i = fcn_i.replace("'", "")
 
-        eq = sympy.sympify(fcn_i,
-                           locals={"inv": inv,
-                                   "square": square,
-                                   "cube": cube,
-                                   "sqrt": sqrt,
-                                   "log": log,
-                                   "pow": pow,
-                                   "x": x,
-                                   "a0": a0,
-                                   "a1": a1,
-                                   "a2": a2})
+        eq = sympy.sympify(
+            fcn_i,
+            locals={
+                "inv": inv,
+                "square": square,
+                "cube": cube,
+                "sqrt": sqrt,
+                "log": log,
+                "pow": pow,
+                "x": x,
+                "a0": a0,
+                "a1": a1,
+                "a2": a2,
+            },
+        )
 
         if try_integration:
             try:
@@ -358,7 +388,7 @@ class PanthLikelihood(Likelihood):
                         raise ValueError
                     eq = eq2
                     integrated = True
-            except Exception:
+            except Exception:  # noqa: BLE001
                 integrated = False
         else:
             integrated = False
@@ -376,23 +406,23 @@ class MockLikelihood(Likelihood):
 
     """
 
-    def __init__(self, nz, yfracerr, data_dir=None, fn_dir=None,
-                 base_out_dir=None):
+    def __init__(self, nz, yfracerr, data_dir=None, fn_dir=None, base_out_dir=None):
         super().__init__(
-            '/mock/CC_Hubble_%i_' % nz + str(yfracerr) + '.dat',
-            '/mock/CC_Hubble_%i_' % nz + str(yfracerr) + '.dat',
-            'mock_%i_' % nz + str(yfracerr),
-            data_dir=data_dir, fn_dir=fn_dir, base_out_dir=base_out_dir
+            f"/mock/CC_Hubble_{nz}_{yfracerr}.dat",
+            f"/mock/CC_Hubble_{nz}_{yfracerr}.dat",
+            f"mock_{nz}_{yfracerr}",
+            data_dir=data_dir,
+            fn_dir=fn_dir,
+            base_out_dir=base_out_dir,
         )
 
-        self.Hfid = 1.
-        self.ylabel = r'$H \left( z \right) \ / \ H_{\rm fid}$'  # for plotting
-        self.xvar, self.yvar, self.yerr = np.genfromtxt(
-            self.data_file, unpack=True)
+        self.Hfid = 1.0
+        self.ylabel = r"$H \left( z \right) \ / \ H_{\rm fid}$"  # for plotting
+        self.xvar, self.yvar, self.yerr = np.genfromtxt(self.data_file, unpack=True)
         self.xvar += 1
         self.yvar /= self.Hfid
         self.yerr /= self.Hfid
-        self.inv_cov = 1 / self.yerr ** 2
+        self.inv_cov = 1 / self.yerr**2
 
     def get_pred(self, zp1, a, eq_numpy, **kwargs):
         """Return the predicted H(z), which is the square root of the functions we are using.
@@ -446,17 +476,32 @@ class MSE(Likelihood):
 
     """
 
-    def __init__(self, data_file, run_name, data_dir=None, fn_set='core_maths',
-                 fn_dir=None, base_out_dir=None):
+    def __init__(
+        self,
+        data_file,
+        run_name,
+        data_dir=None,
+        fn_set="core_maths",
+        fn_dir=None,
+        base_out_dir=None,
+    ):
 
-        super().__init__(data_file, data_file, run_name, data_dir=data_dir,
-                         fn_set=fn_set, fn_dir=fn_dir, base_out_dir=base_out_dir)
-        self.ylabel = r'$y$'    # for plotting
-        self.xvar, self.yvar, self.yerr = np.loadtxt(
-            self.data_file, unpack=True)
-        self.yerr = 0.
+        super().__init__(
+            data_file,
+            data_file,
+            run_name,
+            data_dir=data_dir,
+            fn_set=fn_set,
+            fn_dir=fn_dir,
+            base_out_dir=base_out_dir,
+        )
+        self.ylabel = r"$y$"  # for plotting
+        self.xvar, self.yvar, self.yerr = np.loadtxt(self.data_file, unpack=True)
+        self.yerr = 0.0
 
-        warnings.warn("You are using the MSE class. MSE is NOT a likelihood in the probabilistic sense. It should not be used for MDL calculations as the answer will be nonesense since an uncertainty is required for MDL to have meaning.")
+        warnings.warn(
+            "You are using the MSE class. MSE is NOT a likelihood in the probabilistic sense. It should not be used for MDL calculations as the answer will be nonesense since an uncertainty is required for MDL to have meaning."
+        )
         self.is_mse = True  #  Warning to not use MSE for DL
 
     def negloglike(self, a, eq_numpy, **kwargs):
@@ -495,14 +540,27 @@ class GaussLikelihood(Likelihood):
 
     """
 
-    def __init__(self, data_file, run_name, data_dir=None, fn_set='core_maths',
-                 fn_dir=None, base_out_dir=None):
+    def __init__(
+        self,
+        data_file,
+        run_name,
+        data_dir=None,
+        fn_set="core_maths",
+        fn_dir=None,
+        base_out_dir=None,
+    ):
 
-        super().__init__(data_file, data_file, run_name, data_dir=data_dir,
-                         fn_set=fn_set, fn_dir=fn_dir, base_out_dir=base_out_dir)
-        self.ylabel = r'$y$'    # for plotting
-        self.xvar, self.yvar, self.yerr = np.loadtxt(
-            self.data_file, unpack=True)
+        super().__init__(
+            data_file,
+            data_file,
+            run_name,
+            data_dir=data_dir,
+            fn_set=fn_set,
+            fn_dir=fn_dir,
+            base_out_dir=base_out_dir,
+        )
+        self.ylabel = r"$y$"  # for plotting
+        self.xvar, self.yvar, self.yerr = np.loadtxt(self.data_file, unpack=True)
 
     def negloglike(self, a, eq_numpy, **kwargs):
         """Negative log-likelihood for a given function.
@@ -520,8 +578,11 @@ class GaussLikelihood(Likelihood):
         ypred = self.get_pred(self.xvar, np.atleast_1d(a), eq_numpy)
         if not np.all(np.isreal(ypred)):
             return np.inf
-        nll = np.sum(0.5 * (ypred - self.yvar) ** 2 / self.yerr **
-                     2 + 0.5 * np.log(2 * np.pi) + np.log(self.yerr))
+        nll = np.sum(
+            0.5 * (ypred - self.yvar) ** 2 / self.yerr**2
+            + 0.5 * np.log(2 * np.pi)
+            + np.log(self.yerr)
+        )
         if np.isnan(nll):
             return np.inf
         return nll
@@ -540,12 +601,26 @@ class PoissonLikelihood(Likelihood):
 
     """
 
-    def __init__(self, data_file, run_name, data_dir=None, fn_set='core_maths',
-                 fn_dir=None, base_out_dir=None):
+    def __init__(
+        self,
+        data_file,
+        run_name,
+        data_dir=None,
+        fn_set="core_maths",
+        fn_dir=None,
+        base_out_dir=None,
+    ):
 
-        super().__init__(data_file, data_file, run_name, data_dir=data_dir,
-                         fn_set=fn_set, fn_dir=fn_dir, base_out_dir=base_out_dir)
-        self.ylabel = r'$y$'    # for plotting
+        super().__init__(
+            data_file,
+            data_file,
+            run_name,
+            data_dir=data_dir,
+            fn_set=fn_set,
+            fn_dir=fn_dir,
+            base_out_dir=base_out_dir,
+        )
+        self.ylabel = r"$y$"  # for plotting
         self.xvar, self.yvar = np.loadtxt(self.data_file, unpack=True)
         self.yerr = np.sqrt(self.yvar)
 

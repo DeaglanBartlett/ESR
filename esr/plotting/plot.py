@@ -20,18 +20,18 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
         return
 
     all_f = os.listdir(dirname)
-    all_f = [f for f in all_f if f.startswith('final_')]
+    all_f = [f for f in all_f if f.startswith("final_")]
     all_f.sort()
     print(all_f)
-    all_comp = [int(f[len('final_'):-len('.dat')]) for f in all_f]
+    all_comp = [int(f[len("final_") : -len(".dat")]) for f in all_f]
     all_logL = np.empty(len(all_comp))
     all_DL = np.empty(len(all_comp))
 
     for i, fname in enumerate(all_f):
         print(i, fname)
 
-        with open(dirname + '/' + fname, 'r') as f:
-            reader = csv.reader(f, delimiter=';')
+        with open(dirname + "/" + fname, "r") as f:
+            reader = csv.reader(f, delimiter=";")
             data = [row for row in reader]
             data = np.array([d[2:7] for d in data], dtype=float)
 
@@ -39,7 +39,7 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
         try:
             all_DL[i] = np.nanmin(data[:, 0])
             all_logL[i] = np.nanmin(data[:, 2])
-        except Exception:
+        except Exception:  # noqa: BLE001
             all_DL[i] = np.nan
             all_logL[i] = np.nan
 
@@ -52,22 +52,22 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
     all_logL = all_logL[m]
 
     fig, ax1 = plt.subplots(1, 1, figsize=(5, 3.5), sharex=True)
-    cm = plt.get_cmap('Set1')
+    cm = plt.get_cmap("Set1")
 
     if do_DL and do_logL:
         ax2 = ax1.twinx()
-        ax1.plot(all_comp, all_DL, marker='.', color=cm(0), markersize=5)
-        ax2.plot(all_comp, all_logL, marker='.', color=cm(1), markersize=5)
+        ax1.plot(all_comp, all_DL, marker=".", color=cm(0), markersize=5)
+        ax2.plot(all_comp, all_logL, marker=".", color=cm(1), markersize=5)
 
-        ax1.set_ylabel(r'$\Delta L \left( D \right)$')
-        ax2.set_ylabel(r'$ \left| \Delta \log\mathcal{L} \right|$')
+        ax1.set_ylabel(r"$\Delta L \left( D \right)$")
+        ax2.set_ylabel(r"$ \left| \Delta \log\mathcal{L} \right|$")
         ax1.yaxis.label.set_color(cm(0))
-        ax1.tick_params(axis='y', colors=cm(0))
-        ax2.spines['left'].set_color(cm(0))
+        ax1.tick_params(axis="y", colors=cm(0))
+        ax2.spines["left"].set_color(cm(0))
 
         ax2.yaxis.label.set_color(cm(1))
-        ax2.tick_params(axis='y', colors=cm(1))
-        ax2.spines['right'].set_color(cm(1))
+        ax2.tick_params(axis="y", colors=cm(1))
+        ax2.spines["right"].set_color(cm(1))
 
         ax2.set_ylim(0, None)
 
@@ -79,23 +79,23 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
             y = all_logL
             c = cm(1)
 
-        ax1.plot(all_comp, y, marker='.', color=c, markersize=5)
+        ax1.plot(all_comp, y, marker=".", color=c, markersize=5)
 
         if do_DL:
-            ax1.set_ylabel(r'$\Delta L \left( D \right)$')
+            ax1.set_ylabel(r"$\Delta L \left( D \right)$")
         else:
-            ax1.set_ylabel(r'$ \left| \Delta \log\mathcal{L} \right|$')
+            ax1.set_ylabel(r"$ \left| \Delta \log\mathcal{L} \right|$")
         ax1.yaxis.label.set_color(c)
-        ax1.tick_params(axis='y', colors=c)
+        ax1.tick_params(axis="y", colors=c)
 
     ax1.set_ylim(0, None)
     ax1.set_xticks(all_comp)
     ax1.set_xticklabels(all_comp)
-    ax1.set_xlabel(r'Complexity')
+    ax1.set_xlabel(r"Complexity")
 
     fig.tight_layout()
-    fig.savefig(dirname + '/' + savename, bbox_inches='tight')
-    print(dirname + '/' + savename)
+    fig.savefig(dirname + "/" + savename, bbox_inches="tight")
+    print(dirname + "/" + savename)
     plt.show()
 
     return

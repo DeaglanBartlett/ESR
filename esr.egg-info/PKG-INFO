@@ -13,6 +13,7 @@ Classifier: Operating System :: POSIX :: Linux
 Classifier: Programming Language :: Python :: 3
 Requires-Dist: sympy
 Requires-Dist: myst-parser
+Requires-Dist: myst-nb
 Requires-Dist: numpy
 Requires-Dist: scipy
 Requires-Dist: matplotlib

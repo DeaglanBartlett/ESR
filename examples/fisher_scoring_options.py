@@ -37,9 +37,9 @@ from mpi4py import MPI
 
 import esr.generation.duplicate_checker
 import esr.fitting.test_all
-import esr.fitting.test_all_Fisher
+import esr.fitting.test_all_fisher
 import esr.fitting.match
-import esr.fitting.combine_DL
+import esr.fitting.combine_dl
 from esr.fitting.fit_single import fit_from_string
 from esr.fitting.likelihood import GaussLikelihood
 
@@ -94,10 +94,10 @@ if catalogue_missing:
 esr.fitting.test_all.main(comp, likelihood)
 
 for use_det_I, snap_choice in settings:
-    esr.fitting.test_all_Fisher.main(comp, likelihood, use_det_I=use_det_I,
+    esr.fitting.test_all_fisher.main(comp, likelihood, use_det_I=use_det_I,
                                      snap_choice=snap_choice)
     esr.fitting.match.main(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
     if rank == 0:
         shutil.copy(
             os.path.join(likelihood.out_dir, f'final_{comp}.dat'),

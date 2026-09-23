@@ -1,19 +1,24 @@
+import itertools
+import sys
+import warnings
+
 import numpy as np
 import sympy
 from mpi4py import MPI
-import warnings
-import itertools
-import esr.fitting.test_all as test_all
-import esr.fitting.test_all_Fisher as test_all_Fisher
+
+from esr.fitting import test_all, test_all_fisher
+from esr.fitting.sympy_symbols import a0, x
 from esr.fitting.utils import (
-    combine_temp_files, fitting_paths, likelihood_catalogue_paths,
-    raw_catalogue_paths)
-from esr.fitting.sympy_symbols import x, a0
-import esr.generation.simplifier as simplifier
+    combine_temp_files,
+    fitting_paths,
+    likelihood_catalogue_paths,
+    raw_catalogue_paths,
+)
+from esr.generation import simplifier
 
 # Suppress the numpy/scipy RuntimeWarnings raised in bulk while re-evaluating
 # functions, but leave other categories (including unrelated user warnings)
-# untouched. Diagnostics use test_all_Fisher.emit_diagnostic_warning.
+# untouched. Diagnostics use test_all_fisher.emit_diagnostic_warning.
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 comm = MPI.COMM_WORLD
@@ -45,17 +50,18 @@ def _variant_negloglike(likelihood, fcn_i, theta_vec, tmax, try_integration):
     n = len(theta_vec)
     try:
         _, eq, integrated = likelihood.run_sympify(
-            fcn_i, tmax=tmax, try_integration=try_integration)
+            fcn_i, tmax=tmax, try_integration=try_integration
+        )
     except NameError:
         if not try_integration:
             raise
         _, eq, integrated = likelihood.run_sympify(
-            fcn_i, tmax=tmax, try_integration=False)
+            fcn_i, tmax=tmax, try_integration=False
+        )
     if n == 1:
         eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
     else:
-        all_a = list(sympy.symbols(
-            ' '.join(f'a{j}' for j in range(n)), real=True))
+        all_a = list(sympy.symbols(" ".join(f"a{j}" for j in range(n)), real=True))
         eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
     return likelihood.negloglike(list(theta_vec), eq_numpy, integrated=integrated)
 
@@ -74,12 +80,21 @@ def _require_catalogue_rows(what, n_rows, n_unique):
     """
     if n_rows != n_unique:
         raise ValueError(
-            f'{what} has {n_rows} rows but the active catalogue has {n_unique} '
-            'unique equations. Rerun test_all.main and test_all_Fisher.main '
-            'with the current catalogue/settings.')
+            f"{what} has {n_rows} rows but the active catalogue has {n_unique} "
+            "unique equations. Rerun test_all.main and test_all_fisher.main "
+            "with the current catalogue/settings."
+        )
 
 
-def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_integration=False, print_frequency=1000 ):
+def check_match_results(
+    comp,
+    likelihood,
+    rtol=1e-5,
+    atol=1e-8,
+    tmax=5,
+    try_integration=False,
+    print_frequency=1000,
+):
     """
     Check that the matches have been done correctly by re-evaluating the likelihoods of all functions
     from the output
@@ -92,7 +107,7 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
         :tmax (float, default=5.): maximum time in seconds to run any one part of simplification procedure for a given function
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :print_frequency (int, default=1000): the status of the fits will be printed every ``print_frequency`` number of iterations
-        
+
     Returns:
         :total_nbad (int): number of functions where the likelihood did not match
     """
@@ -100,10 +115,10 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
     # Output was [negloglike_all, codelen, index_arr] + [params[:, i] for i in range(max_param)])]
 
     fit_paths = fitting_paths(comp, likelihood)
-    matched_file = fit_paths['codelen_matches']
+    matched_file = fit_paths["codelen_matches"]
     # Stream read through codelen_matches_comp*.dat file
     if rank == 0:
-        with open(matched_file, 'r') as f:
+        with open(matched_file, "r") as f:
             num_lines = sum(1 for _ in f)  # Count total lines in the file
     else:
         num_lines = None
@@ -119,22 +134,24 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
         start_line = rank * lines_per_rank + extra_lines
         end_line = start_line + lines_per_rank
 
-    print(f"Rank {rank} processing lines {start_line} to {end_line-1} of {num_lines}", flush=True)
+    print(
+        f"Rank {rank} processing lines {start_line} to {end_line-1} of {num_lines}",
+        flush=True,
+    )
     comm.Barrier()
 
-    allfn_file = raw_catalogue_paths(comp, likelihood)['all']
+    allfn_file = raw_catalogue_paths(comp, likelihood)["all"]
 
     nbad = 0
 
-    with open(matched_file, 'r') as f, \
-            open(allfn_file, 'r') as allfn_f:
-        
+    with open(matched_file, "r") as f, open(allfn_file, "r") as allfn_f:
+
         for i, (line, line_fcn) in enumerate(zip(f, allfn_f)):
 
             comm.Barrier()
 
             if rank == 0 and i % print_frequency == 0:
-                print(f'{i+1} of {num_lines}', flush=True)
+                print(f"{i+1} of {num_lines}", flush=True)
 
             if i < start_line or i >= end_line:
                 continue  # Skip lines not assigned to this rank
@@ -145,12 +162,13 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
             params = [float(p) for p in d[3:]]
             codelen = float(d[1])
 
-            if 'zoo' in fcn_i:
+            if "zoo" in fcn_i:
                 # zoo functions can't be evaluated
                 continue
 
             fcn_i, eq, integrated = likelihood.run_sympify(
-                fcn_i, tmax=tmax, try_integration=try_integration)
+                fcn_i, tmax=tmax, try_integration=try_integration
+            )
             eq, active_params = test_all.canonicalize_parameter_symbols(eq)
             k = len(active_params)
             measured = params[:k]
@@ -162,21 +180,26 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
             if k == 0:
                 eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
             elif k > 1:
-                all_a = ' '.join([f'a{j}' for j in range(k)])
+                all_a = " ".join([f"a{j}" for j in range(k)])
                 all_a = list(sympy.symbols(all_a, real=True))
                 eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
             else:
                 eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
             new_negloglike = likelihood.negloglike(
-                measured, eq_numpy, integrated=integrated)
+                measured, eq_numpy, integrated=integrated
+            )
 
             if not np.isclose(stored_negloglike, new_negloglike, rtol=rtol, atol=atol):
 
                 # We only care if the codelength is finite
                 if np.isnan(codelen) or np.isinf(codelen):
                     continue
-                print(f"Rank {rank}: Mismatch in negloglike for function {fcn_i}",
-                       stored_negloglike, new_negloglike, measured)
+                print(
+                    f"Rank {rank}: Mismatch in negloglike for function {fcn_i}",
+                    stored_negloglike,
+                    new_negloglike,
+                    measured,
+                )
                 nbad += 1
 
     # Gather nbad from all ranks and sum them
@@ -193,7 +216,15 @@ def check_match_results(comp, likelihood, rtol=1e-5, atol=1e-8, tmax=5, try_inte
     return total_nbad
 
 
-def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, use_det_I=None, snap_choice=None):
+def main(
+    comp,
+    likelihood,
+    tmax=5,
+    print_frequency=1000,
+    try_integration=False,
+    use_det_I=None,
+    snap_choice=None,
+):
     """Apply results of fitting the unique functions to all functions and save to file
 
     Args:
@@ -203,10 +234,10 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         :print_frequency (int, default=1000): the status of the fits will be printed every ``print_frequency`` number of iterations
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :use_det_I (bool, default=None): Fisher codelength setting. By default,
-            read the setting saved by ``test_all_Fisher.main``. A supplied
+            read the setting saved by ``test_all_fisher.main``. A supplied
             value must agree with that setting.
         :snap_choice (int, default=None): Parameter snapping setting. By
-            default, read the setting saved by ``test_all_Fisher.main``; a
+            default, read the setting saved by ``test_all_fisher.main``; a
             supplied value must agree with it. With 0, each parameter is
             assessed independently using its Hessian diagonal element. With 1,
             ESR diagonalises the full Hessian to identify directions with fewer
@@ -214,7 +245,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             largest projection onto each such direction. With 2 (projected
             eigenbasis), ESR zeros the weak projected coordinate itself and
             scores the codelength in the eigenbasis; this requires
-            ``use_det_I=True``. See ``test_all_Fisher.convert_params`` for the
+            ``use_det_I=True``. See ``test_all_fisher.convert_params`` for the
             detailed definitions.
 
     Returns:
@@ -223,7 +254,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     """
 
     if likelihood.is_mse:
-        raise ValueError('Cannot use MSE with description length')
+        raise ValueError("Cannot use MSE with description length")
 
     def fop(x):
         return likelihood.negloglike(x, eq_numpy, integrated=integrated)
@@ -232,43 +263,56 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         return likelihood.negloglike([x], eq_numpy, integrated=integrated)
 
     if rank == 0:
-        print('\nMatching', flush=True)
+        print("\nMatching", flush=True)
 
     raw_paths = raw_catalogue_paths(comp, likelihood)
     fit_paths = fitting_paths(comp, likelihood, rank=rank)
-    invsubs_file = raw_paths['inv_subs']
-    match_file = raw_paths['matches']
+    invsubs_file = raw_paths["inv_subs"]
+    match_file = raw_paths["matches"]
 
     test_all.ensure_likelihood_catalogue(comp, likelihood, tmax, try_integration)
     fcn_list_proc, data_start, data_end = test_all.get_functions(
-        comp, likelihood, unique=False)
+        comp, likelihood, unique=False
+    )
 
-    recorded_settings = test_all_Fisher.load_scoring_settings(comp, likelihood)
+    recorded_settings = test_all_fisher.load_scoring_settings(comp, likelihood)
     if recorded_settings is None:
         if use_det_I is None or snap_choice is None:
             raise ValueError(
-                'No saved Fisher settings found. Rerun test_all_Fisher or '
-                'supply both use_det_I and snap_choice explicitly.')
+                "No saved Fisher settings found. Rerun test_all_fisher or "
+                "supply both use_det_I and snap_choice explicitly."
+            )
     else:
-        if use_det_I is not None and bool(use_det_I) != recorded_settings['use_det_I']:
-            raise ValueError('match use_det_I does not agree with saved Fisher settings.')
-        if snap_choice is not None and int(snap_choice) != recorded_settings['snap_choice']:
-            raise ValueError('match snap_choice does not agree with saved Fisher settings.')
-        use_det_I = recorded_settings['use_det_I']
-        snap_choice = recorded_settings['snap_choice']
-    test_all_Fisher._validate_snap_and_det(use_det_I, snap_choice)
+        if use_det_I is not None and bool(use_det_I) != recorded_settings["use_det_I"]:
+            raise ValueError(
+                "match use_det_I does not agree with saved Fisher settings."
+            )
+        if (
+            snap_choice is not None
+            and int(snap_choice) != recorded_settings["snap_choice"]
+        ):
+            raise ValueError(
+                "match snap_choice does not agree with saved Fisher settings."
+            )
+        use_det_I = recorded_settings["use_det_I"]
+        snap_choice = recorded_settings["snap_choice"]
+    test_all_fisher._validate_snap_and_det(use_det_I, snap_choice)
     test_all.check_catalogue_digest(
-        test_all.load_fit_settings(comp, likelihood), comp, likelihood,
-        'The test_all fits')
+        test_all.load_fit_settings(comp, likelihood),
+        comp,
+        likelihood,
+        "The test_all fits",
+    )
     test_all.check_catalogue_digest(
-        recorded_settings, comp, likelihood, 'The Fisher outputs')
+        recorded_settings, comp, likelihood, "The Fisher outputs"
+    )
 
-    negloglike, params_meas = test_all_Fisher.load_loglike(
-        comp, likelihood, data_start, data_end, split=False)
+    negloglike, params_meas = test_all_fisher.load_loglike(
+        comp, likelihood, data_start, data_end, split=False
+    )
     max_param = params_meas.shape[1]
     n_unique = test_all.get_function_count(comp, likelihood, unique=True)
-    _require_catalogue_rows(
-        'The test_all negloglike output', len(negloglike), n_unique)
+    _require_catalogue_rows("The test_all negloglike output", len(negloglike), n_unique)
 
     # Likelihood-aware branch. This intentionally returns before the
     # inverse-substitution logic below, and that omission is deliberate rather
@@ -283,26 +327,30 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     # incorrect transformation on top of that.
     if test_all.likelihood_catalogue_active(comp, likelihood):
         catalogue_paths = likelihood_catalogue_paths(comp, likelihood)
-        with open(catalogue_paths['matches'], 'r') as f:
+        with open(catalogue_paths["matches"], "r") as f:
             matches_proc = np.fromiter(
-                (int(float(line.strip()))
-                 for line in itertools.islice(f, data_start, data_end)),
-                dtype=int
+                (
+                    int(float(line.strip()))
+                    for line in itertools.islice(f, data_start, data_end)
+                ),
+                dtype=int,
             )
         if len(matches_proc) != len(fcn_list_proc):
             raise ValueError(
-                'Likelihood-aware match file is inconsistent with all-equation '
-                'catalogue. Rerun test_all.main and test_all_Fisher.main.')
-        codelen_unique = np.atleast_2d(
-            np.genfromtxt(fit_paths['codelen']))
+                "Likelihood-aware match file is inconsistent with all-equation "
+                "catalogue. Rerun test_all.main and test_all_fisher.main."
+            )
+        codelen_unique = np.atleast_2d(np.genfromtxt(fit_paths["codelen"]))
         if codelen_unique.size == 0:
             codelen_unique = np.empty((0, max_param + 2))
         _require_catalogue_rows(
-            'The Fisher codelength output', codelen_unique.shape[0], n_unique)
+            "The Fisher codelength output", codelen_unique.shape[0], n_unique
+        )
         if len(matches_proc) and matches_proc.max() >= n_unique:
             raise ValueError(
-                'Likelihood-aware match file refers to equations beyond the '
-                'catalogue. Rerun test_all.main and test_all_Fisher.main.')
+                "Likelihood-aware match file refers to equations beyond the "
+                "catalogue. Rerun test_all.main and test_all_fisher.main."
+            )
         codelen = np.full(len(fcn_list_proc), np.nan)
         negloglike_all = np.full(len(fcn_list_proc), np.nan)
         index_arr = np.zeros(len(fcn_list_proc))
@@ -312,51 +360,61 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             codelen[i] = codelen_unique[index, 0]
             negloglike_all[i] = codelen_unique[index, 1]
             n_available = min(max_param, codelen_unique.shape[1] - 2)
-            params[i, :n_available] = codelen_unique[index, 2:2+n_available]
+            params[i, :n_available] = codelen_unique[index, 2 : 2 + n_available]
 
-        out_arr = np.transpose(np.vstack(
-            [negloglike_all, codelen, index_arr] + [params[:, i] for i in range(max_param)]))
+        out_arr = np.transpose(
+            np.vstack(
+                [negloglike_all, codelen, index_arr]
+                + [params[:, i] for i in range(max_param)]
+            )
+        )
 
-        np.savetxt(fit_paths['codelen_matches_rank'], out_arr, fmt='%.7e')
+        np.savetxt(fit_paths["codelen_matches_rank"], out_arr, fmt="%.7e")
 
         comm.Barrier()
 
         if rank == 0:
             combine_temp_files(
                 likelihood.temp_dir,
-                fit_paths['codelen_matches_rank_pattern'],
-                fit_paths['codelen_matches'])
-            print('Saved likelihood-aware matched output to', likelihood.out_dir, flush=True)
+                fit_paths["codelen_matches_rank_pattern"],
+                fit_paths["codelen_matches"],
+            )
+            print(
+                "Saved likelihood-aware matched output to",
+                likelihood.out_dir,
+                flush=True,
+            )
 
         comm.Barrier()
         return
 
     # all_inv_subs_proc = simplifier.load_subs(invsubs_file, max_param)[data_start:data_end]
-    all_inv_subs_proc = simplifier.load_subs(
-        invsubs_file, max_param, bcast_res=False)
+    all_inv_subs_proc = simplifier.load_subs(invsubs_file, max_param, bcast_res=False)
 
-    with open(match_file, 'r') as f:
+    with open(match_file, "r") as f:
         matches_proc = np.fromiter(
-            (int(float(line.strip()))
-             for line in itertools.islice(f, data_start, data_end)),
-            dtype=int
+            (
+                int(float(line.strip()))
+                for line in itertools.islice(f, data_start, data_end)
+            ),
+            dtype=int,
         )
 
     if len(matches_proc) and matches_proc.max() >= n_unique:
         raise ValueError(
-            'Match file refers to equations beyond the unique catalogue. '
-            'Regenerate the catalogue, then rerun test_all.main and '
-            'test_all_Fisher.main.')
+            "Match file refers to equations beyond the unique catalogue. "
+            "Regenerate the catalogue, then rerun test_all.main and "
+            "test_all_fisher.main."
+        )
 
     # 2D array of shape (# unique fcns, 10)
-    all_fish = np.loadtxt(fit_paths['derivs'])
+    all_fish = np.loadtxt(fit_paths["derivs"])
     all_fish = np.atleast_2d(all_fish)
     if all_fish.size == 0:
         # No Hessian entries at all (every function parameterless), so the
         # rows are empty -- fill with zeros so indexing works
         all_fish = np.zeros((n_unique, int(max_param * (max_param + 1) / 2)))
-    _require_catalogue_rows(
-        'The Fisher derivative output', all_fish.shape[0], n_unique)
+    _require_catalogue_rows("The Fisher derivative output", all_fish.shape[0], n_unique)
 
     # Both of these are also just for this proc
     codelen = np.zeros(len(fcn_list_proc))
@@ -369,7 +427,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         if i % print_frequency == 0 and rank == 0:
             print(i, len(fcn_list_proc))
 
-        fcn_i = fcn_list_proc[i].replace('\'', '')
+        fcn_i = fcn_list_proc[i].replace("'", "")
 
         nparams = simplifier.count_params([fcn_i], max_param)[0]
 
@@ -394,7 +452,6 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         # Access from the unique eqs all_fish array, common to all procs
         fish_measured = all_fish[index, :]
 
-
         # if (i in all_inv_subs_proc) and not isinstance(all_inv_subs_proc[i], dict):
         #     codelen[i] = np.inf
         #     continue
@@ -405,13 +462,14 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             else:
                 sub = {}
             p, fish_mat = simplifier.convert_params(
-                measured, fish_measured, sub, n=max_param, full_fisher=True)
+                measured, fish_measured, sub, n=max_param, full_fisher=True
+            )
             if isinstance(p, float):
                 p = [p]
             p = np.atleast_1d(p)
             fish_diag = np.diag(fish_mat)
-        except Exception as e:
-            print('\nError with function:', fcn_i.strip(), e)
+        except Exception as e:  # noqa: BLE001
+            print("\nError with function:", fcn_i.strip(), e)
             codelen[i] = np.inf
             continue
 
@@ -423,20 +481,25 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             # variant's likelihood is rebuilt lazily, only if a coordinate is
             # actually snapped.
             ptrue = np.asarray(p, dtype=float)
-            theta_snapped, negloglike_all[i], _, codelen[i] = \
-                test_all_Fisher._score_projected_eigenbasis(
-                    fish_mat, ptrue, negloglike_all[i], use_det_I,
+            theta_snapped, negloglike_all[i], _, codelen[i] = (
+                test_all_fisher._score_projected_eigenbasis(
+                    fish_mat,
+                    ptrue,
+                    negloglike_all[i],
+                    use_det_I,
                     lambda tv, _f=fcn_i: _variant_negloglike(
-                        likelihood, _f, tv, tmax, try_integration))
-            params[i, :] = np.pad(
-                theta_snapped, (0, max_param - len(theta_snapped)))
+                        likelihood, _f, tv, tmax, try_integration
+                    ),
+                )
+            )
+            params[i, :] = np.pad(theta_snapped, (0, max_param - len(theta_snapped)))
             assert len(params[i, :]) == max_param
             continue
 
         if np.sum(fish_diag <= 0) > 0:
             codelen[i] = np.inf
             continue
-        if use_det_I and test_all_Fisher._has_negative_curvature(fish_mat):
+        if use_det_I and test_all_fisher._has_negative_curvature(fish_mat):
             codelen[i] = np.inf
             continue
 
@@ -447,15 +510,15 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         # eigenbasis and overwrites this diagonal estimate.
         try:
             Delta = np.zeros(len(fish_diag))
-            m = (fish_diag != 0)
-            Delta[m] = np.atleast_1d(np.sqrt(12./fish_diag[m]))
+            m = fish_diag != 0
+            Delta[m] = np.atleast_1d(np.sqrt(12.0 / fish_diag[m]))
             Delta[~m] = np.inf
             Nsteps = np.atleast_1d(np.abs(np.array(p)))
-            m = (Delta != 0)
+            m = Delta != 0
             Nsteps[m] /= Delta[m]
             Nsteps[~m] = np.nan
-        except Exception as e:
-            print('Error with function:', fcn_i, e)
+        except Exception as e:  # noqa: BLE001
+            print("Error with function:", fcn_i, e)
             codelen[i] = np.inf
             continue
 
@@ -464,53 +527,56 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
 
         # Compute unsnapped DL (for comparison if snapping is attempted)
         all_mask = np.ones(len(p), dtype=bool)
-        codelen_nosnap = test_all_Fisher._compute_codelen(fish_mat, fish_diag, p, all_mask, use_det_I)
+        codelen_nosnap = test_all_fisher._compute_codelen(
+            fish_mat, fish_diag, p, all_mask, use_det_I
+        )
         DL_nosnap = negloglike_all[i] + codelen_nosnap
 
-        Nsteps, has_degenerate_eig = test_all_Fisher._compute_snap_mask(fish_mat, fish_diag, p, Nsteps, snap_choice)
+        Nsteps, has_degenerate_eig = test_all_fisher._compute_snap_mask(
+            fish_mat, fish_diag, p, Nsteps, snap_choice
+        )
 
         # Should reevaluate -log(L) with the param(s) set to 0, but doesn't matter unless the fcn is a very good one
         if np.sum(Nsteps < 1) > 0:
             # Set any parameter to 0 that doesn't have at least one precision step, and recompute -log(L)
             try:
-                p[Nsteps < 1] = 0.
+                p[Nsteps < 1] = 0.0
             except (IndexError, TypeError):
-                p = 0.
+                p = 0.0
 
             # It's possible that after putting params to 0 the likelihood is botched, in which case give it nan
             try:
                 fcn_i, eq, integrated = likelihood.run_sympify(
-                    fcn_i, tmax=tmax, try_integration=try_integration)
+                    fcn_i, tmax=tmax, try_integration=try_integration
+                )
                 if k == 1:
                     eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                     # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                     negloglike_all[i] = f1(p)
                 else:
-                    all_a = ' '.join([f'a{j}' for j in range(nparams)])
+                    all_a = " ".join([f"a{j}" for j in range(nparams)])
                     all_a = list(sympy.symbols(all_a, real=True))
-                    eq_numpy = sympy.lambdify(
-                        [x] + all_a, eq, modules=["numpy"])
+                    eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
                     negloglike_all[i] = fop(p)
 
             except NameError:
                 if try_integration:
                     fcn_i, eq, integrated = likelihood.run_sympify(
-                        fcn_i, tmax=tmax, try_integration=False)
+                        fcn_i, tmax=tmax, try_integration=False
+                    )
                     if k == 1:
-                        eq_numpy = sympy.lambdify(
-                            [x, a0], eq, modules=["numpy"])
+                        eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                         # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                         negloglike_all[i] = f1(p)
                     else:
-                        all_a = ' '.join([f'a{j}' for j in range(nparams)])
+                        all_a = " ".join([f"a{j}" for j in range(nparams)])
                         all_a = list(sympy.symbols(all_a, real=True))
-                        eq_numpy = sympy.lambdify(
-                            [x] + all_a, eq, modules=["numpy"])
+                        eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
                         negloglike_all[i] = fop(p)
                 else:
                     negloglike_all[i] = np.nan
 
-            except Exception:
+            except Exception:  # noqa: BLE001
                 negloglike_all[i] = np.nan
 
             if np.isfinite(negloglike_all[i]):
@@ -526,7 +592,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
                     for idx in itertools.combinations(try_idx, r):
                         p = np.copy(ptrue)
                         for idx_ in idx:
-                            p[idx_] = 0.
+                            p[idx_] = 0.0
                         if k == 1:
                             negloglike_all[i] = f1(p)
                         else:
@@ -549,13 +615,13 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
                     # may have picked one that is pathological at zero.
                     for j in range(nparams):
                         p = np.copy(ptrue)
-                        p[j] = 0.
+                        p[j] = 0.0
                         try:
                             if nparams == 1:
                                 negloglike_all[i] = f1(p)
                             else:
                                 negloglike_all[i] = fop(p)
-                        except Exception:
+                        except Exception:  # noqa: BLE001
                             negloglike_all[i] = np.nan
                         if np.isfinite(negloglike_all[i]):
                             kept_mask = np.ones(len(p), dtype=bool)
@@ -577,19 +643,21 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
 
             if k < 0:
                 print("This shouldn't have happened", flush=True)
-                quit()
+                sys.exit()
 
             # Compute snapped codelen and compare DL.
             # If Hessian has degenerate eigenvalues (detected by _compute_snap_mask),
             # snap is mandatory — reverting would allow det(H)→0 to give
             # artificially low codelen.
-            codelen_snap = test_all_Fisher._compute_codelen(fish_mat, fish_diag, ptrue, kept_mask, use_det_I)
+            codelen_snap = test_all_fisher._compute_codelen(
+                fish_mat, fish_diag, ptrue, kept_mask, use_det_I
+            )
             DL_snap = negloglike_all[i] + codelen_snap
 
             if has_degenerate_eig:
                 pass  # mandatory snap — degenerate Hessian
             elif not use_det_I:
-                pass  # published rule, as in test_all_Fisher.convert_params
+                pass  # published rule, as in test_all_fisher.convert_params
             elif DL_snap >= DL_nosnap:
                 # Well-conditioned but snapping didn't help — revert
                 p = np.copy(ptrue)
@@ -606,26 +674,29 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             try:
                 cond = np.linalg.cond(H_active)
                 if cond > 1e10:
-                    test_all_Fisher.emit_diagnostic_warning(
-                        'One or more fitted Hessians are badly conditioned '
-                        '(condition number > 1e10); their parameter codelengths '
-                        'may be unreliable.',
-                        test_all_Fisher.HighConditionNumberWarning)
+                    test_all_fisher.emit_diagnostic_warning(
+                        "One or more fitted Hessians are badly conditioned "
+                        "(condition number > 1e10); their parameter codelengths "
+                        "may be unreliable.",
+                        test_all_fisher.HighConditionNumberWarning,
+                    )
             except np.linalg.LinAlgError:
                 pass
 
         try:
-            codelen[i] = test_all_Fisher._compute_codelen(fish_mat, fish_diag, ptrue, kept_mask, use_det_I)
-        except Exception:
+            codelen[i] = test_all_fisher._compute_codelen(
+                fish_mat, fish_diag, ptrue, kept_mask, use_det_I
+            )
+        except Exception:  # noqa: BLE001
             codelen[i] = np.inf
 
         p = ptrue
-        p[~kept_mask] = 0.
+        p[~kept_mask] = 0.0
 
-        try:        # If p was an array, we can make a list out of it
-            params[i, :] = np.pad(p, (0, max_param-len(p)))
-        except Exception:     # p is either a number or nothing
-            if p:   # p is a number
+        try:  # If p was an array, we can make a list out of it
+            params[i, :] = np.pad(p, (0, max_param - len(p)))
+        except Exception:  # noqa: BLE001     # p is either a number or nothing
+            if p:  # p is a number
                 params[i, :] = 0
                 params[i, 0] = p
             else:
@@ -636,24 +707,32 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     n_nonposdef = np.sum(np.isinf(codelen))
     total_nonposdef = comm.reduce(int(n_nonposdef), op=MPI.SUM, root=0)
     if rank == 0 and total_nonposdef > 0:
-        print(f'Warning: {total_nonposdef} functions had non-positive-definite Hessian (codelen=inf)', flush=True)
+        print(
+            f"Warning: {total_nonposdef} functions had non-positive-definite Hessian (codelen=inf)",
+            flush=True,
+        )
 
-    out_arr = np.transpose(np.vstack(
-        [negloglike_all, codelen, index_arr] + [params[:, i] for i in range(max_param)]))
+    out_arr = np.transpose(
+        np.vstack(
+            [negloglike_all, codelen, index_arr]
+            + [params[:, i] for i in range(max_param)]
+        )
+    )
 
     np.savetxt(
-        fit_paths['codelen_matches_rank'], out_arr,
-        fmt='%.7e')        # Save the data for this proc in Partial
+        fit_paths["codelen_matches_rank"], out_arr, fmt="%.7e"
+    )  # Save the data for this proc in Partial
 
     comm.Barrier()
 
     if rank == 0:
         combine_temp_files(
             likelihood.temp_dir,
-            fit_paths['codelen_matches_rank_pattern'],
-            fit_paths['codelen_matches'])
+            fit_paths["codelen_matches_rank_pattern"],
+            fit_paths["codelen_matches"],
+        )
 
-        print('Saved output to', likelihood.out_dir, flush=True)
+        print("Saved output to", likelihood.out_dir, flush=True)
 
     comm.Barrier()
 
