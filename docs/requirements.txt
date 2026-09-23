@@ -5,6 +5,7 @@ scipy
 matplotlib
 pandas
 sphinx>=5.0
+myst-nb
 pympler
 psutil
 prettytable

@@ -3,6 +3,7 @@ import sympy
 import signal
 import sys
 import itertools
+import hashlib
 from mpi4py import MPI
 from contextlib import contextmanager
 import csv
@@ -11,12 +12,209 @@ import gc
 from collections import OrderedDict
 import pprint
 import os
-
 import esr.generation.utils as utils
 from esr.generation.custom_printer import ESRPrinter
 from esr.fitting.sympy_symbols import (
-    sympy_locs, square, cube, pow_abs, sqrt_abs, log_abs
+    sympy_locs, square, cube, pow_abs, sqrt_abs, log_abs,
+    x as _fprint_x_sym
 )
+
+# ---------------------------------------------------------------------------
+# Numerical fingerprinting diagnostics
+# ---------------------------------------------------------------------------
+
+# Fixed random evaluation points (deterministic seed for reproducibility).
+# These points make fingerprinting reproducible, but are not a proof of
+# function or model-family equivalence: they do not cover boundaries,
+# singularities, or all allowed parameter signs and domains.
+_FPRINT_RNG = np.random.RandomState(42)
+_FPRINT_N_POINTS = 60
+_FPRINT_MAX_PARAMS = 20
+
+_FPRINT_X_POINTS = _FPRINT_RNG.uniform(0.2, 5.0, _FPRINT_N_POINTS)
+_FPRINT_PARAM_POINTS = {
+    f'a{i}': _FPRINT_RNG.uniform(0.5, 3.0, _FPRINT_N_POINTS)
+    for i in range(_FPRINT_MAX_PARAMS)
+}
+
+
+def numerical_fingerprint(expr, max_param=None):
+    """Compute a heuristic numerical fingerprint for a sympy expression.
+
+    Evaluates at fixed random points using numpy (via sympy.lambdify) for speed.
+    Returns a tuple of float values, or None if evaluation fails at too many points.
+    A matching fingerprint is only a candidate equivalence: it cannot establish
+    equality at unsampled boundaries or singularities, nor equivalence between
+    real-parameter model families.
+
+    Args:
+        :expr: sympy expression
+        :max_param (int or None): optional sanity bound on the parameter index.
+            Parameter symbols are always taken from expr.free_symbols; this only
+            guards against indices the fixed evaluation-point table cannot cover
+            (see _FPRINT_MAX_PARAMS). Expressions whose parameters exceed the
+            table return None (treated as un-fingerprintable) rather than raising.
+
+    Returns:
+        :fingerprint (tuple or None): tuple of float values, or None on failure
+    """
+    if expr is None:
+        return None
+
+    # Identify symbols in the expression
+    param_symbols = sorted(
+        [s for s in expr.free_symbols if s.name.startswith('a') and s.name[1:].isdigit()],
+        key=lambda s: int(s.name[1:])
+    )
+    has_x = _fprint_x_sym in expr.free_symbols
+
+    # Fixed evaluation points only exist for a0..a{_FPRINT_MAX_PARAMS-1}. An
+    # explicit max_param over the table, or an expression whose highest a*
+    # index reaches the table size, cannot be fingerprinted: return None
+    # instead of raising a KeyError at _FPRINT_PARAM_POINTS[p.name] below.
+    # An explicit guard (not assert) keeps this valid under `python -O`.
+    if max_param is not None and max_param > _FPRINT_MAX_PARAMS:
+        return None
+    if param_symbols and int(param_symbols[-1].name[1:]) >= _FPRINT_MAX_PARAMS:
+        return None
+
+    # Build lambdified function for fast numpy evaluation
+    args = []
+    if has_x:
+        args.append(_fprint_x_sym)
+    args.extend(param_symbols)
+
+    try:
+        f_numpy = sympy.lambdify(args, expr, modules=["numpy"])
+    except Exception:
+        return None
+
+    # Evaluate at all points at once (vectorized)
+    call_args = []
+    if has_x:
+        call_args.append(_FPRINT_X_POINTS)
+    for p in param_symbols:
+        call_args.append(_FPRINT_PARAM_POINTS[p.name])
+
+    try:
+        with np.errstate(all='ignore'):
+            if len(call_args) == 0:
+                # Constant expression
+                result = np.full(_FPRINT_N_POINTS, float(expr))
+            else:
+                result = np.asarray(f_numpy(*call_args), dtype=float)
+            result = np.atleast_1d(result)
+            if result.shape == ():
+                result = np.full(_FPRINT_N_POINTS, float(result))
+            elif len(result) == 1 and _FPRINT_N_POINTS > 1:
+                result = np.full(_FPRINT_N_POINTS, result[0])
+    except Exception:
+        return None
+
+    # Count failures (non-finite values)
+    finite_mask = np.isfinite(result)
+    n_failed = int(np.sum(~finite_mask))
+
+    # If too many evaluations fail, this expression is problematic.
+    # Threshold of 30%: balances keeping pathological expressions (too strict)
+    # vs. missing duplicates among expressions with some domain issues (too lenient).
+    if n_failed > _FPRINT_N_POINTS * 0.3:
+        return None
+
+    values = []
+    for i in range(_FPRINT_N_POINTS):
+        if finite_mask[i]:
+            values.append(result[i])
+        else:
+            values.append(None)
+
+    return tuple(values)
+
+
+def fingerprint_to_hash(fp):
+    """Convert a numerical fingerprint tuple to an MD5 hash string.
+
+    Values are formatted to 10 significant figures before hashing,
+    grouping expressions that agree numerically but differ symbolically.
+
+    Args:
+        :fp (tuple or None): fingerprint from numerical_fingerprint
+
+    Returns:
+        :hash_str (str or None): MD5 hex digest, or None if fp is None
+    """
+    if fp is None:
+        return None
+
+    rounded = []
+    for v in fp:
+        if v is None:
+            rounded.append("None")
+        elif v == 0.0:
+            rounded.append("0.0")
+        else:
+            rounded.append(f"{v:.10e}")
+    key = "|".join(rounded)
+    return hashlib.md5(key.encode()).hexdigest()
+
+
+def numerical_duplicate_candidates(uniq_fun, max_param=None, verbose=True):
+    """Identify candidate numerical collisions without removing expressions.
+
+    Takes the list of unique function strings, converts each to a sympy expression,
+    computes numerical fingerprints, and returns groups with identical hashes.
+
+    This is a diagnostic only. Matching finite samples are not sufficient to
+    merge ESR expressions: callers must separately verify the variable domain,
+    boundaries and singularities, real parameter domains/reparameterisations,
+    and description-length/model-counting semantics.
+
+    Args:
+        :uniq_fun (list): list of unique function strings
+        :max_param (int or None): maximum number of parameters. If None, auto-detected.
+        :verbose (bool, default=True): whether to print progress
+
+    Returns:
+        :candidate_groups (list): list of ``(hash, indexes)`` tuples, one
+            for each hash shared by at least two expressions. ``indexes``
+            indexes ``uniq_fun``.
+    """
+    if rank == 0 and verbose:
+        print('\nNumerical duplicate diagnostic (candidate groups only)', flush=True)
+
+    n_orig = len(uniq_fun)
+    hash_indexes = OrderedDict()
+
+    for i, fstr in enumerate(uniq_fun):
+        if rank == 0 and verbose and (i % 500 == 0):
+            print(f'\t{i} of {n_orig}', flush=True)
+
+        try:
+            expr = sympy.sympify(fstr, locals=sympy_locs)
+        except Exception:
+            continue
+
+        fp = numerical_fingerprint(expr, max_param=max_param)
+        h = fingerprint_to_hash(fp)
+        if h is not None:
+            hash_indexes.setdefault(h, []).append(i)
+
+    candidate_groups = [
+        (h, indexes) for h, indexes in hash_indexes.items()
+        if len(indexes) > 1
+    ]
+
+    if rank == 0 and verbose:
+        n_flagged = sum(len(indexes) - 1 for _, indexes in candidate_groups)
+        print(f'\tFound {len(candidate_groups)} candidate groups containing '
+              f'{n_flagged} additional expressions '
+              f'({n_flagged}/{n_orig} = {100*n_flagged/max(n_orig,1):.1f}%)',
+              flush=True)
+        print('\tNOTE: candidates are not removed; verify exact model '
+              'equivalence before any catalogue change.', flush=True)
+
+    return candidate_groups
+
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -41,11 +239,13 @@ def time_limit(seconds):
     def signal_handler(signum, frame):
         raise TimeoutException("Timed out")
     signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(seconds)
+    # Use setitimer (not alarm) so a float ``seconds`` such as 5.0 works;
+    # signal.alarm requires an integer and would raise TypeError otherwise.
+    signal.setitimer(signal.ITIMER_REAL, float(seconds))
     try:
         yield
     finally:
-        signal.alarm(0)
+        signal.setitimer(signal.ITIMER_REAL, 0)
 
 
 def get_max_param(all_fun, verbose=True):
@@ -721,8 +921,8 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
     # If we find a zoo, let's make this a nan
     for i in range(len(sym_fun)):
         if sympy.zoo in sym_fun[i].atoms():
-            sym_fun[i] = sympy.core.numbers.NaN
-            str_fun[i] = str(sympy.core.numbers.NaN)
+            sym_fun[i] = sympy.nan
+            str_fun[i] = esrp.doprint(sym_fun[i])
 
     comm.Barrier()
 
@@ -755,7 +955,7 @@ def expand_or_factor(all_sym, tmax=1, method='expand'):
     p = ESRPrinter()
     if len(i) > 0:
         for j in range(i[0], i[-1]+1):
-            if vals[j] is sympy.core.numbers.NaN:
+            if vals[j] is sympy.nan:
                 continue
             try:
                 with time_limit(tmax):
@@ -1266,29 +1466,41 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
     return all_subs
 
 
-def convert_params(p_meas, fish_meas, inv_subs, n=4):
+def convert_params(p_meas, fish_meas, inv_subs, n=4, full_fisher=False):
     """Convert parameters from those in unique function to those in actual function
+
+    Transforms the Fisher matrix via the Jacobian of the parameter
+    substitution, ``fish_new = J^{-T} H J^{-1}``.  By default this preserves
+    the legacy API and returns only its diagonal.  Callers that need parameter
+    correlations, such as determinant-based description-length scoring, must
+    request the full matrix explicitly with ``full_fisher=True``.
 
     Args:
         :p_meas (list): list of measured parameters in unique function
-        :fish_meas (list): flattened version of the Hessian of -log(likelihood) at the maximum likelihood point
+        :fish_meas (list): flattened upper triangle of the Hessian of -log(likelihood) at the maximum likelihood point
         :inv_subs (list): list of substitutions required to convert between all and unique functions
-        :n (int, default=4): the number of dimensions of the array from which fish_meas was computed using
+        :n (int, default=4): the number of dimensions of the array from which fish_meas was computed
+        :full_fisher (bool, default=False): whether to return the full
+            transformed Fisher matrix rather than its diagonal
 
     Returns:
         :p_new (list): list of parameters for the actual function
-        :diag_fish (np.array): the diagonal entries of the Fisher matrix of the actual function at the maximum likelihood point
+        :fish_new (np.ndarray): the diagonal entries (shape: max_param) of
+            the transformed Fisher matrix, unless ``full_fisher=True``; then
+            the full matrix (shape: max_param x max_param)
 
     """
 
     max_param = len(p_meas)
 
     if np.nan in inv_subs:
-        return np.array([np.nan]*max_param), np.array([np.nan]*max_param)
+        invalid_fish = (np.full((max_param, max_param), np.nan)
+                        if full_fisher else np.full(max_param, np.nan))
+        return np.full(max_param, np.nan), invalid_fish
 
     fish = np.zeros((n, n))
     fish[np.triu_indices(n)] = fish_meas
-    fish = np.where(fish, fish, fish.T)
+    fish = (fish + fish.T) - np.diag(np.diag(fish))
     fish = fish[:max_param, :max_param]
 
     param_list = ['a%i' % i for i in range(max_param)]
@@ -1314,9 +1526,9 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4):
 
     fish_new = np.dot(jinv.T, np.dot(fish, jinv))
 
-    diag_fish = np.array([fish_new[i, i] for i in range(fish_new.shape[0])])
-
-    return p_new, diag_fish
+    if full_fisher:
+        return p_new, fish_new
+    return p_new, np.diag(fish_new)
 
 
 def check_results(dirname, compl, tmax=10):

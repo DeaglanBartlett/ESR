@@ -1,0 +1,27 @@
+/* Notebook output scrolling for MyST-NB rendered pages */
+/* Keep each output area scrollable while leaving input code full-height. */
+.nboutput .highlight pre,
+.cell_output .highlight pre {
+    max-height: 28rem;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+/* Merge multiple outputs from the same input into one visual block. */
+.nboutput + .nboutput {
+    margin-top: -0.5rem;
+}
+
+.nboutput + .nboutput .prompt {
+    visibility: hidden;
+}
+
+.cell_output .output + .output {
+    margin-top: 0;
+    border-top: 0;
+}
+
+/* Add a little visual separation after notebook outputs. */
+.nboutput {
+    margin-bottom: 0.75rem;
+}

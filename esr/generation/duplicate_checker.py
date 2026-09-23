@@ -14,7 +14,22 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 
-def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed=1234):
+def _validate_inverse_substitution_pairs(round_index, idx, inv):
+    """Reject incomplete paired inverse-substitution artifacts.
+
+    ``inv_idx`` and ``inv_subs`` are written from the same rank-0 list, so a
+    length mismatch means that one of the files is stale or truncated. Pairing
+    only a shared prefix could assign substitutions to the wrong equations.
+    """
+    if len(idx) != len(inv):
+        raise ValueError(
+            'inv_idx/inv_subs length mismatch in round %i: len(idx)=%i '
+            'len(inv)=%i. Delete the incomplete round artifacts and rerun '
+            'duplicate_checker.' % (round_index, len(idx), len(inv)))
+
+
+def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
+         seed=1234, diagnose_numerical_duplicates=False, fn_dir=None):
     """Run the generation of functions for a given complexity and set of basis functions
 
     Args:
@@ -24,6 +39,18 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         :search_tmax (float, default=60.): maximum time in seconds to run any one part of simplification procedure for a given function
         :expand_tmax (float, default=1.): maximum time in seconds to run any one part of expand/simplify procedure for a given function
         :seed (int, default=1234): seed to set random number generator for shuffling functions (used to prevent one rank having similar, hard to simplify functions)
+        :diagnose_numerical_duplicates (bool, default=False): whether to
+            write a report of expressions with matching numerical
+            fingerprints. This is diagnostic only and never removes or
+            remaps equations. Candidate groups require explicit verification
+            of variable/parameter domains, boundaries, singularities, and
+            description-length semantics before any manual catalogue change.
+        :fn_dir (str, default=None): directory in which to store the generated
+            catalogue for this run (the ``compl_<compl>`` subdirectory is created
+            inside it). If None, the default ``function_library/<runname>`` is
+            used. Pass ``likelihood.fn_dir`` here to generate straight into the
+            location a likelihood object reads from (e.g. an isolated directory
+            for a test), keeping generation and fitting consistent.
 
     Returns:
         None
@@ -55,24 +82,24 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
                            ["inv", "exp", "log_abs"],  # type1
                            ["+", "*", "-", "/", "pow"]]  # type2
 
-    dirname = os.path.abspath(os.path.join(os.path.dirname(
-        generator.__file__), '..', 'function_library'))
-    if (not os.path.isdir(dirname)) and (rank == 0):
-        os.mkdir(dirname)
-    dirname += '/' + runname + '/'
-    if (not os.path.isdir(dirname)) and (rank == 0):
-        os.mkdir(dirname)
-
+    if fn_dir is None:
+        dirname = os.path.abspath(os.path.join(os.path.dirname(
+            generator.__file__), '..', 'function_library'))
+        if (not os.path.isdir(dirname)) and (rank == 0):
+            os.makedirs(dirname, exist_ok=True)
+        dirname += '/' + runname + '/'
+    else:
+        dirname = os.path.abspath(fn_dir) + '/'
     if (rank == 0) and (not os.path.isdir(dirname)):
         print('Making output directory:', dirname)
-        os.mkdir(dirname)
+        os.makedirs(dirname, exist_ok=True)
     sys.stdout.flush()
     comm.Barrier()
 
     dirname += 'compl_%i/' % compl
     if (rank == 0) and (not os.path.isdir(dirname)):
         print('Making output directory:', dirname)
-        os.mkdir(dirname)
+        os.makedirs(dirname, exist_ok=True)
     sys.stdout.flush()
     comm.Barrier()
 
@@ -126,7 +153,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
     if rank == 0:
         print('\nSaving all equations')
         sys.stdout.flush()
-        with open(dirname + '/all_equations_%i.txt' % compl, "w") as f:
+        with utils.atomic_write(dirname + '/all_equations_%i.txt' % compl) as f:
             w = 80
             pp = pprint.PrettyPrinter(width=w, stream=f)
             for s in all_fun:
@@ -163,7 +190,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         print('\nShuffling')
         sys.stdout.flush()
         np.random.seed(seed)
-        i = np.arange(len(uniq))
+        i = np.arange(len(uniq_fun))
         np.random.shuffle(i)
         inv = {i[j]: j for j in range(len(i))}
         uniq_fun = [uniq_fun[ii] for ii in i]
@@ -195,7 +222,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         sys.stdout.flush()
 
         print('\tUnique equations')
-        with open(dirname + '/unique_equations_%i.txt' % compl, "w") as f:
+        with utils.atomic_write(dirname + '/unique_equations_%i.txt' % compl) as f:
             w = 80
             pp = pprint.PrettyPrinter(width=w, stream=f)
             for s in uniq_fun:
@@ -207,7 +234,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         gc.collect()
 
         print('\tMatches')
-        with open(dirname + '/matches_%i.txt' % compl, "w") as f:
+        with utils.atomic_write(dirname + '/matches_%i.txt' % compl) as f:
             for i in range(len(match_idx)):
                 print(match_idx[i], file=f)
         del match_idx
@@ -239,8 +266,9 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
                 idx = []
 
         if rank == 0:
-            for i, j in enumerate(idx):
-                all_inv_subs[j] = all_inv_subs[j] + inv[i]
+            _validate_inverse_substitution_pairs(r, idx, inv)
+            for i in range(len(idx)):
+                all_inv_subs[idx[i]] = all_inv_subs[idx[i]] + inv[i]
             del idx, inv
             gc.collect()
 
@@ -261,7 +289,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         for i in range(len(all_inv_subs)):
             if all_inv_subs[i] is None:
                 all_inv_subs[i] = []
-        with open(dirname + '/inv_subs_%i.txt' % compl, "w") as f:
+        with utils.atomic_write(dirname + '/inv_subs_%i.txt' % compl) as f:
             writer = csv.writer(f, delimiter=';')
             writer.writerows(all_inv_subs)
 
@@ -282,6 +310,25 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1, seed
         print('\nChecking Results', flush=True)
     if compl > 2:
         simplifier.check_results(dirname, compl)
+
+    if rank == 0 and diagnose_numerical_duplicates:
+        with open(dirname + '/unique_equations_%i.txt' % compl, 'r') as f:
+            final_uniq_fun = f.read().splitlines()
+        candidate_groups = simplifier.numerical_duplicate_candidates(
+            final_uniq_fun, max_param=max_param)
+        report_file = os.path.join(
+            dirname, 'numerical_duplicate_candidates_%i.txt' % compl)
+        with utils.atomic_write(report_file) as f:
+            f.write('# Candidate numerical fingerprint collisions only.\n')
+            f.write('# No equations were removed or remapped by this diagnostic.\n')
+            f.write('# Verify exact equality over the required variable and '
+                    'parameter domains, including boundaries and singularities, '
+                    'before merging any expressions.\n')
+            for group_id, (fingerprint, indexes) in enumerate(candidate_groups):
+                f.write('\nGROUP %i HASH %s\n' % (group_id, fingerprint))
+                for index in indexes:
+                    f.write('%i\t%s\n' % (index, final_uniq_fun[index]))
+        print('Wrote numerical duplicate candidate report:', report_file, flush=True)
 
     sys.stdout.flush()
     comm.Barrier()
