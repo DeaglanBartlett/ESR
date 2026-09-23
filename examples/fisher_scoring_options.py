@@ -203,9 +203,12 @@ for label, intercept, xlo, xhi in cases:
                 'a0 + a1*x', basis_functions, snap_likelihood, verbose=False,
                 return_params=True, use_det_I=use_det_I,
                 snap_choice=snap_choice)
-        kept = int(np.sum(np.asarray(params) != 0))
+        #  Not the number of retained directions under snap_choice=2: that
+        #  mode removes a direction in the rotated basis, which generally
+        #  back-transforms to a small nonzero value in every parameter.
+        nonzero = int(np.sum(np.asarray(params) != 0))
         print(f'    snap_choice={snap_choice}: L = {DL:9.4f}   '
-              f'-log(L) = {negloglike:9.4f}   parameters kept = {kept}   '
+              f'-log(L) = {negloglike:9.4f}   nonzero coefficients = {nonzero}   '
               f'a0 = {params[0]:12.5f}   a1 = {params[1]:.5f}')
 
 print("""
@@ -235,10 +238,13 @@ and a1 that is unconstrained, not a0 on its own. snap_choice=0 looks at each
 parameter separately, sees an a0 far larger than its own precision step, and
 keeps it -- at a value nowhere near the 3.0 the data were generated with, and
 which lands somewhere different every time the script is run. The eigenbasis
-modes find the unconstrained direction, drop the intercept and refit the slope,
-and report the same numbers every time. Note that snap_choice=0 comes out with
-the *shorter* description length there, by charging for a parameter it has not
-actually determined.
+modes find the unconstrained direction and remove it, and report the same
+numbers every time: snap_choice=1 zeroes a0 itself and refits the slope, while
+snap_choice=2 zeroes the rotated coordinate, which leaves a0 at a small residue
+rather than exactly zero -- which is why the count above is of nonzero
+coefficients rather than of retained directions. Note that snap_choice=0 comes
+out with the *shorter* description length there, by charging for a parameter it
+has not actually determined.
 
 For the same reason, pairing use_det_I=True with snap_choice=0 warns. It is a
 legitimate comparison setting -- it is how you attribute a change to the

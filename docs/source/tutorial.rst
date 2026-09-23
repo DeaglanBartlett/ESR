@@ -187,12 +187,16 @@ Why re-optimisation after snapping is required
 
 Removing an unconstrained direction is mandatory, because the unsnapped
 determinant still contains its eigenvalue and the smaller that eigenvalue comes
-out the shorter the code it produces. Under ``snap_choice=1`` and ``2`` the
-remaining parameters are then re-optimised with the snapped ones held at zero,
-since they were fitted alongside the parameter being removed: zeroing an
-intercept while leaving the slope where it was would otherwise collapse the
-likelihood and make a necessary snap look like a bad one. ``snap_choice=0``
-keeps the published behaviour of scoring at the zeroed vector itself.
+out the shorter the code it produces. Under ``snap_choice=1`` the remaining
+parameters are then re-optimised with the snapped ones held at zero, since they
+were fitted alongside the parameter being removed: zeroing an intercept while
+leaving the slope where it was would otherwise collapse the likelihood and make
+a necessary snap look like a bad one. ``snap_choice=2`` needs no such refit,
+because it zeros a coordinate of the Hessian eigenbasis, in which the quadratic
+model has no cross terms: the retained coordinates are already at their
+constrained optimum, and the likelihood is simply re-evaluated at the
+back-transformed point. ``snap_choice=0`` keeps the published behaviour of
+scoring at the zeroed vector itself.
 
 Likelihood-aware fitted catalogue
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

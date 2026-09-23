@@ -1808,6 +1808,74 @@ def test_determinant_survives_parameter_removal(tmp_path):
         np.testing.assert_allclose(params[:nparam], theta_mle, rtol=1e-2)
 
 
+def test_plot_uses_the_parameterisation_the_fit_was_stored_in(tmp_path, monkeypatch):
+    """Plotted curves must be drawn in the basis the parameters were fitted in.
+
+    A likelihood transformation can drop a parameter and relabel the survivors:
+    ``a0 + a1*x`` becomes ``a1*(x - 1)`` here, whose one parameter is stored in
+    the ``a0`` column. Counting the raw expression's parameters instead and
+    lambdifying the untransformed expression reads the fitted value into ``a0``
+    and takes ``a1`` from the padded zero column, so the curve drawn is not the
+    fitted model.
+    """
+    import sympy
+    from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x as xsym
+
+    monkeypatch.setattr(plt, 'show', lambda: None)
+
+    rng = np.random.default_rng(5)
+    xvar = np.linspace(0.5, 3.0, 40)
+    yerr = np.full_like(xvar, 0.2)
+    yvar = 2.0 + 1.3 * xvar + rng.normal(0.0, 0.2, xvar.size)
+    np.savetxt(tmp_path / 'data.txt', np.column_stack([xvar, yvar, yerr]))
+
+    class OffsetRemovingGauss(GaussLikelihood):
+        use_likelihood_catalogue = True
+
+        def run_sympify(self, fcn_i, **kwargs):
+            fcn_i, eq, _ = super().run_sympify(fcn_i, **kwargs)
+            return fcn_i, sympy.expand(eq - eq.subs(xsym, 1)), False
+
+    likelihood = OffsetRemovingGauss('data.txt', 'plot_basis',
+                                     data_dir=str(tmp_path),
+                                     base_out_dir=str(tmp_path))
+    likelihood.fn_dir = str(tmp_path / 'functions')
+
+    comp = 5
+    compl_dir = tmp_path / 'functions' / f'compl_{comp}'
+    compl_dir.mkdir(parents=True)
+    (compl_dir / f'all_equations_{comp}.txt').write_text('a0 + a1*x\n')
+    (compl_dir / f'unique_equations_{comp}.txt').write_text('a0 + a1*x\n')
+    (compl_dir / f'matches_{comp}.txt').write_text('0\n')
+    (compl_dir / f'aifeyn_{comp}.txt').write_text('6.931472\n')
+
+    test_all.main(comp, likelihood, Niter_params=[4], Nconv_params=[2])
+    esr.fitting.test_all_Fisher.main(
+        comp, likelihood, use_det_I=True, snap_choice=1)
+    esr.fitting.match.main(comp, likelihood)
+    esr.fitting.combine_DL.main(comp, likelihood)
+
+    drawn = []
+    original_get_pred = likelihood.get_pred
+
+    def recording_get_pred(xvals, measured, eq_numpy, **kwargs):
+        ypred = original_get_pred(xvals, measured, eq_numpy, **kwargs)
+        drawn.append((np.atleast_1d(measured).copy(), np.atleast_1d(ypred)))
+        return ypred
+
+    monkeypatch.setattr(likelihood, 'get_pred', recording_get_pred)
+    esr.fitting.plot.main(comp, likelihood)
+
+    assert len(drawn) == 1
+    measured, ypred = drawn[0]
+    #  One parameter survives the transform, and the curve is that model.
+    assert len(measured) == 1
+    np.testing.assert_allclose(ypred, measured[0] * (likelihood.xvar - 1.0),
+                               rtol=1e-6, atol=1e-8)
+    assert not np.allclose(ypred, 0.0)      # what the raw parameter count gives
+
+
 def test_determinant_scoring_and_matching_with_parameter_removal(
         tmp_path, monkeypatch):
     """End-to-end determinant scoring and matching when the likelihood transform

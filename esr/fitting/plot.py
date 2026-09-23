@@ -10,7 +10,7 @@ import os
 
 from esr.fitting.sympy_symbols import x, a0
 from esr.fitting.utils import fitting_paths, set_recursionlimit_for_comp
-import esr.generation.simplifier as simplifier
+import esr.fitting.test_all as test_all
 
 # Suppress the numpy/scipy RuntimeWarnings raised while evaluating functions for
 # plotting, but leave other categories (including ESR's own diagnostics and
@@ -111,14 +111,19 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
 
         fcn_i = fcn_list[i].replace('\'', '')
 
-        k = simplifier.count_params([fcn_i], max_param)[0]
-        measured = params[i, :k]
-
         print('%i of %i:' % (i+1, len(fcn_list)), fcn_i)
 
         try:
             fcn_i, eq, integrated = likelihood.run_sympify(
                 fcn_i, tmax=tmax, try_integration=try_integration)
+            #  A likelihood transformation can drop or relabel parameters, and
+            #  the stored values are in the canonical basis the fit used, so the
+            #  curve must be drawn from the canonicalised expression and the
+            #  number of parameters that survived it -- not from the raw
+            #  expression's own parameter count.
+            eq, active_params = test_all.canonicalize_parameter_symbols(eq)
+            k = len(active_params)
+            measured = params[i, :k]
 
             if k == 0:
                 eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
@@ -131,19 +136,29 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
             ypred = likelihood.get_pred(
                 likelihood.xvar, measured, eq_numpy, integrated=integrated)
         except Exception:
-            if try_integration:
+            #  Retry numerically if the analytic integration was the problem.
+            #  Anything left unplottable is skipped: falling through would draw
+            #  the previous function's curve under this function's label.
+            if not try_integration:
+                continue
+            try:
                 fcn_i, eq, integrated = likelihood.run_sympify(
                     fcn_i, tmax=tmax, try_integration=False)
-                if k > 0:
-                    all_a = ' '.join([f'a{i}' for i in range(k)])
-                    all_a = list(sympy.symbols(all_a, real=True))
+                eq, active_params = test_all.canonicalize_parameter_symbols(eq)
+                k = len(active_params)
+                measured = params[i, :k]
+                if k == 0:
+                    eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
+                elif k > 1:
+                    all_a = list(sympy.symbols(
+                        ' '.join(f'a{j}' for j in range(k)), real=True))
                     eq_numpy = sympy.lambdify(
                         [x] + all_a, eq, modules=["numpy"])
                 else:
-                    eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
-                    ypred = likelihood.get_pred(
-                        likelihood.xvar, measured, eq_numpy, integrated=integrated)
-            else:
+                    eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+                ypred = likelihood.get_pred(
+                    likelihood.xvar, measured, eq_numpy, integrated=integrated)
+            except Exception:
                 continue
 
         if np.isscalar(ypred):
