@@ -187,6 +187,19 @@ def _correlation_eigenvalues(Hmat):
     n_flat = int(np.sum(~constrained))
     if not np.any(constrained):
         return np.zeros(len(diagonal)), False
+    #  Zero curvature along a parameter's own axis means a flat direction only if
+    #  that parameter is also uncoupled: in a positive semi-definite Hessian
+    #  H_ii = 0 forces H_ij = 0, so any coupling makes the 2x2 minor indefinite,
+    #  with a negative eigenvalue of about -sum_j H_ij**2 / H_jj. Dropping the
+    #  coordinate and reporting a flat direction would hide that. The flat
+    #  coordinate has no curvature of its own to normalise by, so the induced
+    #  negative curvature is judged against the largest curvature in the matrix.
+    if n_flat:
+        coupling = np.sum(
+            Hsym[np.ix_(~constrained, constrained)] ** 2 / diagonal[constrained],
+            axis=1)
+        if np.any(coupling > EIGENVALUE_REL_THRESHOLD * np.max(diagonal)):
+            return None, True
     block = Hsym[np.ix_(constrained, constrained)]
     block_diagonal = np.diag(block)
     try:

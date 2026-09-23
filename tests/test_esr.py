@@ -1919,6 +1919,29 @@ def test_match_rejects_outputs_from_a_different_catalogue(tmp_path):
     esr.fitting.match.main(comp, likelihood)
 
 
+def test_dynamic_fitting_records_the_catalogue_digest(tmp_path, monkeypatch):
+    """The dynamic scheduler is the default for MPI runs and writes the combined
+    fits itself, so it has to save the catalogue marker too -- otherwise every
+    default run leaves outputs the later stages can only check by row count."""
+    comp = 3
+    likelihood = _fitted_cc_pipeline(tmp_path, comp)
+    esr.fitting.test_all.clear_fit_settings(comp, likelihood)
+    assert esr.fitting.test_all.load_fit_settings(comp, likelihood) is None
+
+    #  Take the dynamic branch (it needs >= 3 ranks) with the fitting itself
+    #  stubbed out: the fits from the run above are already on disk.
+    called = []
+    monkeypatch.setattr(esr.fitting.test_all, 'size', 3)
+    monkeypatch.setattr(esr.fitting.test_all, '_main_dynamic',
+                        lambda *a, **k: called.append(True))
+    esr.fitting.test_all.main(comp, likelihood)
+
+    assert called                                     # the branch was taken
+    settings = esr.fitting.test_all.load_fit_settings(comp, likelihood)
+    assert settings['catalogue_digest'] == \
+        esr.fitting.test_all.catalogue_digest(comp, likelihood)
+
+
 def test_outputs_from_a_rebuilt_catalogue_of_the_same_size_are_refused(tmp_path):
     """Two catalogues of the same length are not the same catalogue.
 
@@ -2132,6 +2155,41 @@ def test_projected_eigenbasis_snaps_weak_direction():
     assert nll_f == 12.0
     assert np.isfinite(cl)
     np.testing.assert_allclose(theta_f, V @ np.array([b[0], 0.0]))
+
+
+@pytest.mark.parametrize('name, H, indefinite', [
+    ('uncoupled flat', [[100.0, 0.0], [0.0, 0.0]], False),
+    ('coupling at the noise level', [[1.0, 1e-4], [1e-4, 0.0]], False),
+    ('coupled zero diagonal', [[1.0, 1.0], [1.0, 0.0]], True),
+    ('coupled through a third parameter',
+     [[4.0, 1.0, 0.0], [1.0, 2.0, 0.5], [0.0, 0.5, 0.0]], True),
+])
+def test_a_zero_curvature_direction_counts_as_flat_only_if_uncoupled(
+        name, H, indefinite):
+    """Zero curvature along a parameter's own axis is a flat direction only when
+    that parameter is uncoupled.
+
+    In a positive semi-definite Hessian H_ii = 0 forces H_ij = 0, so a coupled
+    zero diagonal is a saddle: [[1, 1], [1, 0]] has eigenvalues (1 +- sqrt(5))/2.
+    Reducing to the constrained block and reporting a flat direction would hide
+    that, and snap_choice=2 -- which runs before the diagonal rejection used by
+    the other modes -- would then score a saddle.
+    """
+    from esr.fitting.test_all_Fisher import (
+        _correlation_eigenvalues, _has_negative_curvature,
+        _score_projected_eigenbasis)
+
+    H = np.array(H)
+    assert (np.linalg.eigvalsh(H).min() < -1e-8) == indefinite   # ground truth
+    eigenvalues, unusable = _correlation_eigenvalues(H)
+    assert unusable == indefinite
+    assert _has_negative_curvature(H) == indefinite
+    if not indefinite:
+        assert np.isclose(np.min(eigenvalues), 0.0)              # still flat
+
+    _, _, _, codelen = _score_projected_eigenbasis(
+        H, np.ones(len(H)), 8.0, True, lambda t: 8.0)
+    assert np.isinf(codelen) == indefinite
 
 
 def test_projected_eigenbasis_handles_exact_flat_direction():

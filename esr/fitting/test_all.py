@@ -1367,6 +1367,11 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
             Niter_params,
             Nconv_params,
             ignore_previous_eqns)
+        #  _main_dynamic writes the combined fits itself, so the marker saying
+        #  which catalogue they came from has to be saved here too.
+        if rank == 0:
+            save_fit_settings(comp, likelihood)
+        comm.Barrier()
         return
 
     fcn_list_proc, _, _ = get_functions(comp, likelihood)
