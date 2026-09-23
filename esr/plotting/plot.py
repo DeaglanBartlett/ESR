@@ -39,7 +39,7 @@ def pareto_plot(dirname, savename, do_DL=True, do_logL=True):
         try:
             all_DL[i] = np.nanmin(data[:, 0])
             all_logL[i] = np.nanmin(data[:, 2])
-        except Exception:
+        except Exception:  # noqa: BLE001
             all_DL[i] = np.nan
             all_logL[i] = np.nan
 

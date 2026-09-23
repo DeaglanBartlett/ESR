@@ -92,7 +92,7 @@ class Likelihood:
         """
         try:
             return eq_numpy(x, *a)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return np.inf
 
     def clear_data(self):
@@ -355,7 +355,7 @@ class PanthLikelihood(Likelihood):
                         raise ValueError
                     eq = eq2
                     integrated = True
-            except Exception:
+            except Exception:  # noqa: BLE001
                 integrated = False
         else:
             integrated = False

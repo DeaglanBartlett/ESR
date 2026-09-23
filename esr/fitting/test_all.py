@@ -248,7 +248,7 @@ def _transform_fingerprint(likelihood, tmax, try_integration):
             _, eq, integrated = likelihood.run_sympify(
                 probe, tmax=tmax, try_integration=try_integration)
             token = f'{bool(integrated)}:{sympy.srepr(eq)}'
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             token = f'ERR:{type(exc).__name__}'
         h.update(token.encode('utf-8'))
         h.update(b'\x00')
@@ -353,7 +353,7 @@ def _canonical_transformed_key(fcn_i, likelihood, tmax, try_integration):
     eq, active_params = canonicalize_parameter_symbols(eq)
     try:
         eq_key = sympy.factor(sympy.cancel(eq))
-    except Exception:
+    except Exception:  # noqa: BLE001
         eq_key = eq
     return (bool(integrated), sympy.srepr(eq_key)), [
         symbol.name for symbol in active_params
@@ -393,7 +393,7 @@ def _transformed_keys_for_slice(functions, start_index, likelihood, tmax,
             with simplifier.time_limit(tmax):
                 key, layout = _canonical_transformed_key(
                     fcn_i, likelihood, tmax, try_integration)
-        except Exception:
+        except Exception:  # noqa: BLE001
             failed = True
             key = ('failed', index, fcn_i)
             layout = expected
@@ -931,7 +931,7 @@ def _fit_function_with_timeout(fcn_i, likelihood, tmax, pmin, pmax, comp,
                         ignore_previous_eqns=ignore_previous_eqns)
                 else:
                     raise NameError
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(e, flush=True)
         chi2_i = np.nan
         params[:] = 0.
@@ -1290,11 +1290,11 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
             else:
                 chi2_i = np.nan
                 params[:] = 0.
-        except Exception:
+        except Exception:  # noqa: BLE001
             chi2_i = np.nan
             params[:] = 0.
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(e)
         return np.nan, params
 

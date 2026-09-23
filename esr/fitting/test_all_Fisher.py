@@ -508,7 +508,7 @@ def _refit_after_snap(fop, theta, kept_mask):
     try:
         result = minimize(objective, theta[kept_mask], method='Nelder-Mead',
                           options={'maxiter': 2000})
-    except Exception:
+    except Exception:  # noqa: BLE001
         return theta, negloglike
     if np.isfinite(result.fun) and not (result.fun > negloglike):
         theta[kept_mask] = result.x
@@ -633,7 +633,7 @@ def _score_projected_eigenbasis(Hmat, theta, negloglike, use_det_I,
     theta_snapped = V @ np.where(kept, b, 0.0)
     try:
         negloglike_snapped = eval_negloglike(theta_snapped)
-    except Exception:
+    except Exception:  # noqa: BLE001
         # A broken evaluation at the snapped point is treated the same as a
         # non-finite value below (fall back to no-snap for a well-conditioned
         # Hessian, or an infinite codelength if it is degenerate), so one
@@ -786,7 +786,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
             eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
         else:
             eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
-    except Exception:
+    except Exception:  # noqa: BLE001
         print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
         deriv[:] = np.nan
         return params, negloglike, deriv, np.inf
@@ -1102,7 +1102,7 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
                 deriv[i, :] = np.nan
                 codelen[i] = np.inf
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             params[i, :] = 0.
             deriv[i, :] = np.nan
             codelen[i] = np.inf

@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from mpmath.libmp import prec_to_dps
 from mpmath.libmp import to_str as mlib_to_str
 from sympy.core import Add, Basic, Mul, Number, Pow, Rational, S
@@ -19,7 +21,7 @@ class ESRPrinter(Printer):
     """
 
     printmethod = "_sympystr"
-    _default_settings = {
+    _default_settings: ClassVar[dict[str, object]] = {
         "order": None,
         "full_prec": "auto",
         "sympy_integers": False,
@@ -29,7 +31,7 @@ class ESRPrinter(Printer):
         "max": None,
     }
 
-    _relationals = {}
+    _relationals: ClassVar[dict] = {}
 
     def parenthesize(self, item, level, strict=False):
         if (precedence(item) < level) or ((not strict) and precedence(item) <= level):
@@ -644,11 +646,10 @@ class ESRPrinter(Printer):
                 return f'{self._print(S.One)}/{self.parenthesize(expr.base, PREC, strict=False)}'
 
         e = self.parenthesize(expr.exp, PREC, strict=False)
-        if self.printmethod == '_sympyrepr' and expr.exp.is_Rational and expr.exp.q != 1:
+        if self.printmethod == '_sympyrepr' and expr.exp.is_Rational and expr.exp.q != 1 and e.startswith('(Rational'):
             # the parenthesized exp should be '(Rational(a, b))' so strip parens,
             # but just check to be sure.
-            if e.startswith('(Rational'):
-                return f'{self.parenthesize(expr.base, PREC, strict=False)}**{e[1:-1]}'
+            return f'{self.parenthesize(expr.base, PREC, strict=False)}**{e[1:-1]}'
         if expr.exp.is_integer:
             return f'{self.parenthesize(expr.base, PREC, strict=False)}**{e}'
         return f'pow({self.parenthesize(expr.base, PREC, strict=False)},{e})'

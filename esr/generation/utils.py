@@ -130,7 +130,7 @@ def locals_size(loc):
     for i, x in enumerate(keys):
         try:
             mem[i] = asizeof.asizeof(loc[x])
-        except Exception:
+        except Exception:  # noqa: BLE001
             mem[i] = 0
 
     j = np.argsort(-mem)

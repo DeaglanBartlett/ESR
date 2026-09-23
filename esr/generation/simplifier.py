@@ -93,7 +93,7 @@ def numerical_fingerprint(expr, max_param=None):
 
     try:
         f_numpy = sympy.lambdify(args, expr, modules=["numpy"])
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
     # Evaluate at all points at once (vectorized)
@@ -115,7 +115,7 @@ def numerical_fingerprint(expr, max_param=None):
                 result = np.full(_FPRINT_N_POINTS, float(result))
             elif len(result) == 1 and _FPRINT_N_POINTS > 1:
                 result = np.full(_FPRINT_N_POINTS, result[0])
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
     # Count failures (non-finite values)
@@ -198,7 +198,7 @@ def numerical_duplicate_candidates(uniq_fun, max_param=None, verbose=True):
 
         try:
             expr = sympy.sympify(fstr, locals=sympy_locs)
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
 
         fp = numerical_fingerprint(expr, max_param=max_param)
@@ -421,7 +421,7 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
     for i in range(len(str_fun)):
         try:
             s = sympy.sympify(str_fun[i], locals=locs)
-        except Exception:
+        except Exception:  # noqa: BLE001
             print(f'Making {str_fun[i]} a zoo')
             s = sympy.zoo
         str_fun[i] = p.doprint(s)
@@ -716,7 +716,7 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                                                     else:
                                                         # Can't undo the simplification, so we won't do it
                                                         sym_fun[i] = f0.copy()
-                                        except Exception:
+                                        except Exception:  # noqa: BLE001
                                             print('Bad comparison:', f0, f1)
                                             sys.stdout.flush()
                                             sym_fun[i] = f0.copy()
@@ -1635,7 +1635,7 @@ def check_results(dirname, compl, tmax=10):
         s1 = sympy.sympify(all_fun[i], locals=locs)
         try:
             s2 = sympy.sympify(uniq_fun[matches[i]], locals=locs)
-        except Exception:
+        except Exception:  # noqa: BLE001
             print(
                 f'Could not check {uniq_fun[matches[i]]} so will keep equation')
             s2 = None
@@ -1661,7 +1661,7 @@ def check_results(dirname, compl, tmax=10):
                 s1 = s1.subs(sub, simultaneous=True)
                 if (not str(s1) == str(s2)) and (not s1.equals(s2)):
                     raise ValueError
-        except Exception:
+        except Exception:  # noqa: BLE001
             to_change.append([i+imin, all_fun[i]])
 
     del inv_subs, all_fun

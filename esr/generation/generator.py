@@ -29,7 +29,7 @@ def is_float(string):
     try:
         float(eval(string))
         return True
-    except Exception:
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -150,7 +150,7 @@ class DecoratedNode:
         try:
             f = float(self.val)
             return f == float(1)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
     def count_nodes(self, basis_functions):
@@ -160,9 +160,6 @@ class DecoratedNode:
         return len(self.to_list(basis_functions))
 
     def to_list(self, basis_functions):
-        """
-
-        """
         if self.degree == 0:
             return [str(self.val)]
         elif self.degree == 1:
@@ -525,7 +522,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
             c[i] = nodes[i].count_nodes(basis_functions)
             if check_ops:
                 all_in_basis[i] = check_operators(nodes[i], basis_functions)
-        except Exception:
+        except Exception:  # noqa: BLE001
             c[i] = np.nan
 
     i = 1
@@ -537,7 +534,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
         c[i] = nodes[i].count_nodes(basis_functions)
         if check_ops:
             all_in_basis[i] = check_operators(nodes[i], basis_functions)
-    except Exception:
+    except Exception:  # noqa: BLE001
         c[i] = np.nan
 
     i = 2
@@ -549,7 +546,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
         c[i] = nodes[i].count_nodes(basis_functions)
         if check_ops:
             all_in_basis[i] = check_operators(nodes[i], basis_functions)
-    except Exception:
+    except Exception:  # noqa: BLE001
         c[i] = np.nan
 
     i = 3
@@ -561,7 +558,7 @@ def string_to_node(s, basis_functions, locs=None, evalf=False, allow_eval=True, 
         c[i] = nodes[i].count_nodes(basis_functions)
         if check_ops:
             all_in_basis[i] = check_operators(nodes[i], basis_functions)
-    except Exception:
+    except Exception:  # noqa: BLE001
         c[i] = np.nan
 
     if check_ops and any(all_in_basis):
@@ -1121,11 +1118,10 @@ def update_sums(tree, labels, try_idx, basis_functions):
         n = 1
         k = all_start[j]
         neg_const.append(False)
-        if k is not None and labels[k] in ["*", "/"]:
-            if labels[tree[k].left].lstrip("-").isdigit() and labels[tree[k].left].startswith("-") or labels[tree[k].right].lstrip("-").isdigit() and labels[tree[k].right].startswith("-"):
-                n *= -1
-                neg_const[-1] = True
-
+        if k is not None and labels[k] in ["*", "/"] and labels[tree[k].left].lstrip("-").isdigit() and labels[tree[k].left].startswith("-") or labels[tree[k].right].lstrip("-").isdigit() and labels[tree[k].right].startswith("-"):
+            n *= -1
+            neg_const[-1] = True
+    
         if (labels[k] == "-") and (tree[k].right == all_idx[j][0]):
             n *= -1
 
@@ -1407,14 +1403,14 @@ def update_sums(tree, labels, try_idx, basis_functions):
                                                        [0]:all_idx[a][1]] + l_uni
                                         t_uni = [
                                             tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-                                        n_uni = n_uni
+                                        # n_uni = n_uni
                                     elif nrep != 0:
                                         l_uni = ['*', str(abs(nrep))] + \
                                             labels[all_idx[a][0]
                                                 :all_idx[a][1]] + l_uni
                                         t_uni = [
                                             2, 0] + [tt.type for tt in tree[all_idx[a][0]:all_idx[a][1]]] + t_uni
-                                        n_uni = n_uni
+                                        # n_uni = n_uni
 
                                     if nrep > 0:
                                         n_uni = n_uni + ['+']
@@ -1522,7 +1518,7 @@ def find_additional_trees(tree, labels, basis_functions):
                             new_tree.append(t)
                             new_labels.append(L)
                             try_idx.append(0)
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         print('Failed sympy (not keeping):',
                               new_labels[i], '\t', L)
 
@@ -1545,7 +1541,7 @@ def find_additional_trees(tree, labels, basis_functions):
                                     new_tree.append(t)
                                     new_labels.append(L[j])
                                     try_idx.append(0)
-                            except Exception:
+                            except Exception:  # noqa: BLE001
                                 print('Failed sympy (not keeping):',
                                       new_labels[i], '\t', L[j])
 
@@ -1675,7 +1671,7 @@ def labels_to_shape(labels, basis_functions):
     for i, t in enumerate(labels):
         try:
             s[i] = basis_dict[t]
-        except Exception:
+        except Exception:  # noqa: BLE001
             if (t.startswith('a') and t[1:].isdigit()) or (is_float(t)):
                 s[i] = 0
             else:

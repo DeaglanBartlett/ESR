@@ -415,7 +415,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
                 p = [p]
             p = np.atleast_1d(p)
             fish_diag = np.diag(fish_mat)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print('\nError with function:', fcn_i.strip(), e)
             codelen[i] = np.inf
             continue
@@ -459,7 +459,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             m = (Delta != 0)
             Nsteps[m] /= Delta[m]
             Nsteps[~m] = np.nan
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print('Error with function:', fcn_i, e)
             codelen[i] = np.inf
             continue
@@ -515,7 +515,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
                 else:
                     negloglike_all[i] = np.nan
 
-            except Exception:
+            except Exception:  # noqa: BLE001
                 negloglike_all[i] = np.nan
 
             if np.isfinite(negloglike_all[i]):
@@ -560,7 +560,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
                                 negloglike_all[i] = f1(p)
                             else:
                                 negloglike_all[i] = fop(p)
-                        except Exception:
+                        except Exception:  # noqa: BLE001
                             negloglike_all[i] = np.nan
                         if np.isfinite(negloglike_all[i]):
                             kept_mask = np.ones(len(p), dtype=bool)
@@ -621,7 +621,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
 
         try:
             codelen[i] = test_all_Fisher._compute_codelen(fish_mat, fish_diag, ptrue, kept_mask, use_det_I)
-        except Exception:
+        except Exception:  # noqa: BLE001
             codelen[i] = np.inf
 
         p = ptrue
@@ -629,7 +629,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
 
         try:        # If p was an array, we can make a list out of it
             params[i, :] = np.pad(p, (0, max_param-len(p)))
-        except Exception:     # p is either a number or nothing
+        except Exception:  # noqa: BLE001     # p is either a number or nothing
             if p:   # p is a number
                 params[i, :] = 0
                 params[i, 0] = p

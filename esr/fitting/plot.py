@@ -136,7 +136,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
                 eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
             ypred = likelihood.get_pred(
                 likelihood.xvar, measured, eq_numpy, integrated=integrated)
-        except Exception:
+        except Exception:  # noqa: BLE001
             #  Retry numerically if the analytic integration was the problem.
             #  Anything left unplottable is skipped: falling through would draw
             #  the previous function's curve under this function's label.
@@ -159,7 +159,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
                     eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                 ypred = likelihood.get_pred(
                     likelihood.xvar, measured, eq_numpy, integrated=integrated)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
         if np.isscalar(ypred):

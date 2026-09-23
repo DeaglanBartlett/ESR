@@ -79,7 +79,7 @@ class ShapeLikelihood(GaussLikelihood):
             if normalisation.is_number and normalisation == 0:
                 return fcn_i, eq, integrated
             eq = sympy.cancel(sympy.simplify(eq / normalisation))
-        except Exception:
+        except Exception:  # noqa: BLE001
             #  A function that cannot be normalised is left as it is; the
             #  catalogue build reports any such failures.
             pass
