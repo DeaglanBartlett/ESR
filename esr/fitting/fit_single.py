@@ -2,9 +2,7 @@ import numpy as np
 
 from esr.fitting.test_all import optimise_fun
 from esr.fitting.test_all_Fisher import convert_params
-
-import esr.generation.generator as generator
-import esr.generation.simplifier as simplifier
+from esr.generation import generator, simplifier
 
 
 def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,

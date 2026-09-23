@@ -1,23 +1,30 @@
-import numpy as np
-import sympy
+import ast
+import csv
+import gc
+import hashlib
+import itertools
+import os
+import pprint
 import signal
 import sys
-import itertools
-import hashlib
-from mpi4py import MPI
-from contextlib import contextmanager
-import csv
-import ast
-import gc
 from collections import OrderedDict
-import pprint
-import os
-import esr.generation.utils as utils
-from esr.generation.custom_printer import ESRPrinter
+from contextlib import contextmanager
+
+import numpy as np
+import sympy
+from mpi4py import MPI
+
 from esr.fitting.sympy_symbols import (
-    sympy_locs, square, cube, pow_abs, sqrt_abs, log_abs,
-    x as _fprint_x_sym
+    cube,
+    log_abs,
+    pow_abs,
+    sqrt_abs,
+    square,
+    sympy_locs,
 )
+from esr.fitting.sympy_symbols import x as _fprint_x_sym
+from esr.generation import utils
+from esr.generation.custom_printer import ESRPrinter
 
 # ---------------------------------------------------------------------------
 # Numerical fingerprinting diagnostics
@@ -265,8 +272,7 @@ def get_max_param(all_fun, verbose=True):
     while len(with_ai) > 0:
         max_param += 1
         with_ai = [f for f in with_ai if 'a%i' % max_param in f]
-    if max_param < 0:
-        max_param = 0
+    max_param = max(max_param, 0)
     if verbose and rank == 0:
         print('\nMax number of parameters:', max_param)
     sys.stdout.flush()
@@ -1430,7 +1436,7 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
         for i in range(len(all_a)):
             locs["a%i" % i] = all_a[i]
 
-    for i in all_subs.keys():
+    for i in all_subs:
         for j in range(len(all_subs[i])):
             all_subs[i][j] = all_subs[i][j].replace("{", "{'")
             all_subs[i][j] = all_subs[i][j].replace("}", "'}")
@@ -1736,4 +1742,3 @@ def check_results(dirname, compl, tmax=10):
             matches[to_change[i][0]] = nuniq + new_match[to_change[i][1]]
         np.savetxt(dirname + '/matches_%i.txt' % compl, matches)
 
-    return

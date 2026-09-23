@@ -1,20 +1,25 @@
-import numpy as np
-import math
-import sympy
-from mpi4py import MPI
-import warnings
 import itertools
 import json
+import math
 import os
+import warnings
+
 import numdifftools as nd
+import numpy as np
+import sympy
+from mpi4py import MPI
 from scipy.optimize import minimize
 from scipy.stats import mode
 
-import esr.fitting.test_all as test_all
+from esr.fitting import test_all
+from esr.fitting.sympy_symbols import a0, x
 from esr.fitting.utils import (
-    atomic_write, combine_temp_files, emit_diagnostic_warning, fitting_paths,
-    set_recursionlimit_for_comp)
-from esr.fitting.sympy_symbols import x, a0
+    atomic_write,
+    combine_temp_files,
+    emit_diagnostic_warning,
+    fitting_paths,
+    set_recursionlimit_for_comp,
+)
 
 
 class HighConditionNumberWarning(UserWarning):
@@ -1136,4 +1141,3 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
 
     comm.Barrier()
 
-    return

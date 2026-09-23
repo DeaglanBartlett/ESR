@@ -1,17 +1,15 @@
+import os
+import warnings
+
 import astropy.constants
 import astropy.units as apu
 import numpy as np
 import scipy.integrate
 import sympy
-import os
-import warnings
 
-from esr.fitting.sympy_symbols import (
-    square, cube, sqrt, log, pow, x, a0, a1, a2, inv
-)
-
-from esr.generation.simplifier import time_limit
 import esr.generation.simplifier
+from esr.fitting.sympy_symbols import a0, a1, a2, cube, inv, log, pow, sqrt, square, x
+from esr.generation.simplifier import time_limit
 
 
 class Likelihood:
@@ -99,7 +97,6 @@ class Likelihood:
 
     def clear_data(self):
         """Clear data used for numerical integration (not required in most cases)"""
-        pass
 
     def run_sympify(self, fcn_i, **kwargs):
         """Sympify a function

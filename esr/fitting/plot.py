@@ -1,16 +1,17 @@
 import csv
-from mpi4py import MPI
+import os
 import warnings
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 import sympy
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import matplotlib as mpl
-import os
+from matplotlib import cm
+from mpi4py import MPI
 
-from esr.fitting.sympy_symbols import x, a0
+from esr.fitting import test_all
+from esr.fitting.sympy_symbols import a0, x
 from esr.fitting.utils import fitting_paths, set_recursionlimit_for_comp
-import esr.fitting.test_all as test_all
 
 # Suppress the numpy/scipy RuntimeWarnings raised while evaluating functions for
 # plotting, but leave other categories (including ESR's own diagnostics and

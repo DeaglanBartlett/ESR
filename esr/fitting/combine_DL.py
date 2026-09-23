@@ -1,13 +1,14 @@
-import numpy as np
-from mpi4py import MPI
-import os
-from pathlib import Path
-from prettytable import PrettyTable
 import csv
+import os
 import warnings
 from collections import defaultdict
+from pathlib import Path
 
-import esr.fitting.test_all as test_all
+import numpy as np
+from mpi4py import MPI
+from prettytable import PrettyTable
+
+from esr.fitting import test_all
 from esr.fitting.utils import combine_temp_files, fitting_paths, raw_catalogue_paths
 
 comm = MPI.COMM_WORLD

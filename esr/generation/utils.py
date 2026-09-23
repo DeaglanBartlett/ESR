@@ -1,12 +1,13 @@
-import numpy as np
 import os
 import sys
 import tempfile
+from collections import OrderedDict
 from contextlib import contextmanager
-from pympler import asizeof
+
+import numpy as np
 import psutil
 from psutil._common import bytes2human
-from collections import OrderedDict
+from pympler import asizeof
 
 
 @contextmanager
@@ -110,7 +111,6 @@ def using_mem(point=""):
     """
     print('\n%s:' % point)
     pprint_ntuple(psutil.virtual_memory())
-    return
 
 
 def locals_size(loc):
@@ -143,7 +143,6 @@ def locals_size(loc):
             print('\t%-15s : %7s' % (keys[i], value))
         sys.stdout.flush()
 
-    return
 
 
 def get_unique_indexes(L):

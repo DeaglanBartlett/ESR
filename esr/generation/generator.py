@@ -52,11 +52,7 @@ class Node:
         return new_node
 
     def is_used(self):
-        if (self.type == 0) and (self.parent is None):
-            return False
-        elif (self.type == 1) and (self.left is None):
-            return False
-        elif (self.type == 2) and (self.left is None) and (self.right is None):
+        if (self.type == 0) and (self.parent is None) or (self.type == 1) and (self.left is None) or (self.type == 2) and (self.left is None) and (self.right is None):
             return False
         return True
 
@@ -195,10 +191,7 @@ class DecoratedNode:
         elif self.op == "Pow" and (self.children[1].type == sympy.core.numbers.NegativeOne) and ("inv" in basis_functions[1]):
             return ["Inv"] + self.children[0].to_list(basis_functions)
         # Deal with * inv = /
-        elif self.op == "Mul" and self.children[0].op == "Pow" and (self.children[1].type == sympy.core.numbers.NegativeOne) and ("/" in basis_functions[2]):
-            return ["Mul"] + self.children[1].to_list(basis_functions)
-        # Deal with / inv = *
-        elif self.op == "Div" and self.children[0].op == "Pow" and (self.children[1].type == sympy.core.numbers.NegativeOne) and ("*" in basis_functions[2]):
+        elif self.op == "Mul" and self.children[0].op == "Pow" and (self.children[1].type == sympy.core.numbers.NegativeOne) and ("/" in basis_functions[2]) or self.op == "Div" and self.children[0].op == "Pow" and (self.children[1].type == sympy.core.numbers.NegativeOne) and ("*" in basis_functions[2]):
             return ["Mul"] + self.children[1].to_list(basis_functions)
         #  Multiply or divide by one doesn't do anything
         elif self.op == "Mul" and (self.children[0].is_unity() or self.children[1].is_unity()):
@@ -488,9 +481,7 @@ def check_operators(nodes, basis_functions):
             labels[i] = '*'
         elif labels[i] == 'Div' and '/' in basis_functions[2]:
             labels[i] = '/'
-        elif labels[i].lower() in sympy_numerics or is_float(labels[i]):
-            labels[i] = 'a'
-        elif labels[i].startswith('a') and labels[i][1:].isdigit():
+        elif labels[i].lower() in sympy_numerics or is_float(labels[i]) or labels[i].startswith('a') and labels[i][1:].isdigit():
             labels[i] = 'a'
         elif labels[i].startswith('x') and labels[i][1:].isdigit():
             labels[i] = 'x'
@@ -1133,10 +1124,7 @@ def update_sums(tree, labels, try_idx, basis_functions):
         k = all_start[j]
         neg_const.append(False)
         if k is not None and labels[k] in ["*", "/"]:
-            if labels[tree[k].left].lstrip("-").isdigit() and labels[tree[k].left].startswith("-"):
-                n *= -1
-                neg_const[-1] = True
-            elif labels[tree[k].right].lstrip("-").isdigit() and labels[tree[k].right].startswith("-"):
+            if labels[tree[k].left].lstrip("-").isdigit() and labels[tree[k].left].startswith("-") or labels[tree[k].right].lstrip("-").isdigit() and labels[tree[k].right].startswith("-"):
                 n *= -1
                 neg_const[-1] = True
 

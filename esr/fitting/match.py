@@ -1,15 +1,19 @@
+import itertools
+import warnings
+
 import numpy as np
 import sympy
 from mpi4py import MPI
-import warnings
-import itertools
-import esr.fitting.test_all as test_all
-import esr.fitting.test_all_Fisher as test_all_Fisher
+
+from esr.fitting import test_all, test_all_Fisher
+from esr.fitting.sympy_symbols import a0, x
 from esr.fitting.utils import (
-    combine_temp_files, fitting_paths, likelihood_catalogue_paths,
-    raw_catalogue_paths)
-from esr.fitting.sympy_symbols import x, a0
-import esr.generation.simplifier as simplifier
+    combine_temp_files,
+    fitting_paths,
+    likelihood_catalogue_paths,
+    raw_catalogue_paths,
+)
+from esr.generation import simplifier
 
 # Suppress the numpy/scipy RuntimeWarnings raised in bulk while re-evaluating
 # functions, but leave other categories (including unrelated user warnings)

@@ -1,19 +1,26 @@
+import hashlib
+import itertools
+import json
+import os
+import warnings
+
 import numpy as np
 import sympy
-import warnings
-import os
-import json
-import hashlib
 from mpi4py import MPI
 from scipy.optimize import minimize
-import itertools
 
-from esr.fitting.sympy_symbols import x, a0
+from esr.fitting.sympy_symbols import a0, x
 from esr.fitting.utils import (
-    atomic_write, combine_temp_files, emit_diagnostic_warning,
-    fitting_paths, likelihood_catalogue_paths, raw_catalogue_paths,
-    set_recursionlimit_for_comp, write_negloglike_file)
-import esr.generation.simplifier as simplifier
+    atomic_write,
+    combine_temp_files,
+    emit_diagnostic_warning,
+    fitting_paths,
+    likelihood_catalogue_paths,
+    raw_catalogue_paths,
+    set_recursionlimit_for_comp,
+    write_negloglike_file,
+)
+from esr.generation import simplifier
 
 # Suppress the numpy/scipy RuntimeWarnings (overflow, invalid value, divide by
 # zero) raised in bulk while evaluating candidate functions, but leave other
@@ -1054,7 +1061,6 @@ def _main_dynamic(comp, likelihood, fcn_list, tmax, pmin, pmax,
             comm.send((index, chi2_i, params_i), dest=0, tag=RESULT_TAG)
 
     comm.Barrier()
-    return
 
 
 def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=[40, 60], Nconv_params=[5, 20], test_success=False, ignore_previous_eqns=True):

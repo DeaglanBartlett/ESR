@@ -189,13 +189,7 @@ class ESRPrinter(Printer):
     def _print_Interval(self, i):
         fin = 'Interval{m}({a}, {b})'
         a, b, L, r = i.args
-        if a.is_infinite and b.is_infinite:
-            m = ''
-        elif a.is_infinite and not r:
-            m = ''
-        elif b.is_infinite and not L:
-            m = ''
-        elif not L and not r:
+        if a.is_infinite and b.is_infinite or a.is_infinite and not r or b.is_infinite and not L or not L and not r:
             m = ''
         elif L and r:
             m = '.open'
@@ -391,10 +385,7 @@ class ESRPrinter(Printer):
         sign = ""
         if c.is_number:
             re, im = c.as_real_imag()
-            if im.is_zero and re.is_negative:
-                expr = _keep_coeff(-c, m)
-                sign = "-"
-            elif re.is_zero and im.is_negative:
+            if im.is_zero and re.is_negative or re.is_zero and im.is_negative:
                 expr = _keep_coeff(-c, m)
                 sign = "-"
 
