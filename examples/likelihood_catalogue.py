@@ -129,9 +129,9 @@ for use_catalogue in [False, True]:
     esr.fitting.combine_dl.main(comp, likelihood)
 
     if rank == 0:
-        n_fitted = sum(1 for _ in open(
-            esr.fitting.test_all.function_catalogue_path(
-                comp, likelihood, unique=True)))
+        with open(esr.fitting.test_all.function_catalogue_path(
+                comp, likelihood, unique=True)) as f:
+            n_fitted = sum(1 for _ in f)
         shutil.copy(os.path.join(likelihood.out_dir, f'final_{comp}.dat'),
                     os.path.join(work_dir, f'final_{comp}_{tag}.dat'))
         summary[use_catalogue] = (n_fitted, elapsed)

@@ -303,8 +303,10 @@ def test_likelihood_catalogue_parallel_matches_serial(tmp_path):
     serial = NormalisingLikelihood('serial')
     assert test_all.ensure_likelihood_catalogue(comp, serial, tmax=5)
     serial_paths = likelihood_catalogue_paths(comp, serial)
-    serial_unique = open(serial_paths['unique']).read()
-    serial_matches = open(serial_paths['matches']).read()
+    with open(serial_paths['unique']) as f:
+        serial_unique = f.read()
+    with open(serial_paths['matches']) as f:
+        serial_matches = f.read()
 
     # Parallel build under mpiexec -n 3, writing to a separate output dir.
     script = tmp_path / 'parallel_build.py'
@@ -346,8 +348,10 @@ def test_likelihood_catalogue_parallel_matches_serial(tmp_path):
 
     parallel = NormalisingLikelihood('parallel')
     parallel_paths = likelihood_catalogue_paths(comp, parallel)
-    assert open(parallel_paths['unique']).read() == serial_unique
-    assert open(parallel_paths['matches']).read() == serial_matches
+    with open(parallel_paths['unique']) as f:
+        assert f.read() == serial_unique
+    with open(parallel_paths['matches']) as f:
+        assert f.read() == serial_matches
 
     # Dedup happened but did not collapse everything, and the first equation's
     # transformed group genuinely spans all three rank slices (per = ceil(24/3)
@@ -2564,13 +2568,15 @@ def test_likelihood_catalogue_cache_invalidates_on_equation_change(tmp_path):
     write(['a0*(a1 + x)', 'a2 + x'])
     assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
     paths = likelihood_catalogue_paths(comp, likelihood)
-    assert len(open(paths['matches']).read().splitlines()) == 2
+    with open(paths['matches']) as f:
+        assert len(f.read().splitlines()) == 2
 
     # Append an equation. Without a content-aware cache key the old two-line
     # matches file would be reused; it must rebuild instead.
     write(['a0*(a1 + x)', 'a2 + x', 'a0*x'])
     assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
-    assert len(open(paths['matches']).read().splitlines()) == 3
+    with open(paths['matches']) as f:
+        assert len(f.read().splitlines()) == 3
     metadata = test_all._read_likelihood_catalogue_metadata(comp, likelihood)
     assert metadata['n_all'] == 3
     assert metadata['settings']['all_equations_hash'] is not None
@@ -2630,16 +2636,16 @@ def test_likelihood_catalogue_versioned_cache_hit_skips_rebuild(tmp_path, monkey
     active_first = test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
     assert active_first is True          # normalising removes a0 -> active catalogue
     assert builds['n'] == 1              # first call built it
-    matches_before = open(
-        likelihood_catalogue_paths(comp, likelihood)['matches']).read()
+    with open(likelihood_catalogue_paths(comp, likelihood)['matches']) as f:
+        matches_before = f.read()
 
     # Nothing changed: identical equations, transform and version.
     active_second = test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
     assert active_second is True         # same active state returned
     assert builds['n'] == 1              # second call reused the cache, no rebuild
 
-    matches_after = open(
-        likelihood_catalogue_paths(comp, likelihood)['matches']).read()
+    with open(likelihood_catalogue_paths(comp, likelihood)['matches']) as f:
+        matches_after = f.read()
     assert matches_after == matches_before
 
 
@@ -2698,7 +2704,8 @@ def test_duplicate_checker_and_likelihood_share_custom_fn_dir(tmp_path):
     assert os.path.exists(raw['unique'])
     # The files really landed under the custom fn_dir, not the package library.
     assert os.path.abspath(fn_dir) in os.path.abspath(raw['all'])
-    assert sum(1 for _ in open(raw['all'])) == 24   # core_maths complexity 3
+    with open(raw['all']) as f:
+        assert sum(1 for _ in f) == 24   # core_maths complexity 3
 
 
 def test_convert_params_snap2_flat_direction_from_pipeline(monkeypatch, tmp_path):
