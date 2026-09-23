@@ -159,7 +159,8 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
                     eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
                 ypred = likelihood.get_pred(
                     likelihood.xvar, measured, eq_numpy, integrated=integrated)
-            except Exception:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
+                print(f"Failed to plot {fcn_i}: {e}", flush=True)
                 continue
 
         if np.isscalar(ypred):

@@ -199,6 +199,7 @@ def numerical_duplicate_candidates(uniq_fun, max_param=None, verbose=True):
         try:
             expr = sympy.sympify(fstr, locals=sympy_locs)
         except Exception:  # noqa: BLE001
+            expr = None
             continue
 
         fp = numerical_fingerprint(expr, max_param=max_param)

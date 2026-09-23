@@ -1,3 +1,5 @@
+# ruff: noqa: N999
+
 import itertools
 import json
 import math
@@ -827,8 +829,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0) or (np.sum(np.isinf(Fisher_diag)) > 0):
         Fisher_array = np.empty((n_iter, nparam))
         Hmat_array = np.empty((n_iter, nparam, nparam))
-        e = 0
-        for d2, meth in itertools.product(d_list, method_list):
+        for e, (d2, meth) in enumerate(itertools.product(d_list, method_list)):
             if use_relative_dx:
                 Hfun = nd.Hessian(fop, step=np.abs(
                     d2*theta_ML)+1.e-15, method=meth)
@@ -836,7 +837,6 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
                 Hfun = nd.Hessian(fop, step=d2, method=meth)
             Hmat = Hfun(theta_ML)
             Hmat_array[e] = Hmat
-            e += 1
 
         Hmat_array_f = []  # filter array
         for matrix in Hmat_array:
