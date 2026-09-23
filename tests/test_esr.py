@@ -240,7 +240,8 @@ def test_gaussian_dynamic_mpi(tmp_path):
         env=env,
         text=True,
         capture_output=True,
-        timeout=120)
+        timeout=120,
+        check=False)
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'Dynamic scheduling:' in result.stdout
     assert 'MPI_DYNAMIC_SMOKE_OK' in result.stdout
@@ -342,7 +343,8 @@ def test_likelihood_catalogue_parallel_matches_serial(tmp_path):
     env.setdefault('OMPI_ALLOW_RUN_AS_ROOT_CONFIRM', '1')
     result = subprocess.run(
         ['mpiexec', '--oversubscribe', '-n', '3', sys.executable, str(script)],
-        cwd=os.getcwd(), env=env, text=True, capture_output=True, timeout=180)
+        cwd=os.getcwd(), env=env, text=True, capture_output=True, timeout=180,
+        check=False)
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'PARALLEL_BUILD_OK' in result.stdout
 
