@@ -1,5 +1,6 @@
 import unittest
 from fractions import Fraction
+from typing import ClassVar
 
 import sympy
 from sympy import (
@@ -334,7 +335,7 @@ class TestESRPrinter(unittest.TestCase):
 
     def test_print_Quaternion(self):
         class Expr:
-            args = [1, 2, 3, 4]
+            args: ClassVar[list] = [1, 2, 3, 4]
         self.printer.parenthesize = lambda x, y, strict=False: str(x)
         self.assertEqual(self.printer._print_Quaternion(
             Expr()), "1 + 2*i + 3*j + 4*k")
@@ -442,7 +443,7 @@ class TestESRPrinter(unittest.TestCase):
 
     def test_print_BaseScalarField(self):
         class CoordSys:
-            symbols = [type('Symbol', (object,), {'name': 'x'})(),
+            symbols: ClassVar[list] = [type('Symbol', (object,), {'name': 'x'})(),
                        type('Symbol', (object,), {'name': 'y'})(),
                        type('Symbol', (object,), {'name': 'z'})()]
 
@@ -453,7 +454,7 @@ class TestESRPrinter(unittest.TestCase):
 
     def test_print_BaseVectorField(self):
         class CoordSys:
-            symbols = [type('Symbol', (object,), {'name': 'x'})(),
+            symbols: ClassVar[list] = [type('Symbol', (object,), {'name': 'x'})(),
                        type('Symbol', (object,), {'name': 'y'})(),
                        type('Symbol', (object,), {'name': 'z'})()]
 
@@ -464,7 +465,7 @@ class TestESRPrinter(unittest.TestCase):
 
     def test_print_Differential(self):
         class CoordSys:
-            symbols = [type('Symbol', (object,), {'name': 'x'})(),
+            symbols: ClassVar[list] = [type('Symbol', (object,), {'name': 'x'})(),
                        type('Symbol', (object,), {'name': 'y'})(),
                        type('Symbol', (object,), {'name': 'z'})()]
 
@@ -488,7 +489,7 @@ class TestESRPrinter(unittest.TestCase):
 
     def test_print_Tr(self):
         class Expr:
-            args = ["A"]
+            args: ClassVar[list] = ["A"]
         self.printer._print = lambda x: str(x)
         self.assertEqual(self.printer._print_Tr(Expr()), "Tr(A)")
 
@@ -586,14 +587,14 @@ class TestESRPrinter(unittest.TestCase):
 
                 def __str__(self):
                     return "Signature"
-            signature = [Signature()]
+            signature: ClassVar[list] = [Signature()]
         self.printer._print = lambda x: str(x)
         self.assertEqual(self.printer._print_Lambda(
             Lambda()), "Lambda(Signature, expr)")
 
     def test_print_LatticeOp(self):
         class LatticeOp:
-            args = ["arg1", "arg2"]
+            args: ClassVar[list] = ["arg1", "arg2"]
             func = type('Func', (object,), {'__name__': 'LatticeOpFunc'})()
         self.printer._print = lambda x: str(x)
         self.assertEqual(self.printer._print_LatticeOp(
@@ -601,12 +602,12 @@ class TestESRPrinter(unittest.TestCase):
 
     def test_print_Limit(self):
         class Limit:
-            args = ["e", "z", "z0", "+"]
+            args: ClassVar[list] = ["e", "z", "z0", "+"]
         self.printer._print = lambda x: str(x)
         self.assertEqual(self.printer._print_Limit(Limit()), "Limit(e, z, z0)")
 
         class LimitWithDir:
-            args = ["e", "z", "z0", "-"]
+            args: ClassVar[list] = ["e", "z", "z0", "-"]
         self.assertEqual(self.printer._print_Limit(
             LimitWithDir()), "Limit(e, z, z0, dir='-')")
 
