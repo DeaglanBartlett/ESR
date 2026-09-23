@@ -86,10 +86,10 @@ def chi2_fcn(x, likelihood, eq_numpy, integrated, signs):
         for i in range(len(signs)):
             if signs[i] is None:
                 p[i] = x[i]
-            elif signs[i] == '+':
+            elif signs[i] == "+":
                 p[i] = 10 ** x[i]
-            elif signs[i] == '-':
-                p[i] = - 10 ** x[i]
+            elif signs[i] == "-":
+                p[i] = -(10 ** x[i])
             else:
                 raise ValueError
     return likelihood.negloglike(p, eq_numpy, integrated=integrated)
@@ -97,9 +97,13 @@ def chi2_fcn(x, likelihood, eq_numpy, integrated, signs):
 
 def ensure_output_dirs(likelihood):
     if rank == 0:
-        for dirname in [likelihood.base_out_dir, likelihood.out_dir, likelihood.temp_dir]:
+        for dirname in [
+            likelihood.base_out_dir,
+            likelihood.out_dir,
+            likelihood.temp_dir,
+        ]:
             if not os.path.exists(dirname):
-                print('Making dir:', dirname)
+                print("Making dir:", dirname)
             os.makedirs(dirname, exist_ok=True)
     comm.Barrier()
 
@@ -120,16 +124,19 @@ def function_catalogue_path(comp, likelihood, unique=True):
         :path (str): path of the selected catalogue file
     """
     if unique and likelihood_catalogue_active(comp, likelihood):
-        return likelihood_catalogue_paths(comp, likelihood)['unique']
+        return likelihood_catalogue_paths(comp, likelihood)["unique"]
     raw = raw_catalogue_paths(comp, likelihood)
-    return raw['unique'] if unique else raw['all']
+    return raw["unique"] if unique else raw["all"]
 
 
-def _likelihood_catalogue_settings(tmax, try_integration,
-                                   all_equations_hash=None,
-                                   transform_version=None,
-                                   transform_fingerprint=None,
-                                   raw_matches_hash=None):
+def _likelihood_catalogue_settings(
+    tmax,
+    try_integration,
+    all_equations_hash=None,
+    transform_version=None,
+    transform_fingerprint=None,
+    raw_matches_hash=None,
+):
     """Settings fingerprint stored alongside a cached likelihood catalogue.
 
     The returned dict is written into the catalogue metadata and compared on
@@ -184,13 +191,13 @@ def _likelihood_catalogue_settings(tmax, try_integration,
         :settings (dict): JSON-serialisable settings fingerprint
     """
     settings = {
-        'cache_schema_version': 1,
-        'tmax': float(tmax),
-        'try_integration': bool(try_integration),
-        'all_equations_hash': all_equations_hash,
-        'raw_matches_hash': raw_matches_hash,
-        'transform_version': transform_version,
-        'transform_fingerprint': transform_fingerprint,
+        "cache_schema_version": 1,
+        "tmax": float(tmax),
+        "try_integration": bool(try_integration),
+        "all_equations_hash": all_equations_hash,
+        "raw_matches_hash": raw_matches_hash,
+        "transform_version": transform_version,
+        "transform_fingerprint": transform_fingerprint,
     }
     # Normalise through JSON so the fresh settings compare equal to the stored
     # (JSON-loaded) copy: a tuple ``transform_version`` would otherwise become a
@@ -212,16 +219,23 @@ def _hash_file(path):
         :digest (str): hex SHA-1 digest of the file bytes
     """
     h = hashlib.sha1()
-    with open(path, 'rb') as f:
-        for chunk in iter(lambda: f.read(1 << 20), b''):
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
 
 
 _TRANSFORM_PROBES = (
-    'a0', 'a0*x', 'a0 + a1*x', 'a0*x + a1*pow(x, 2)',
-    'a0 + a1*pow(x, 3)', 'a0*pow(x, 4) + a1', 'a0/(a1 + x)',
-    'a0 + a1*x + a2*pow(x, 2)', 'a0*inv(x) + a1')
+    "a0",
+    "a0*x",
+    "a0 + a1*x",
+    "a0*x + a1*pow(x, 2)",
+    "a0 + a1*pow(x, 3)",
+    "a0*pow(x, 4) + a1",
+    "a0/(a1 + x)",
+    "a0 + a1*x + a2*pow(x, 2)",
+    "a0*inv(x) + a1",
+)
 
 
 def _transform_fingerprint(likelihood, tmax, try_integration):
@@ -246,12 +260,13 @@ def _transform_fingerprint(likelihood, tmax, try_integration):
     for probe in _TRANSFORM_PROBES:
         try:
             _, eq, integrated = likelihood.run_sympify(
-                probe, tmax=tmax, try_integration=try_integration)
-            token = f'{bool(integrated)}:{sympy.srepr(eq)}'
+                probe, tmax=tmax, try_integration=try_integration
+            )
+            token = f"{bool(integrated)}:{sympy.srepr(eq)}"
         except Exception as exc:  # noqa: BLE001
-            token = f'ERR:{type(exc).__name__}'
-        h.update(token.encode('utf-8'))
-        h.update(b'\x00')
+            token = f"ERR:{type(exc).__name__}"
+        h.update(token.encode("utf-8"))
+        h.update(b"\x00")
     return h.hexdigest()
 
 
@@ -267,7 +282,7 @@ def _read_likelihood_catalogue_metadata(comp, likelihood):
     """
     paths = likelihood_catalogue_paths(comp, likelihood)
     try:
-        with open(paths['metadata'], 'r') as f:
+        with open(paths["metadata"], "r") as f:
             return json.load(f)
     except FileNotFoundError:
         return None
@@ -285,10 +300,10 @@ def likelihood_catalogue_active(comp, likelihood):
             the unique-representative and matches files are present
     """
     metadata = _read_likelihood_catalogue_metadata(comp, likelihood)
-    if metadata is None or not metadata.get('active', False):
+    if metadata is None or not metadata.get("active", False):
         return False
     paths = likelihood_catalogue_paths(comp, likelihood)
-    return os.path.exists(paths['unique']) and os.path.exists(paths['matches'])
+    return os.path.exists(paths["unique"]) and os.path.exists(paths["matches"])
 
 
 def canonicalize_parameter_symbols(eq):
@@ -308,17 +323,18 @@ def canonicalize_parameter_symbols(eq):
     """
     active_params = sorted(
         [
-            symbol for symbol in eq.free_symbols
-            if symbol != x and symbol.name.startswith('a')
-            and symbol.name[1:].isdigit()
+            symbol
+            for symbol in eq.free_symbols
+            if symbol != x and symbol.name.startswith("a") and symbol.name[1:].isdigit()
         ],
-        key=lambda symbol: int(symbol.name[1:])
+        key=lambda symbol: int(symbol.name[1:]),
     )
     if len(active_params) == 0:
         return eq, active_params
 
     canonical = sympy.symbols(
-        ' '.join([f'a{i}' for i in range(len(active_params))]), real=True)
+        " ".join([f"a{i}" for i in range(len(active_params))]), real=True
+    )
     canonical = list(np.atleast_1d(canonical))
     replacements = {
         active_params[i]: canonical[i]
@@ -349,7 +365,8 @@ def _canonical_transformed_key(fcn_i, likelihood, tmax, try_integration):
             detect a parameter-layout change against the raw tree
     """
     fcn_i, eq, integrated = likelihood.run_sympify(
-        fcn_i, tmax=tmax, try_integration=try_integration)
+        fcn_i, tmax=tmax, try_integration=try_integration
+    )
     eq, active_params = canonicalize_parameter_symbols(eq)
     try:
         eq_key = sympy.factor(sympy.cancel(eq))
@@ -360,8 +377,9 @@ def _canonical_transformed_key(fcn_i, likelihood, tmax, try_integration):
     ]
 
 
-def _transformed_keys_for_slice(functions, start_index, likelihood, tmax,
-                                try_integration, max_param):
+def _transformed_keys_for_slice(
+    functions, start_index, likelihood, tmax, try_integration, max_param
+):
     """Canonical transformed keys for a contiguous slice of raw equations.
 
     This is the per-equation work of the catalogue build, factored out so it can
@@ -386,16 +404,18 @@ def _transformed_keys_for_slice(functions, start_index, likelihood, tmax,
     results = []
     for offset, fcn_i in enumerate(functions):
         index = start_index + offset
-        expected = [f'a{i}' for i in range(
-            simplifier.count_params([fcn_i], max_param)[0])]
+        expected = [
+            f"a{i}" for i in range(simplifier.count_params([fcn_i], max_param)[0])
+        ]
         failed = False
         try:
             with simplifier.time_limit(tmax):
                 key, layout = _canonical_transformed_key(
-                    fcn_i, likelihood, tmax, try_integration)
+                    fcn_i, likelihood, tmax, try_integration
+                )
         except Exception:  # noqa: BLE001
             failed = True
-            key = ('failed', index, fcn_i)
+            key = ("failed", index, fcn_i)
             layout = expected
         results.append((index, key, layout != expected, failed))
     return results
@@ -483,17 +503,17 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
     # silent all-equations transform pass -- expensive at high complexity -- for a
     # feature only custom transforming likelihoods need. The README and tutorial
     # state that a transforming likelihood must set use_likelihood_catalogue=True.
-    if not getattr(likelihood, 'use_likelihood_catalogue', False):
+    if not getattr(likelihood, "use_likelihood_catalogue", False):
         if rank == 0:
-            for path in [paths['unique'], paths['matches']]:
+            for path in [paths["unique"], paths["matches"]]:
                 if os.path.exists(path):
                     os.remove(path)
             metadata = {
-                'active': False,
-                'settings': _likelihood_catalogue_settings(tmax, try_integration),
-                'disabled_by_likelihood': True,
+                "active": False,
+                "settings": _likelihood_catalogue_settings(tmax, try_integration),
+                "disabled_by_likelihood": True,
             }
-            with atomic_write(paths['metadata']) as f:
+            with atomic_write(paths["metadata"]) as f:
                 json.dump(metadata, f, indent=2, sort_keys=True)
         comm.Barrier()
         return False
@@ -504,10 +524,11 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
     # tmax/try_integration change.
     raw_paths = raw_catalogue_paths(comp, likelihood)
     if rank == 0:
-        all_equations_hash = _hash_file(raw_paths['all'])
-        raw_matches_hash = _hash_file(raw_paths['matches'])
+        all_equations_hash = _hash_file(raw_paths["all"])
+        raw_matches_hash = _hash_file(raw_paths["matches"])
         transform_fingerprint = _transform_fingerprint(
-            likelihood, tmax, try_integration)
+            likelihood, tmax, try_integration
+        )
     else:
         all_equations_hash = None
         raw_matches_hash = None
@@ -515,10 +536,15 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
     all_equations_hash = comm.bcast(all_equations_hash, root=0)
     raw_matches_hash = comm.bcast(raw_matches_hash, root=0)
     transform_fingerprint = comm.bcast(transform_fingerprint, root=0)
-    transform_version = getattr(likelihood, 'catalogue_transform_version', None)
+    transform_version = getattr(likelihood, "catalogue_transform_version", None)
     settings = _likelihood_catalogue_settings(
-        tmax, try_integration, all_equations_hash,
-        transform_version, transform_fingerprint, raw_matches_hash)
+        tmax,
+        try_integration,
+        all_equations_hash,
+        transform_version,
+        transform_fingerprint,
+        raw_matches_hash,
+    )
 
     metadata = _read_likelihood_catalogue_metadata(comp, likelihood)
     # A cache is reused only when its inputs match, it was built cleanly (no
@@ -529,13 +555,18 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
     # every call rather than risk a stale mapping (correct but slower -- set
     # catalogue_transform_version to cache it, or use_likelihood_catalogue=False
     # to skip it).
-    if (metadata is not None and transform_version is not None
-            and metadata.get('settings') == settings
-            and metadata.get('failed_count', 0) == 0
-            and (not metadata.get('active', False)
-                 or likelihood_catalogue_active(comp, likelihood))):
+    if (
+        metadata is not None
+        and transform_version is not None
+        and metadata.get("settings") == settings
+        and metadata.get("failed_count", 0) == 0
+        and (
+            not metadata.get("active", False)
+            or likelihood_catalogue_active(comp, likelihood)
+        )
+    ):
         comm.Barrier()
-        return metadata.get('active', False)
+        return metadata.get("active", False)
 
     max_param = int(max(4, np.floor((comp - 1) / 2)))
     if rank == 0:
@@ -549,25 +580,33 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
         # alongside x**a0 -- and fit them as separate models, where a
         # near-degenerate Hessian earns them a shorter codelength than the very
         # family they are a redundant copy of.
-        with open(raw_paths['unique'], 'r') as f:
+        with open(raw_paths["unique"], "r") as f:
             unique_functions = [line.strip() for line in f]
         raw_unique_count = len(unique_functions)
-        with open(raw_paths['matches'], 'r') as f:
+        with open(raw_paths["matches"], "r") as f:
             raw_matches = [int(float(line.strip())) for line in f if line.strip()]
-        if raw_matches and (min(raw_matches) < 0
-                            or max(raw_matches) >= raw_unique_count):
+        if raw_matches and (
+            min(raw_matches) < 0 or max(raw_matches) >= raw_unique_count
+        ):
             raise ValueError(
-                f'Raw matches file for complexity {comp} indexes outside its '
-                f'unique-equation catalogue ({raw_unique_count} entries). '
-                f'Regenerate the catalogue with duplicate_checker.main.')
+                f"Raw matches file for complexity {comp} indexes outside its "
+                f"unique-equation catalogue ({raw_unique_count} entries). "
+                f"Regenerate the catalogue with duplicate_checker.main."
+            )
         per = int(np.ceil(raw_unique_count / size)) if raw_unique_count else 0
         # Contiguous slices, so gathering in rank order reproduces global index
         # order and the representative selection is deterministic.
         chunks = [
-            (min(r * per, raw_unique_count),
-             unique_functions[min(r * per, raw_unique_count):
-                              min((r + 1) * per, raw_unique_count)])
-            for r in range(size)]
+            (
+                min(r * per, raw_unique_count),
+                unique_functions[
+                    min(r * per, raw_unique_count) : min(
+                        (r + 1) * per, raw_unique_count
+                    )
+                ],
+            )
+            for r in range(size)
+        ]
     else:
         chunks = None
 
@@ -589,13 +628,14 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
     # one-time cost per settings combination.
     start_index, my_functions = comm.scatter(chunks, root=0)
     local_results = _transformed_keys_for_slice(
-        my_functions, start_index, likelihood, tmax, try_integration, max_param)
+        my_functions, start_index, likelihood, tmax, try_integration, max_param
+    )
     gathered = comm.gather(local_results, root=0)
 
     if rank == 0:
         results = sorted(
-            (item for sub in gathered for item in sub),
-            key=lambda entry: entry[0])
+            (item for sub in gathered for item in sub), key=lambda entry: entry[0]
+        )
 
         key_to_unique = {}
         unique_representatives = []
@@ -624,58 +664,64 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
         # silently.
         if failed_count > 0:
             emit_diagnostic_warning(
-                f'{failed_count} of {raw_unique_count} unique equations failed '
-                f'to transform while building the likelihood-aware catalogue '
-                f'for complexity {comp}; each such equation is treated as its '
-                f'own family.', LikelihoodCatalogueWarning)
+                f"{failed_count} of {raw_unique_count} unique equations failed "
+                f"to transform while building the likelihood-aware catalogue "
+                f"for complexity {comp}; each such equation is treated as its "
+                f"own family.",
+                LikelihoodCatalogueWarning,
+            )
 
         # Activate when the transform removes/relabels a parameter (correctness)
         # OR collapses raw-distinct expressions onto the same transformed model
         # (a dedup benefit: fewer fits than the raw unique catalogue).
-        active = (changed_layout_count > 0
-                  or len(unique_representatives) < raw_unique_count)
+        active = (
+            changed_layout_count > 0 or len(unique_representatives) < raw_unique_count
+        )
         if transform_version is None:
             emit_diagnostic_warning(
-                f'Likelihood-aware catalogue for complexity {comp} is built '
-                f'from a run_sympify transform with no '
-                f'catalogue_transform_version, so it is rebuilt on every call '
-                f'rather than cached: the probe fingerprint alone cannot '
-                f'guarantee cache freshness. Set '
-                f'likelihood.catalogue_transform_version to cache it, or '
-                f'use_likelihood_catalogue=False to skip it.',
-                LikelihoodCatalogueWarning)
+                f"Likelihood-aware catalogue for complexity {comp} is built "
+                f"from a run_sympify transform with no "
+                f"catalogue_transform_version, so it is rebuilt on every call "
+                f"rather than cached: the probe fingerprint alone cannot "
+                f"guarantee cache freshness. Set "
+                f"likelihood.catalogue_transform_version to cache it, or "
+                f"use_likelihood_catalogue=False to skip it.",
+                LikelihoodCatalogueWarning,
+            )
         if active:
-            with atomic_write(paths['unique']) as f:
+            with atomic_write(paths["unique"]) as f:
                 for fcn_i in unique_representatives:
-                    f.write(fcn_i + '\n')
-            with atomic_write(paths['matches']) as f:
+                    f.write(fcn_i + "\n")
+            with atomic_write(paths["matches"]) as f:
                 for match in matches:
-                    f.write(str(match) + '\n')
+                    f.write(str(match) + "\n")
         else:
-            for path in [paths['unique'], paths['matches']]:
+            for path in [paths["unique"], paths["matches"]]:
                 if os.path.exists(path):
                     os.remove(path)
 
         metadata = {
-            'active': bool(active),
-            'settings': settings,
-            'n_all': len(matches),
-            'n_unique': len(unique_representatives),
-            'raw_unique_count': raw_unique_count,
-            'changed_layout_count': changed_layout_count,
-            'failed_count': failed_count,
+            "active": bool(active),
+            "settings": settings,
+            "n_all": len(matches),
+            "n_unique": len(unique_representatives),
+            "raw_unique_count": raw_unique_count,
+            "changed_layout_count": changed_layout_count,
+            "failed_count": failed_count,
         }
-        with atomic_write(paths['metadata']) as f:
+        with atomic_write(paths["metadata"]) as f:
             json.dump(metadata, f, indent=2, sort_keys=True)
         if active:
-            print('Using likelihood-aware catalogue: '
-                  f"{len(unique_representatives)} transformed families from "
-                  f"{raw_unique_count} unique equations; "
-                  f"{changed_layout_count} parameter-layout changes.",
-                  flush=True)
+            print(
+                "Using likelihood-aware catalogue: "
+                f"{len(unique_representatives)} transformed families from "
+                f"{raw_unique_count} unique equations; "
+                f"{changed_layout_count} parameter-layout changes.",
+                flush=True,
+            )
     comm.Barrier()
     metadata = _read_likelihood_catalogue_metadata(comp, likelihood)
-    return bool(metadata is not None and metadata.get('active', False))
+    return bool(metadata is not None and metadata.get("active", False))
 
 
 def catalogue_digest(comp, likelihood):
@@ -701,8 +747,8 @@ def save_fit_settings(comp, likelihood):
         :comp (int): complexity of functions to consider
         :likelihood (fitting.likelihood object): object providing ``out_dir``
     """
-    with atomic_write(fitting_paths(comp, likelihood)['fit_settings']) as f:
-        json.dump({'catalogue_digest': catalogue_digest(comp, likelihood)}, f)
+    with atomic_write(fitting_paths(comp, likelihood)["fit_settings"]) as f:
+        json.dump({"catalogue_digest": catalogue_digest(comp, likelihood)}, f)
 
 
 def load_fit_settings(comp, likelihood):
@@ -716,7 +762,7 @@ def load_fit_settings(comp, likelihood):
         :settings (dict or None): the parsed marker, or None if absent
     """
     try:
-        with open(fitting_paths(comp, likelihood)['fit_settings'], 'r') as f:
+        with open(fitting_paths(comp, likelihood)["fit_settings"], "r") as f:
             return json.load(f)
     except FileNotFoundError:
         return None
@@ -730,7 +776,7 @@ def clear_fit_settings(comp, likelihood):
         :likelihood (fitting.likelihood object): object providing ``out_dir``
     """
     try:
-        os.remove(fitting_paths(comp, likelihood)['fit_settings'])
+        os.remove(fitting_paths(comp, likelihood)["fit_settings"])
     except FileNotFoundError:
         pass
 
@@ -750,20 +796,22 @@ def check_catalogue_digest(recorded, comp, likelihood, what):
         :likelihood (fitting.likelihood object): provides the catalogue paths
         :what (str): which outputs are being checked, for the message
     """
-    digest = recorded.get('catalogue_digest') if recorded else None
+    digest = recorded.get("catalogue_digest") if recorded else None
     if digest is None:
         emit_diagnostic_warning(
-            f'{what} carry no catalogue digest, so they can only be checked '
-            'against the number of equations in the catalogue, which cannot '
-            'distinguish two catalogues of the same length. Rerun '
-            'test_all.main and test_all_fisher.main to record one.',
-            MissingCatalogueDigestWarning)
+            f"{what} carry no catalogue digest, so they can only be checked "
+            "against the number of equations in the catalogue, which cannot "
+            "distinguish two catalogues of the same length. Rerun "
+            "test_all.main and test_all_fisher.main to record one.",
+            MissingCatalogueDigestWarning,
+        )
         return
     if digest != catalogue_digest(comp, likelihood):
         raise ValueError(
-            f'{what} were produced from a different catalogue to the one now '
-            'active. Rerun test_all.main and test_all_fisher.main with the '
-            'current catalogue/settings.')
+            f"{what} were produced from a different catalogue to the one now "
+            "active. Rerun test_all.main and test_all_fisher.main with the "
+            "current catalogue/settings."
+        )
 
 
 def get_functions(comp, likelihood, unique=True):
@@ -866,10 +914,20 @@ def get_function_count(comp, likelihood, unique=True):
     return comm.bcast(total_lines, root=0)
 
 
-def _fit_function_with_timeout(fcn_i, likelihood, tmax, pmin, pmax, comp,
-                               try_integration, log_opt, max_param,
-                               Niter_params, Nconv_params,
-                               ignore_previous_eqns):
+def _fit_function_with_timeout(
+    fcn_i,
+    likelihood,
+    tmax,
+    pmin,
+    pmax,
+    comp,
+    try_integration,
+    log_opt,
+    max_param,
+    Niter_params,
+    Nconv_params,
+    ignore_previous_eqns,
+):
     """Fit one function under a wall-clock timeout, returning NaN on failure.
 
     Wraps ``optimise_fun`` in ``simplifier.time_limit`` and a broad exception
@@ -913,7 +971,8 @@ def _fit_function_with_timeout(fcn_i, likelihood, tmax, pmin, pmax, comp,
                     max_param=max_param,
                     Niter_params=Niter_params,
                     Nconv_params=Nconv_params,
-                    ignore_previous_eqns=ignore_previous_eqns)
+                    ignore_previous_eqns=ignore_previous_eqns,
+                )
             except NameError:
                 if try_integration:
                     chi2_i, params = optimise_fun(
@@ -928,19 +987,32 @@ def _fit_function_with_timeout(fcn_i, likelihood, tmax, pmin, pmax, comp,
                         max_param=max_param,
                         Niter_params=Niter_params,
                         Nconv_params=Nconv_params,
-                        ignore_previous_eqns=ignore_previous_eqns)
+                        ignore_previous_eqns=ignore_previous_eqns,
+                    )
                 else:
                     raise NameError
     except Exception as e:  # noqa: BLE001
         print(e, flush=True)
         chi2_i = np.nan
-        params[:] = 0.
+        params[:] = 0.0
     return chi2_i, params
 
 
-def _main_dynamic(comp, likelihood, fcn_list, tmax, pmin, pmax,
-                  print_frequency, try_integration, log_opt, max_param,
-                  Niter_params, Nconv_params, ignore_previous_eqns):
+def _main_dynamic(
+    comp,
+    likelihood,
+    fcn_list,
+    tmax,
+    pmin,
+    pmax,
+    print_frequency,
+    try_integration,
+    log_opt,
+    max_param,
+    Niter_params,
+    Nconv_params,
+    ignore_previous_eqns,
+):
     """Fit all functions using a rank-0 coordinator/worker MPI schedule.
 
     The static partitioning in ``main`` gives each rank a fixed contiguous
@@ -988,22 +1060,20 @@ def _main_dynamic(comp, likelihood, fcn_list, tmax, pmin, pmax,
         print(
             f"Dynamic scheduling: {n_functions} functions across "
             f"{n_workers} workers",
-            flush=True)
+            flush=True,
+        )
 
         chi2 = np.full(n_functions, np.nan)
         params = np.zeros([n_functions, max_param])
         paths = fitting_paths(comp, likelihood)
-        checkpoint_file = paths['negloglike_checkpoint']
-        output_file = paths['negloglike']
+        checkpoint_file = paths["negloglike_checkpoint"]
+        output_file = paths["negloglike"]
         next_index = 0
         active = 0
 
         for worker in range(1, size):
             if next_index < n_functions:
-                comm.send(
-                    (next_index, fcn_list[next_index]),
-                    dest=worker,
-                    tag=WORK_TAG)
+                comm.send((next_index, fcn_list[next_index]), dest=worker, tag=WORK_TAG)
                 next_index += 1
                 active += 1
             else:
@@ -1014,7 +1084,8 @@ def _main_dynamic(comp, likelihood, fcn_list, tmax, pmin, pmax,
         while active:
             status = MPI.Status()
             index, chi2_i, params_i = comm.recv(
-                source=MPI.ANY_SOURCE, tag=RESULT_TAG, status=status)
+                source=MPI.ANY_SOURCE, tag=RESULT_TAG, status=status
+            )
             worker = status.Get_source()
             chi2[index] = chi2_i
             params[index, :] = params_i
@@ -1022,14 +1093,10 @@ def _main_dynamic(comp, likelihood, fcn_list, tmax, pmin, pmax,
             if completed == 1 or completed % print_frequency == 0:
                 print(f"{completed} of {n_functions}", flush=True)
             if completed % checkpoint_frequency == 0:
-                write_negloglike_file(
-                    checkpoint_file, chi2, params, max_param)
+                write_negloglike_file(checkpoint_file, chi2, params, max_param)
 
             if next_index < n_functions:
-                comm.send(
-                    (next_index, fcn_list[next_index]),
-                    dest=worker,
-                    tag=WORK_TAG)
+                comm.send((next_index, fcn_list[next_index]), dest=worker, tag=WORK_TAG)
                 next_index += 1
             else:
                 comm.send(None, dest=worker, tag=STOP_TAG)
@@ -1057,13 +1124,28 @@ def _main_dynamic(comp, likelihood, fcn_list, tmax, pmin, pmax,
                 max_param,
                 Niter_params,
                 Nconv_params,
-                ignore_previous_eqns)
+                ignore_previous_eqns,
+            )
             comm.send((index, chi2_i, params_i), dest=0, tag=RESULT_TAG)
 
     comm.Barrier()
 
 
-def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=None, Nconv_params=None, test_success=False, ignore_previous_eqns=True):
+def optimise_fun(
+    fcn_i,
+    likelihood,
+    tmax,
+    pmin,
+    pmax,
+    comp=0,
+    try_integration=False,
+    log_opt=False,
+    max_param=4,
+    Niter_params=None,
+    Nconv_params=None,
+    test_success=False,
+    ignore_previous_eqns=True,
+):
     """Optimise the parameters of a function to fit data
 
     The list of parameters, P, passed as Niter_params and Nconv_params compute these values, N, to be
@@ -1096,12 +1178,12 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
         Nconv_params = [5, 20]
     if Niter_params is None:
         Niter_params = [40, 60]
-    xvar = getattr(likelihood, 'xvar', None)
+    xvar = getattr(likelihood, "xvar", None)
 
     params = np.zeros(max_param)
 
     if comp > 1 and ignore_previous_eqns:
-        previous_fns_file = raw_catalogue_paths(comp, likelihood)['previous']
+        previous_fns_file = raw_catalogue_paths(comp, likelihood)["previous"]
         with open(previous_fns_file, "r") as f:
             previous_fns = f.readlines()
         # discard repeat of lower complexity (e.g. [inv, inv, ...])
@@ -1110,17 +1192,20 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
 
     try:
         fcn_i, eq, integrated = likelihood.run_sympify(
-            fcn_i, tmax=tmax, try_integration=try_integration)
+            fcn_i, tmax=tmax, try_integration=try_integration
+        )
 
         # A likelihood transformation can remove a parameter without retaining
         # a prefix, e.g. a0*(a1+x) / g(1) leaves a1. Fit a canonical parameter
         # vector for the transformed expression rather than the original tree.
         eq, active_params = canonicalize_parameter_symbols(eq)
         nparam = len(active_params)
-        Niter = int(np.sum(nparam ** np.arange(len(Niter_params))
-                    * np.array(Niter_params)))
-        Nconv = int(np.sum(nparam ** np.arange(len(Nconv_params))
-                    * np.array(Nconv_params)))
+        Niter = int(
+            np.sum(nparam ** np.arange(len(Niter_params)) * np.array(Niter_params))
+        )
+        Nconv = int(
+            np.sum(nparam ** np.arange(len(Nconv_params)) * np.array(Nconv_params))
+        )
         if (Nconv <= 0) or (Niter <= 0) or (Nconv > Niter):
             raise ValueError("Nconv and/or Niter have unacceptable values")
 
@@ -1136,7 +1221,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
         inf_count = 0
 
         if nparam > 1:
-            all_a = ' '.join([f'a{i}' for i in range(nparam)])
+            all_a = " ".join([f"a{i}" for i in range(nparam)])
             all_a = list(sympy.symbols(all_a, real=True))
             eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
         else:
@@ -1164,25 +1249,54 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
 
             if nparam > 2:
                 inpt = [np.random.uniform(pmin, pmax) for _ in range(nparam)]
-                res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated,
-                               # Default=3000
-                                                     None), method="BFGS", options={'maxiter': 7000})
+                res = minimize(
+                    chi2_fcn,
+                    inpt,
+                    args=(
+                        likelihood,
+                        eq_numpy,
+                        integrated,
+                        # Default=3000
+                        None,
+                    ),
+                    method="BFGS",
+                    options={"maxiter": 7000},
+                )
             elif nparam == 2:
                 if log_opt:
                     # These are now in log-space, so this is 1e-1 -- 1e1; was -10:10
-                    inpt = [np.random.uniform(
-                        pmin, pmax), np.random.uniform(pmin, pmax)]
-                    res_pp = minimize(chi2_fcn, inpt, args=(
-                        likelihood, eq_numpy, integrated, ['+', '+']), method="BFGS")
-                    res_mp = minimize(chi2_fcn, inpt, args=(
-                        likelihood, eq_numpy, integrated, ['-', '+']), method="BFGS")
-                    res_pm = minimize(chi2_fcn, inpt, args=(
-                        likelihood, eq_numpy, integrated, ['+', '-']), method="BFGS")
-                    res_mm = minimize(chi2_fcn, inpt, args=(
-                        likelihood, eq_numpy, integrated, ['-', '-']), method="BFGS")
+                    inpt = [
+                        np.random.uniform(pmin, pmax),
+                        np.random.uniform(pmin, pmax),
+                    ]
+                    res_pp = minimize(
+                        chi2_fcn,
+                        inpt,
+                        args=(likelihood, eq_numpy, integrated, ["+", "+"]),
+                        method="BFGS",
+                    )
+                    res_mp = minimize(
+                        chi2_fcn,
+                        inpt,
+                        args=(likelihood, eq_numpy, integrated, ["-", "+"]),
+                        method="BFGS",
+                    )
+                    res_pm = minimize(
+                        chi2_fcn,
+                        inpt,
+                        args=(likelihood, eq_numpy, integrated, ["+", "-"]),
+                        method="BFGS",
+                    )
+                    res_mm = minimize(
+                        chi2_fcn,
+                        inpt,
+                        args=(likelihood, eq_numpy, integrated, ["-", "-"]),
+                        method="BFGS",
+                    )
 
                     choose = np.argmin(
-                        [res_pp['fun'], res_mp['fun'], res_pm['fun'], res_mm['fun']])
+                        [res_pp["fun"], res_mp["fun"], res_pm["fun"], res_mm["fun"]]
+                    )
                     mult_arr = np.ones(max_param)
                     if choose == 0:
                         res = res_pp
@@ -1201,24 +1315,44 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
                         res = res_pp
                 else:
                     flag_three = True
-                    inpt = [np.random.uniform(
-                        pmin, pmax), np.random.uniform(pmin, pmax)]
-                    res = minimize(chi2_fcn, inpt, args=(likelihood, eq_numpy, integrated,
-                                   # Default=3000
-                                                         None), method="BFGS", options={'maxiter': 5000})
+                    inpt = [
+                        np.random.uniform(pmin, pmax),
+                        np.random.uniform(pmin, pmax),
+                    ]
+                    res = minimize(
+                        chi2_fcn,
+                        inpt,
+                        args=(
+                            likelihood,
+                            eq_numpy,
+                            integrated,
+                            # Default=3000
+                            None,
+                        ),
+                        method="BFGS",
+                        options={"maxiter": 5000},
+                    )
 
             else:
                 if log_opt:
                     inpt = np.random.uniform(pmin, pmax)
-                    res_p = minimize(chi2_fcn, inpt, args=(
-                        likelihood, eq_numpy, integrated, ['+']), method="BFGS")
-                    res_m = minimize(chi2_fcn, inpt, args=(
-                        likelihood, eq_numpy, integrated, ['-']), method="BFGS")
+                    res_p = minimize(
+                        chi2_fcn,
+                        inpt,
+                        args=(likelihood, eq_numpy, integrated, ["+"]),
+                        method="BFGS",
+                    )
+                    res_m = minimize(
+                        chi2_fcn,
+                        inpt,
+                        args=(likelihood, eq_numpy, integrated, ["-"]),
+                        method="BFGS",
+                    )
 
                     mult_arr = np.ones(max_param)
-                    if res_p['fun'] < res_m['fun']:
+                    if res_p["fun"] < res_m["fun"]:
                         res = res_p
-                    elif res_p['fun'] > res_m['fun']:
+                    elif res_p["fun"] > res_m["fun"]:
                         res = res_m
                         mult_arr[0] = -1
                     else:
@@ -1227,13 +1361,18 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
                 else:
                     flag_three = True
                     inpt = np.random.uniform(pmin, pmax)
-                    res = minimize(chi2_fcn, inpt, args=(
-                        likelihood, eq_numpy, integrated, None), method="BFGS", options={'maxiter': 5000})
+                    res = minimize(
+                        chi2_fcn,
+                        inpt,
+                        args=(likelihood, eq_numpy, integrated, None),
+                        method="BFGS",
+                        options={"maxiter": 5000},
+                    )
 
             if test_success and (not res.success):
                 continue
 
-            if np.isinf(res['fun']):
+            if np.isinf(res["fun"]):
                 inf_count += 1
 
             # Failure if first 50 all give inf
@@ -1241,32 +1380,34 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
                 break
 
             # Reset count if log-like improves by 2
-            if res['fun']-chi2_min < -2.:
+            if res["fun"] - chi2_min < -2.0:
                 count_lowest = 0
 
             #  If within 0.5 of lowest, say converged to that value
-            if abs(res['fun']-chi2_min) < 0.5:
+            if abs(res["fun"] - chi2_min) < 0.5:
                 count_lowest += 1
 
-            if res['fun'] < chi2_min:
+            if res["fun"] < chi2_min:
                 best = res
                 mult_arr_best = mult_arr
-                chi2_min = res['fun']
+                chi2_min = res["fun"]
 
             # Converged the required number of times, so a success
             if count_lowest == Nconv:
                 break
 
-        if chi2_min < 1.e100:
+        if chi2_min < 1.0e100:
             # Optimisation happened. Print something
             if flag_three:
-                params = np.pad(np.array(best.x), (0, max_param-len(best.x)))
+                params = np.pad(np.array(best.x), (0, max_param - len(best.x)))
             else:
                 # Params put in linear space and sign added back in
-                params = np.pad(10.**np.array(best.x),
-                                (0, max_param-len(best.x))) * mult_arr_best
+                params = (
+                    np.pad(10.0 ** np.array(best.x), (0, max_param - len(best.x)))
+                    * mult_arr_best
+                )
         elif not np.isfinite(chi2_min):
-            print('\tFailed to find parameters for function:', fcn_i)
+            print("\tFailed to find parameters for function:", fcn_i)
 
         # This is after all the iterations, so it's the best we have; reduced chi2
         chi2_i = chi2_min
@@ -1277,22 +1418,23 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
         raise NameError
 
     except simplifier.TimeoutException:
-        print('TIMED OUT:', fcn_i, flush=True)
+        print("TIMED OUT:", fcn_i, flush=True)
         try:
-            if chi2_min < 1.e100:
+            if chi2_min < 1.0e100:
                 if flag_three:
-                    params = np.pad(np.array(best.x),
-                                    (0, max_param-len(best.x)))
+                    params = np.pad(np.array(best.x), (0, max_param - len(best.x)))
                 else:
-                    params = np.pad(10.**np.array(best.x),
-                                    (0, max_param-len(best.x))) * mult_arr_best
+                    params = (
+                        np.pad(10.0 ** np.array(best.x), (0, max_param - len(best.x)))
+                        * mult_arr_best
+                    )
                 chi2_i = chi2_min
             else:
                 chi2_i = np.nan
-                params[:] = 0.
+                params[:] = 0.0
         except Exception:  # noqa: BLE001
             chi2_i = np.nan
-            params[:] = 0.
+            params[:] = 0.0
 
     except Exception as e:  # noqa: BLE001
         print(e)
@@ -1301,7 +1443,20 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
     return chi2_i, params
 
 
-def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=None, Nconv_params=None, ignore_previous_eqns=False, dynamic=True):
+def main(
+    comp,
+    likelihood,
+    tmax=5,
+    pmin=0,
+    pmax=3,
+    print_frequency=50,
+    try_integration=False,
+    log_opt=False,
+    Niter_params=None,
+    Nconv_params=None,
+    ignore_previous_eqns=False,
+    dynamic=True,
+):
     """Optimise all functions for a given complexity and save results to file.
 
     This can optimise in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
@@ -1335,7 +1490,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
     if Niter_params is None:
         Niter_params = [40, 60]
     if rank == 0:
-        print('\nRunning fits', flush=True)
+        print("\nRunning fits", flush=True)
 
     ensure_likelihood_catalogue(comp, likelihood, tmax, try_integration)
 
@@ -1348,16 +1503,16 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
         previous_unifn_list = []
         if comp > 1:
             for compl in range(1, comp):
-                unifn_file_i = raw_catalogue_paths(
-                    compl, likelihood)['unique']
+                unifn_file_i = raw_catalogue_paths(compl, likelihood)["unique"]
                 with open(unifn_file_i, "r") as f:
                     fcn_list_i = f.readlines()
                 previous_unifn_list += fcn_list_i
         previous_unifn_list = np.array(previous_unifn_list)
         np.savetxt(
-            raw_catalogue_paths(comp, likelihood)['previous'],
+            raw_catalogue_paths(comp, likelihood)["previous"],
             previous_unifn_list,
-            fmt='%s')
+            fmt="%s",
+        )
 
     comm.Barrier()
 
@@ -1380,7 +1535,8 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
             max_param,
             Niter_params,
             Nconv_params,
-            ignore_previous_eqns)
+            ignore_previous_eqns,
+        )
         #  _main_dynamic writes the combined fits itself, so the marker saying
         #  which catalogue they came from has to be saved here too.
         if rank == 0:
@@ -1389,11 +1545,11 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
         return
 
     fcn_list_proc, _, _ = get_functions(comp, likelihood)
-    chi2 = np.zeros(len(fcn_list_proc))     # This is now only for this proc
+    chi2 = np.zeros(len(fcn_list_proc))  # This is now only for this proc
     params = np.zeros([len(fcn_list_proc), max_param])
-    for i in range(len(fcn_list_proc)):           # Consider all possible complexities
-        if rank == 0 and ((i == 0) or ((i+1) % print_frequency == 0)):
-            print(f'{i+1} of {len(fcn_list_proc)}', flush=True)
+    for i in range(len(fcn_list_proc)):  # Consider all possible complexities
+        if rank == 0 and ((i == 0) or ((i + 1) % print_frequency == 0)):
+            print(f"{i+1} of {len(fcn_list_proc)}", flush=True)
         chi2[i], params[i, :] = _fit_function_with_timeout(
             fcn_list_proc[i],
             likelihood,
@@ -1406,19 +1562,19 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
             max_param,
             Niter_params,
             Nconv_params,
-            ignore_previous_eqns)
+            ignore_previous_eqns,
+        )
 
     # Save the data for this proc in Partial
     paths = fitting_paths(comp, likelihood, rank=rank)
-    write_negloglike_file(paths['negloglike_rank'], chi2, params, max_param)
+    write_negloglike_file(paths["negloglike_rank"], chi2, params, max_param)
 
     comm.Barrier()
 
     if rank == 0:
         combine_temp_files(
-            likelihood.temp_dir,
-            paths['negloglike_rank_pattern'],
-            paths['negloglike'])
+            likelihood.temp_dir, paths["negloglike_rank_pattern"], paths["negloglike"]
+        )
         save_fit_settings(comp, likelihood)
 
     comm.Barrier()

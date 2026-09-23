@@ -5,9 +5,22 @@ from esr.fitting.test_all_fisher import convert_params
 from esr.generation import generator, simplifier
 
 
-def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
-                    try_integration=False, verbose=False, Niter=30, Nconv=5, log_opt=False,
-                    return_params=False, use_det_I=True, snap_choice=1):
+def single_function(
+    labels,
+    basis_functions,
+    likelihood,
+    pmin=0,
+    pmax=5,
+    tmax=5,
+    try_integration=False,
+    verbose=False,
+    Niter=30,
+    Nconv=5,
+    log_opt=False,
+    return_params=False,
+    use_det_I=True,
+    snap_choice=1,
+):
     """Run end-to-end fitting of function for a single function
 
     Args:
@@ -66,48 +79,60 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
     fstr = generator.node_to_string(0, tree, labels)
     max_param = simplifier.get_max_param([fstr], verbose=verbose)
     fstr, fsym = simplifier.initial_sympify(
-        [fstr], max_param, parallel=False, verbose=verbose)
+        [fstr], max_param, parallel=False, verbose=verbose
+    )
     fstr = fstr[0]
     fsym = fsym[fstr]
     print(fstr)
     # (2) Fit this function to the data
-    chi2, params = optimise_fun(fstr,
-                                likelihood,
-                                tmax,
-                                pmin,
-                                pmax,
-                                try_integration=try_integration,
-                                max_param=max_param,
-                                Niter_params=[Niter],
-                                Nconv_params=[Nconv],
-                                log_opt=log_opt)
+    chi2, params = optimise_fun(
+        fstr,
+        likelihood,
+        tmax,
+        pmin,
+        pmax,
+        try_integration=try_integration,
+        max_param=max_param,
+        Niter_params=[Niter],
+        Nconv_params=[Nconv],
+        log_opt=log_opt,
+    )
 
     if likelihood.is_mse:
-        print('Not computing DL as using MSE')
+        print("Not computing DL as using MSE")
         DL = np.nan
         negloglike = chi2
     else:
         # (3) Obtain the Fisher matrix for this function
-        fcn, eq, integrated = likelihood.run_sympify(fstr,
-                                                     tmax=tmax,
-                                                     try_integration=try_integration)
+        fcn, eq, integrated = likelihood.run_sympify(
+            fstr, tmax=tmax, try_integration=try_integration
+        )
         params, negloglike, _deriv, codelen = convert_params(
-            fcn, eq, integrated, params, likelihood, chi2, max_param=max_param, use_det_I=use_det_I, snap_choice=snap_choice)
+            fcn,
+            eq,
+            integrated,
+            params,
+            likelihood,
+            chi2,
+            max_param=max_param,
+            use_det_I=use_det_I,
+            snap_choice=snap_choice,
+        )
         if verbose:
-            print('\ntheta_ML:', params)
-            print('Residuals:', negloglike, chi2)
-            print('Parameter:', codelen)
+            print("\ntheta_ML:", params)
+            print("Residuals:", negloglike, chi2)
+            print("Parameter:", codelen)
 
         # (4) Get the functional complexity
-        param_list = [f'a{j}' for j in range(max_param)]
+        param_list = [f"a{j}" for j in range(max_param)]
         aifeyn = generator.aifeyn_complexity(labels, param_list)
         if verbose:
-            print('Function:', aifeyn)
+            print("Function:", aifeyn)
 
         # (5) Combine to get description length
         DL = negloglike + codelen + aifeyn
         if verbose:
-            print('\nDescription length:', DL)
+            print("\nDescription length:", DL)
 
     if return_params:
         return negloglike, DL, params
@@ -115,10 +140,24 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
     return negloglike, DL
 
 
-def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
-                    try_integration=False, verbose=False, Niter=30, Nconv=5, maxvar=20,
-                    log_opt=False, replace_floats=False, return_params=False, use_det_I=True,
-                    snap_choice=1):
+def fit_from_string(
+    fun,
+    basis_functions,
+    likelihood,
+    pmin=0,
+    pmax=5,
+    tmax=5,
+    try_integration=False,
+    verbose=False,
+    Niter=30,
+    Nconv=5,
+    maxvar=20,
+    log_opt=False,
+    replace_floats=False,
+    return_params=False,
+    use_det_I=True,
+    snap_choice=1,
+):
     """Run end-to-end fitting of function for a single function, given as a string.
     Note that this is not guaranteed to find the optimimum representation as a tree,
     so there could be a lower description-length representation of the function
@@ -179,32 +218,37 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
     """
 
     _expr, nodes, _complexity = generator.string_to_node(
-        fun, basis_functions, evalf=True)
+        fun, basis_functions, evalf=True
+    )
     labels = nodes.to_list(basis_functions)
 
     # Prepare to get parents
     new_labels = [None] * len(labels)
     for j, lab in enumerate(labels):
-        if lab == 'Mul':
-            new_labels[j] = '*'
-            labels[j] = '*'
-        elif lab == 'Add':
-            new_labels[j] = '+'
-            labels[j] = '+'
-        elif lab == 'Div':
-            new_labels[j] = '/'
-            labels[j] = '/'
-        elif lab == 'Sub':
-            new_labels[j] = '-'
-            labels[j] = '-'
+        if lab == "Mul":
+            new_labels[j] = "*"
+            labels[j] = "*"
+        elif lab == "Add":
+            new_labels[j] = "+"
+            labels[j] = "+"
+        elif lab == "Div":
+            new_labels[j] = "/"
+            labels[j] = "/"
+        elif lab == "Sub":
+            new_labels[j] = "-"
+            labels[j] = "-"
         else:
             new_labels[j] = lab.lower()
             labels[j] = lab.lower()
-    param_idx = [j for j, lab in enumerate(new_labels) if generator.is_float(
-        lab) or (lab.startswith('a') and generator.is_float(lab[1:]))]
+    param_idx = [
+        j
+        for j, lab in enumerate(new_labels)
+        if generator.is_float(lab)
+        or (lab.startswith("a") and generator.is_float(lab[1:]))
+    ]
     assert len(param_idx) <= maxvar
     for k, j in enumerate(param_idx):
-        new_labels[j] = f'a{k}'
+        new_labels[j] = f"a{k}"
 
     # Get parent operators
     s = generator.labels_to_shape(new_labels, basis_functions)
@@ -213,9 +257,14 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
 
     # Replace floats with symbols (except exponents)
     if replace_floats:
-        param_idx = [j for j, lab in enumerate(labels) if (generator.is_float(lab) and parents[j].lower() != 'pow') or (lab.startswith('a') and generator.is_float(lab[1:]))]
+        param_idx = [
+            j
+            for j, lab in enumerate(labels)
+            if (generator.is_float(lab) and parents[j].lower() != "pow")
+            or (lab.startswith("a") and generator.is_float(lab[1:]))
+        ]
         for k, j in enumerate(param_idx):
-            labels[j] = f'a{k}'
+            labels[j] = f"a{k}"
     print(labels)
     res = single_function(
         labels,
@@ -231,7 +280,7 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
         log_opt=log_opt,
         return_params=return_params,
         use_det_I=use_det_I,
-        snap_choice=snap_choice
+        snap_choice=snap_choice,
     )
 
     if return_params:
@@ -264,16 +313,17 @@ def tree_to_aifeyn(labels, basis_functions, verbose=True):
     max_param = simplifier.get_max_param([fstr], verbose=verbose)
 
     # Get the functional complexity
-    param_list = [f'a{j}' for j in range(max_param)]
+    param_list = [f"a{j}" for j in range(max_param)]
     aifeyn = generator.aifeyn_complexity(labels, param_list)
     if verbose:
-        print('Function:', aifeyn)
+        print("Function:", aifeyn)
 
     return aifeyn, len(labels)
 
 
-def string_to_aifeyn(fun, basis_functions, maxvar=20, verbose=True,
-                     replace_floats=False):
+def string_to_aifeyn(
+    fun, basis_functions, maxvar=20, verbose=True, replace_floats=False
+):
     """
     Takes a string defining a function and returns the AIFeyn term of
     complexity and the complexity of the function
@@ -295,32 +345,37 @@ def string_to_aifeyn(fun, basis_functions, maxvar=20, verbose=True,
     """
 
     _expr, nodes, _complexity = generator.string_to_node(
-        fun, basis_functions, evalf=True)
+        fun, basis_functions, evalf=True
+    )
     labels = nodes.to_list(basis_functions)
 
     # Prepare to get parents
     new_labels = [None] * len(labels)
     for j, lab in enumerate(labels):
-        if lab == 'Mul':
-            new_labels[j] = '*'
-            labels[j] = '*'
-        elif lab == 'Add':
-            new_labels[j] = '+'
-            labels[j] = '+'
-        elif lab == 'Div':
-            new_labels[j] = '/'
-            labels[j] = '/'
-        elif lab == 'Sub':
-            new_labels[j] = '-'
-            labels[j] = '-'
+        if lab == "Mul":
+            new_labels[j] = "*"
+            labels[j] = "*"
+        elif lab == "Add":
+            new_labels[j] = "+"
+            labels[j] = "+"
+        elif lab == "Div":
+            new_labels[j] = "/"
+            labels[j] = "/"
+        elif lab == "Sub":
+            new_labels[j] = "-"
+            labels[j] = "-"
         else:
             new_labels[j] = lab.lower()
             labels[j] = lab.lower()
-    param_idx = [j for j, lab in enumerate(new_labels) if generator.is_float(
-        lab) or (lab.startswith('a') and generator.is_float(lab[1:]))]
+    param_idx = [
+        j
+        for j, lab in enumerate(new_labels)
+        if generator.is_float(lab)
+        or (lab.startswith("a") and generator.is_float(lab[1:]))
+    ]
     assert len(param_idx) <= maxvar
     for k, j in enumerate(param_idx):
-        new_labels[j] = f'a{k}'
+        new_labels[j] = f"a{k}"
 
     # Get parent operators
     s = generator.labels_to_shape(new_labels, basis_functions)
@@ -329,8 +384,13 @@ def string_to_aifeyn(fun, basis_functions, maxvar=20, verbose=True,
 
     # Replace floats with symbols (except exponents)
     if replace_floats:
-        param_idx = [j for j, lab in enumerate(labels) if (generator.is_float(lab) and parents[j].lower() != 'pow') or (lab.startswith('a') and generator.is_float(lab[1:]))]
+        param_idx = [
+            j
+            for j, lab in enumerate(labels)
+            if (generator.is_float(lab) and parents[j].lower() != "pow")
+            or (lab.startswith("a") and generator.is_float(lab[1:]))
+        ]
         for k, j in enumerate(param_idx):
-            labels[j] = f'a{k}'
+            labels[j] = f"a{k}"
 
     return tree_to_aifeyn(labels, basis_functions, verbose=verbose)

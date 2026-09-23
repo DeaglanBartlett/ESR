@@ -53,7 +53,7 @@ CLUSTER_REL_TOL = 1e-3
 # diagnostics are emitted via emit_diagnostic_warning so they survive this.
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-use_relative_dx = True              # CHANGE
+use_relative_dx = True  # CHANGE
 
 # An eigenvalue of the *correlation-normalised* Hessian below this is treated as
 # a degenerate (unconstrained) direction in parameter space. This prevents
@@ -126,18 +126,20 @@ def _validate_snap_and_det(use_det_I, snap_choice):
     _validate_scoring_options(snap_choice)
     if snap_choice == 2 and not use_det_I:
         raise ValueError(
-            "snap_choice=2 (projected eigenbasis) requires use_det_I=True.")
+            "snap_choice=2 (projected eigenbasis) requires use_det_I=True."
+        )
     if use_det_I and snap_choice == 0:
         emit_diagnostic_warning(
-            'use_det_I=True with snap_choice=0: diagonal snapping tests one '
-            'parameter axis at a time, so it cannot remove an unconstrained '
-            'direction lying between the axes. That direction stays in det(H), '
-            'where the smaller its eigenvalue the shorter the codelength, so a '
-            'redundant parameterisation can score better than the model it is a '
-            'redundant copy of. Use this pairing to isolate the effect of the '
-            'determinant in comparison runs, not to rank a catalogue; '
-            'snap_choice=1 is the setting for that.',
-            DiagonalSnapDeterminantWarning)
+            "use_det_I=True with snap_choice=0: diagonal snapping tests one "
+            "parameter axis at a time, so it cannot remove an unconstrained "
+            "direction lying between the axes. That direction stays in det(H), "
+            "where the smaller its eigenvalue the shorter the codelength, so a "
+            "redundant parameterisation can score better than the model it is a "
+            "redundant copy of. Use this pairing to isolate the effect of the "
+            "determinant in comparison runs, not to rank a catalogue; "
+            "snap_choice=1 is the setting for that.",
+            DiagonalSnapDeterminantWarning,
+        )
 
 
 def _symmetrized_hessian(Hmat):
@@ -202,15 +204,16 @@ def _correlation_eigenvalues(Hmat):
     #  negative curvature is judged against the largest curvature in the matrix.
     if n_flat:
         coupling = np.sum(
-            Hsym[np.ix_(~constrained, constrained)] ** 2 / diagonal[constrained],
-            axis=1)
+            Hsym[np.ix_(~constrained, constrained)] ** 2 / diagonal[constrained], axis=1
+        )
         if np.any(coupling > EIGENVALUE_REL_THRESHOLD * np.max(diagonal)):
             return None, True
     block = Hsym[np.ix_(constrained, constrained)]
     block_diagonal = np.diag(block)
     try:
         eigenvalues = np.linalg.eigvalsh(
-            block / np.sqrt(np.outer(block_diagonal, block_diagonal)))
+            block / np.sqrt(np.outer(block_diagonal, block_diagonal))
+        )
     except np.linalg.LinAlgError:
         return None, True
     return np.concatenate([np.zeros(n_flat), eigenvalues]), False
@@ -260,8 +263,9 @@ def _has_negative_curvature(Hmat):
     return _is_saddle(*_correlation_eigenvalues(Hmat))
 
 
-def save_scoring_settings(comp, likelihood, use_det_I, snap_choice,
-                          catalogue_digest=None):
+def save_scoring_settings(
+    comp, likelihood, use_det_I, snap_choice, catalogue_digest=None
+):
     """Record Fisher scoring settings so matching cannot silently change them.
 
     Args:
@@ -277,10 +281,10 @@ def save_scoring_settings(comp, likelihood, use_det_I, snap_choice,
             can be recorded on their own
     """
     _validate_snap_and_det(use_det_I, snap_choice)
-    settings = {'use_det_I': bool(use_det_I), 'snap_choice': int(snap_choice)}
+    settings = {"use_det_I": bool(use_det_I), "snap_choice": int(snap_choice)}
     if catalogue_digest is not None:
-        settings['catalogue_digest'] = catalogue_digest
-    with atomic_write(fitting_paths(comp, likelihood)['fisher_settings']) as f:
+        settings["catalogue_digest"] = catalogue_digest
+    with atomic_write(fitting_paths(comp, likelihood)["fisher_settings"]) as f:
         json.dump(settings, f)
 
 
@@ -296,7 +300,7 @@ def clear_scoring_settings(comp, likelihood):
         :likelihood (fitting.likelihood object): object providing ``out_dir``
     """
     try:
-        os.remove(fitting_paths(comp, likelihood)['fisher_settings'])
+        os.remove(fitting_paths(comp, likelihood)["fisher_settings"])
     except FileNotFoundError:
         pass
 
@@ -313,7 +317,7 @@ def load_scoring_settings(comp, likelihood):
             None if no settings file has been written
     """
     try:
-        with open(fitting_paths(comp, likelihood)['fisher_settings'], 'r') as f:
+        with open(fitting_paths(comp, likelihood)["fisher_settings"], "r") as f:
             return json.load(f)
     except FileNotFoundError:
         return None
@@ -351,15 +355,14 @@ def _compute_codelen(Hmat, Fisher_diag, theta, kept_mask, use_det_I):
             return np.inf
         log_theta_floored = np.empty(k)
         for j in range(k):
-            log_delta = 0.5 * np.log(12. / diag_active[j])
-            log_theta_floored[j] = max(
-                np.log(np.abs(theta_active[j])), log_delta)
+            log_delta = 0.5 * np.log(12.0 / diag_active[j])
+            log_theta_floored[j] = max(np.log(np.abs(theta_active[j])), log_delta)
         _, logdet = np.linalg.slogdet(H_active)
-        return -k/2. * math.log(3.) + 0.5 * logdet + \
-            np.sum(log_theta_floored)
+        return -k / 2.0 * math.log(3.0) + 0.5 * logdet + np.sum(log_theta_floored)
     else:
-        return -k/2. * math.log(3.) + np.sum(0.5*np.log(diag_active) +
-                                              np.log(np.abs(theta_active)))
+        return -k / 2.0 * math.log(3.0) + np.sum(
+            0.5 * np.log(diag_active) + np.log(np.abs(theta_active))
+        )
 
 
 def _unresolved_directions(Hmat, eigenvalues, eigenvectors):
@@ -387,8 +390,8 @@ def _unresolved_directions(Hmat, eigenvalues, eigenvectors):
         :unresolved (np.ndarray): boolean mask of the unresolved directions
     """
     diagonal = np.diag(_symmetrized_hessian(Hmat))
-    scale = np.einsum('ij,i,ij->j', eigenvectors, diagonal, eigenvectors)
-    with np.errstate(invalid='ignore', divide='ignore'):
+    scale = np.einsum("ij,i,ij->j", eigenvectors, diagonal, eigenvectors)
+    with np.errstate(invalid="ignore", divide="ignore"):
         ratio = np.where(scale > 0, eigenvalues / scale, -np.inf)
     return ~(ratio >= EIGENVALUE_REL_THRESHOLD)
 
@@ -426,7 +429,8 @@ def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
 
     try:
         eigenvalues, eigenvectors = np.linalg.eigh(
-            _symmetrized_hessian(Hmat[:nparam, :nparam]))
+            _symmetrized_hessian(Hmat[:nparam, :nparam])
+        )
         # Degeneracy and negative curvature are judged on the correlation-
         # normalised spectrum, which does not depend on how the parameters are
         # scaled; the snap itself still uses the eigenvectors of the Hessian, so
@@ -448,7 +452,9 @@ def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
         #  gives a huge precision step and so is flagged by the one-step test.
         good_eig = eigenvalues > 0
         Nsteps_rot = np.zeros(nparam)
-        Nsteps_rot[good_eig] = np.abs(theta_rot[good_eig]) / np.sqrt(12. / eigenvalues[good_eig])
+        Nsteps_rot[good_eig] = np.abs(theta_rot[good_eig]) / np.sqrt(
+            12.0 / eigenvalues[good_eig]
+        )
         # Map unconstrained eigendirections back to original parameters: for each
         # bad eigendirection, snap the original param with largest projection. A
         # direction is bad if it carries fewer than one precision step, or if its
@@ -456,14 +462,15 @@ def _compute_snap_mask(Hmat, Fisher_diag, theta, Nsteps, snap_choice):
         # direction the data cannot measure must leave det(H) however far theta
         # happens to project along it.
         unresolved = _unresolved_directions(
-            Hmat[:nparam, :nparam], eigenvalues, eigenvectors)
+            Hmat[:nparam, :nparam], eigenvalues, eigenvectors
+        )
         bad_eig = np.where((Nsteps_rot < 1) | unresolved)[0]
         snap_set = set()
         for ei in bad_eig:
             snap_set.add(np.argmax(np.abs(eigenvectors[:, ei])))
         Nsteps = np.ones(nparam)
         for j in snap_set:
-            Nsteps[j] = 0.
+            Nsteps[j] = 0.0
     except np.linalg.LinAlgError:
         has_degenerate_eig = True  # can't decompose — treat as degenerate
 
@@ -506,8 +513,9 @@ def _refit_after_snap(fop, theta, kept_mask):
         return fop(full)
 
     try:
-        result = minimize(objective, theta[kept_mask], method='Nelder-Mead',
-                          options={'maxiter': 2000})
+        result = minimize(
+            objective, theta[kept_mask], method="Nelder-Mead", options={"maxiter": 2000}
+        )
     except Exception:  # noqa: BLE001
         return theta, negloglike
     if np.isfinite(result.fun) and not (result.fun > negloglike):
@@ -516,8 +524,7 @@ def _refit_after_snap(fop, theta, kept_mask):
     return theta, negloglike
 
 
-def _score_projected_eigenbasis(Hmat, theta, negloglike, use_det_I,
-                                eval_negloglike):
+def _score_projected_eigenbasis(Hmat, theta, negloglike, use_det_I, eval_negloglike):
     """Score a fit in the Hessian eigenbasis (``snap_choice=2``).
 
     Rotate ``theta`` into the eigenbasis of the Hessian (``b = V^T theta``),
@@ -607,13 +614,14 @@ def _score_projected_eigenbasis(Hmat, theta, negloglike, use_det_I,
         rel_gaps = np.diff(good_vals) / good_vals[1:]
         if np.min(rel_gaps) < CLUSTER_REL_TOL:
             emit_diagnostic_warning(
-                'snap_choice=2 encountered (near-)degenerate Hessian '
-                'eigenvalues for one or more functions; the projected '
-                'codelength is basis-sensitive there -- prefer snap_choice=1.',
-                ProjectedEigenbasisWarning)
+                "snap_choice=2 encountered (near-)degenerate Hessian "
+                "eigenvalues for one or more functions; the projected "
+                "codelength is basis-sensitive there -- prefer snap_choice=1.",
+                ProjectedEigenbasisWarning,
+            )
 
     Nsteps_rot = np.zeros(nparam)
-    Nsteps_rot[good] = np.abs(b[good]) / np.sqrt(12. / eigenvalues[good])
+    Nsteps_rot[good] = np.abs(b[good]) / np.sqrt(12.0 / eigenvalues[good])
     kept = good & (Nsteps_rot >= 1)
 
     Hdiag = np.diag(eigenvalues)
@@ -641,10 +649,11 @@ def _score_projected_eigenbasis(Hmat, theta, negloglike, use_det_I,
         # *unexpected* exception is surfaced as a diagnostic rather than silently
         # becoming a score.
         emit_diagnostic_warning(
-            'snap_choice=2 likelihood re-evaluation raised an exception for one '
-            'or more functions; falling back to the unsnapped score, or to an '
-            'infinite codelength if the Hessian is degenerate.',
-            ProjectedEigenbasisWarning)
+            "snap_choice=2 likelihood re-evaluation raised an exception for one "
+            "or more functions; falling back to the unsnapped score, or to an "
+            "infinite codelength if the Hessian is degenerate.",
+            ProjectedEigenbasisWarning,
+        )
         negloglike_snapped = np.nan
     k = int(np.sum(kept))
 
@@ -687,19 +696,21 @@ def load_loglike(comp, likelihood, data_start, data_end, split=True):
         :params (np.ndarray): list of parameters at maximum likelihood points. Shape = (nfun, nparam).
 
     """
-    fname = fitting_paths(comp, likelihood)['negloglike']
+    fname = fitting_paths(comp, likelihood)["negloglike"]
     if rank == 0:
         print(fname, flush=True)
     if split:
-        with open(fname, 'r') as f:
-            selected_lines = [line for i, line in enumerate(
-                f) if data_start <= i < data_end]
+        with open(fname, "r") as f:
+            selected_lines = [
+                line for i, line in enumerate(f) if data_start <= i < data_end
+            ]
         expected_rows = data_end - data_start
         if len(selected_lines) != expected_rows:
             raise ValueError(
-                f'{fname} contains {len(selected_lines)} rows for requested '
-                f'range [{data_start}, {data_end}); expected {expected_rows}. '
-                'Rerun test_all.main with the current catalogue/settings.')
+                f"{fname} contains {len(selected_lines)} rows for requested "
+                f"range [{data_start}, {data_end}); expected {expected_rows}. "
+                "Rerun test_all.main with the current catalogue/settings."
+            )
         if expected_rows == 0:
             return np.empty(0), np.zeros((0, 0))
         data = np.genfromtxt(selected_lines)
@@ -720,7 +731,17 @@ def load_loglike(comp, likelihood, data_start, data_end, split=True):
     return negloglike, params
 
 
-def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_param=4, use_det_I=True, snap_choice=1):
+def convert_params(
+    fcn_i,
+    eq,
+    integrated,
+    theta_ML,
+    likelihood,
+    negloglike,
+    max_param=4,
+    use_det_I=True,
+    snap_choice=1,
+):
     """Compute Fisher, correct MLP and find parametric contirbution to description length for single function
 
     Args:
@@ -760,9 +781,12 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     nparam = len(active_params)
 
     if nparam > 0:
+
         def fop(x):
             return likelihood.negloglike(x, eq_numpy, integrated=integrated)
+
     else:
+
         def fop(x):
             return likelihood.negloglike([x], eq_numpy, integrated=integrated)
 
@@ -770,8 +794,24 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     deriv = np.full(int(max_param * (max_param + 1) / 2), np.nan)
 
     #  Step-sizes to try in case the function misbehvaes
-    d_list = [1.e-5, 10.**(-5.5), 10.**(-4.5), 1.e-6, 1.e-4, 10.**(-6.5), 10.**(-3.5),
-              1.e-7, 1.e-3, 10.**(-7.5), 10.**(-2.5), 1.e-8, 1.e-2, 1.e-9, 1.e-10, 1.e-11]
+    d_list = [
+        1.0e-5,
+        10.0 ** (-5.5),
+        10.0 ** (-4.5),
+        1.0e-6,
+        1.0e-4,
+        10.0 ** (-6.5),
+        10.0 ** (-3.5),
+        1.0e-7,
+        1.0e-3,
+        10.0 ** (-7.5),
+        10.0 ** (-2.5),
+        1.0e-8,
+        1.0e-2,
+        1.0e-9,
+        1.0e-10,
+        1.0e-11,
+    ]
 
     method_list = ["central", "forward", "backward"]
 
@@ -781,7 +821,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
 
     try:
         if nparam > 1:
-            all_a = ' '.join([f'a{i}' for i in range(nparam)])
+            all_a = " ".join([f"a{i}" for i in range(nparam)])
             all_a = list(sympy.symbols(all_a, real=True))
             eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
         else:
@@ -802,7 +842,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
 
     for i in range(nparam):
         start = int(i * max_param - (i - 1) * i / 2)
-        deriv[start:start+nparam-i] = Hmat[i, i:]
+        deriv[start : start + nparam - i] = Hmat[i, i:]
 
     if snap_choice == 2:
         # Projected eigenbasis: score straight from the Hessian eigen-
@@ -813,24 +853,30 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         # legitimately project out (returning nan). eq_numpy is already built, so
         # fop can be passed directly.
         theta_snapped, negloglike, _, codelen = _score_projected_eigenbasis(
-            Hmat_best, theta_ML[:nparam], negloglike, use_det_I, fop)
+            Hmat_best, theta_ML[:nparam], negloglike, use_det_I, fop
+        )
         params[:] = np.pad(theta_snapped, (0, max_param - len(theta_snapped)))
         return params, negloglike, deriv, codelen
 
     #  Precision to know constants (diagonal snap modes only; the mode-2
     #  branch above returns first, so a flat direction never divides by zero)
-    Delta = np.sqrt(12./Fisher_diag)
-    Nsteps = abs(np.array(theta_ML))/Delta
+    Delta = np.sqrt(12.0 / Fisher_diag)
+    Nsteps = abs(np.array(theta_ML)) / Delta
 
-    n_iter = len(d_list)*len(method_list)
+    n_iter = len(d_list) * len(method_list)
     # or (np.sum(Nsteps<1) > 0):
-    if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0) or (np.sum(np.isinf(Fisher_diag)) > 0):
+    if (
+        (np.sum(Fisher_diag <= 0.0) > 0.0)
+        or (np.sum(np.isnan(Fisher_diag)) > 0)
+        or (np.sum(np.isinf(Fisher_diag)) > 0)
+    ):
         Fisher_array = np.empty((n_iter, nparam))
         Hmat_array = np.empty((n_iter, nparam, nparam))
         for e, (d2, meth) in enumerate(itertools.product(d_list, method_list)):
             if use_relative_dx:
-                Hfun = nd.Hessian(fop, step=np.abs(
-                    d2*theta_ML)+1.e-15, method=meth)
+                Hfun = nd.Hessian(
+                    fop, step=np.abs(d2 * theta_ML) + 1.0e-15, method=meth
+                )
             else:
                 Hfun = nd.Hessian(fop, step=d2, method=meth)
             Hmat = Hfun(theta_ML)
@@ -838,42 +884,49 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
 
         Hmat_array_f = []  # filter array
         for matrix in Hmat_array:
-            if not np.any(np.isnan(matrix)) and not np.any(np.isinf(matrix)) and np.all(np.diagonal(matrix) > 0):
+            if (
+                not np.any(np.isnan(matrix))
+                and not np.any(np.isinf(matrix))
+                and np.all(np.diagonal(matrix) > 0)
+            ):
                 Hmat_array_f.append(matrix)
         Hmat_array_f = np.array(Hmat_array_f)
         Fisher_array = np.array(
-            [np.array([mat[i, i] for i in range(nparam)]) for mat in Hmat_array_f])
-        Delta_array = np.sqrt(12./Fisher_array)
-        Delta_array_round = [[format(num, ".3e")
-                              for num in row] for row in Delta_array]
+            [np.array([mat[i, i] for i in range(nparam)]) for mat in Hmat_array_f]
+        )
+        Delta_array = np.sqrt(12.0 / Fisher_array)
+        Delta_array_round = [[format(num, ".3e") for num in row] for row in Delta_array]
         Delta_array_round = np.array(Delta_array_round, dtype=float)
         if len(Delta_array_round.shape) < 2:
             repeated_elements_exist = False
         else:
             repeated_elements_exist = len(Delta_array_round[:, 0]) != len(
-                set(Delta_array_round[:, 0]))
+                set(Delta_array_round[:, 0])
+            )
 
         if repeated_elements_exist:
             Delta_mode = mode(Delta_array_round)[0][0]
             mode_ind = np.where(Delta_array_round == Delta_mode)[0][0]
             Fisher_diag = np.atleast_1d(Fisher_array[mode_ind])
             # Delta, Nsteps = np.atleast_1d(Delta_array[mode_ind]), np.atleast_1d(Nsteps_array[mode_ind])
-            Delta = np.sqrt(12./Fisher_diag)
-            Nsteps = abs(np.array(theta_ML))/Delta
+            Delta = np.sqrt(12.0 / Fisher_diag)
+            Nsteps = abs(np.array(theta_ML)) / Delta
             Hmat_best = Hmat_array_f[mode_ind].copy()
             for i in range(nparam):
                 start = int(i * max_param - (i - 1) * i / 2)
-                deriv[start:start+nparam-i] = Hmat_array_f[mode_ind][i, i:]
+                deriv[start : start + nparam - i] = Hmat_array_f[mode_ind][i, i:]
 
         else:  # try again with less precision
-            Delta_array_round = [[format(num, ".1e")
-                                  for num in row] for row in Delta_array]
+            Delta_array_round = [
+                [format(num, ".1e") for num in row] for row in Delta_array
+            ]
             Delta_array_round = np.array(Delta_array_round, dtype=float)
             if len(Delta_array_round.shape) < 2:
                 repeated_elements_exist = False
             else:
                 repeated_elements_exist = len(Delta_array_round[:, 0]) != len(
-                    set(Delta_array_round[:, 0]))
+                    set(Delta_array_round[:, 0])
+                )
             if not repeated_elements_exist:
                 codelen = np.nan
                 return params, negloglike, deriv, codelen
@@ -881,14 +934,14 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
                 Delta_mode = mode(Delta_array_round)[0][0]
                 mode_ind = np.where(Delta_array_round == Delta_mode)[0][0]
                 Fisher_diag = np.atleast_1d(Fisher_array[mode_ind])
-                Delta = np.sqrt(12./Fisher_diag)
-                Nsteps = abs(np.array(theta_ML))/Delta
+                Delta = np.sqrt(12.0 / Fisher_diag)
+                Nsteps = abs(np.array(theta_ML)) / Delta
                 Hmat_best = Hmat_array_f[mode_ind].copy()
                 for i in range(nparam):
                     start = int(i * max_param - (i - 1) * i / 2)
-                    deriv[start:start+nparam-i] = Hmat_array_f[mode_ind][i, i:]
+                    deriv[start : start + nparam - i] = Hmat_array_f[mode_ind][i, i:]
 
-    if (np.sum(Fisher_diag <= 0.) > 0.) or (np.sum(np.isnan(Fisher_diag)) > 0):
+    if (np.sum(Fisher_diag <= 0.0) > 0.0) or (np.sum(np.isnan(Fisher_diag)) > 0):
         return params, negloglike, deriv, np.inf
 
     # Require all Hessian eigenvalues to be positive (a genuine minimum).
@@ -899,11 +952,15 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
     theta_ML_orig = np.copy(theta_ML)
     negloglike_orig = np.copy(negloglike)
 
-    Nsteps, has_degenerate_eig = _compute_snap_mask(Hmat_best, Fisher_diag, theta_ML, Nsteps, snap_choice)
+    Nsteps, has_degenerate_eig = _compute_snap_mask(
+        Hmat_best, Fisher_diag, theta_ML, Nsteps, snap_choice
+    )
 
     # Compute unsnapped DL (for comparison if snapping is attempted)
     all_mask = np.ones(nparam, dtype=bool)
-    codelen_nosnap = _compute_codelen(Hmat_best, Fisher_diag, theta_ML, all_mask, use_det_I)
+    codelen_nosnap = _compute_codelen(
+        Hmat_best, Fisher_diag, theta_ML, all_mask, use_det_I
+    )
     DL_nosnap = negloglike + codelen_nosnap
 
     # See whether we can snap any parameters to zero
@@ -911,7 +968,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
 
         # First try setting any parameter to 0 that doesn't have at least
         # one precision step, and recompute -log(L).
-        theta_ML[Nsteps < 1] = 0.
+        theta_ML[Nsteps < 1] = 0.0
         if snap_choice == 0:
             #  Published diagonal behaviour: score at the zeroed vector itself
             negloglike = fop(theta_ML)
@@ -934,7 +991,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
                 for idx in itertools.combinations(try_idx, r):
                     theta_ML = np.copy(theta_ML_orig)
                     for idx_ in idx:
-                        theta_ML[idx_] = 0.
+                        theta_ML[idx_] = 0.0
                     negloglike = fop(theta_ML)
                     if np.isfinite(negloglike):
                         break
@@ -954,7 +1011,8 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
                     # function the very score the mandatory snap exists to
                     # prevent.
                     params[:] = np.pad(
-                        theta_ML_orig, (0, max_param - len(theta_ML_orig)))
+                        theta_ML_orig, (0, max_param - len(theta_ML_orig))
+                    )
                     return params, negloglike_orig, deriv, np.inf
 
         if k < 0:
@@ -964,7 +1022,9 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
         # Compute snapped codelen and compare DL. theta_ML is theta_ML_orig with
         # the snapped entries zeroed, plus any re-fit of the retained ones, and
         # _compute_codelen reads only the retained entries.
-        codelen_snap = _compute_codelen(Hmat_best, Fisher_diag, theta_ML, kept_mask, use_det_I)
+        codelen_snap = _compute_codelen(
+            Hmat_best, Fisher_diag, theta_ML, kept_mask, use_det_I
+        )
         DL_snap = negloglike + codelen_snap
 
         if has_degenerate_eig:
@@ -998,9 +1058,11 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
             cond = np.linalg.cond(H_active)
             if cond > 1e10:
                 emit_diagnostic_warning(
-                    'One or more fitted Hessians are badly conditioned '
-                    '(condition number > 1e10); their parameter codelengths may '
-                    'be unreliable.', HighConditionNumberWarning)
+                    "One or more fitted Hessians are badly conditioned "
+                    "(condition number > 1e10); their parameter codelengths may "
+                    "be unreliable.",
+                    HighConditionNumberWarning,
+                )
         except np.linalg.LinAlgError:
             pass
 
@@ -1011,13 +1073,21 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
 
     # New params after the setting to 0, padded to length max_param as always
     theta_ML = np.asarray(theta_ML, dtype=float).copy()
-    theta_ML[~kept_mask] = 0.
-    params[:] = np.pad(theta_ML, (0, max_param-len(theta_ML)))
+    theta_ML[~kept_mask] = 0.0
+    params[:] = np.pad(theta_ML, (0, max_param - len(theta_ML)))
 
     return params, negloglike, deriv, codelen
 
 
-def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, use_det_I=True, snap_choice=1):
+def main(
+    comp,
+    likelihood,
+    tmax=5,
+    print_frequency=50,
+    try_integration=False,
+    use_det_I=True,
+    snap_choice=1,
+):
     """Compute Fisher, correct MLP and find parametric contirbution to description length for all functions and save to file
 
     Args:
@@ -1040,17 +1110,16 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
     """
 
     if likelihood.is_mse:
-        raise ValueError('Cannot use MSE with description length')
+        raise ValueError("Cannot use MSE with description length")
     _validate_snap_and_det(use_det_I, snap_choice)
 
     if rank == 0:
-        print('\nComputing Fisher', flush=True)
+        print("\nComputing Fisher", flush=True)
 
     set_recursionlimit_for_comp(comp)
 
     test_all.ensure_likelihood_catalogue(comp, likelihood, tmax, try_integration)
-    fcn_list_proc, data_start, data_end = test_all.get_functions(
-        comp, likelihood)
+    fcn_list_proc, data_start, data_end = test_all.get_functions(comp, likelihood)
     # The settings describe the codelength files, so the previous run's are
     # withdrawn before those files are rewritten and the new ones are saved
     # only after they are complete (below).
@@ -1058,20 +1127,22 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
         clear_scoring_settings(comp, likelihood)
     comm.Barrier()
     test_all.check_catalogue_digest(
-        test_all.load_fit_settings(comp, likelihood), comp, likelihood,
-        'The test_all fits')
-    negloglike, params_proc = load_loglike(
-        comp, likelihood, data_start, data_end)
+        test_all.load_fit_settings(comp, likelihood),
+        comp,
+        likelihood,
+        "The test_all fits",
+    )
+    negloglike, params_proc = load_loglike(comp, likelihood, data_start, data_end)
     max_param = params_proc.shape[1]
 
     # This is now only for this proc
     codelen = np.zeros(len(fcn_list_proc))
     params = np.zeros([len(fcn_list_proc), max_param])
-    deriv = np.zeros([len(fcn_list_proc), int(max_param * (max_param+1) / 2)])
+    deriv = np.zeros([len(fcn_list_proc), int(max_param * (max_param + 1) / 2)])
 
-    for i in range(len(fcn_list_proc)):           # Consider all possible complexities
-        if rank == 0 and ((i == 0) or ((i+1) % print_frequency == 0)):
-            print(f'{i+1} of {len(fcn_list_proc)}', flush=True)
+    for i in range(len(fcn_list_proc)):  # Consider all possible complexities
+        if rank == 0 and ((i == 0) or ((i + 1) % print_frequency == 0)):
+            print(f"{i+1} of {len(fcn_list_proc)}", flush=True)
 
         if np.isnan(negloglike[i]) or np.isinf(negloglike[i]):
             codelen[i] = np.nan
@@ -1080,63 +1151,89 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
         theta_ML = params_proc[i, :]
 
         try:
-            fcn_i = fcn_list_proc[i].replace('\n', '')
-            fcn_i = fcn_list_proc[i].replace('\'', '')
+            fcn_i = fcn_list_proc[i].replace("\n", "")
+            fcn_i = fcn_list_proc[i].replace("'", "")
             fcn_i, eq, integrated = likelihood.run_sympify(
-                fcn_i, tmax=tmax, try_integration=try_integration)
+                fcn_i, tmax=tmax, try_integration=try_integration
+            )
             params[i, :], negloglike[i], deriv[i, :], codelen[i] = convert_params(
-                fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param, use_det_I=use_det_I, snap_choice=snap_choice)
+                fcn_i,
+                eq,
+                integrated,
+                theta_ML,
+                likelihood,
+                negloglike[i],
+                max_param=max_param,
+                use_det_I=use_det_I,
+                snap_choice=snap_choice,
+            )
         except NameError:
             # Occurs if function produced not implemented in numpy
             if try_integration:
-                fcn_i = fcn_list_proc[i].replace('\n', '')
-                fcn_i = fcn_list_proc[i].replace('\'', '')
+                fcn_i = fcn_list_proc[i].replace("\n", "")
+                fcn_i = fcn_list_proc[i].replace("'", "")
                 fcn_i, eq, integrated = likelihood.run_sympify(
-                    fcn_i, tmax=tmax, try_integration=False)
+                    fcn_i, tmax=tmax, try_integration=False
+                )
                 params[i, :], negloglike[i], deriv[i, :], codelen[i] = convert_params(
-                    fcn_i, eq, integrated, theta_ML, likelihood, negloglike[i], max_param=max_param, use_det_I=use_det_I, snap_choice=snap_choice)
+                    fcn_i,
+                    eq,
+                    integrated,
+                    theta_ML,
+                    likelihood,
+                    negloglike[i],
+                    max_param=max_param,
+                    use_det_I=use_det_I,
+                    snap_choice=snap_choice,
+                )
             else:
-                params[i, :] = 0.
+                params[i, :] = 0.0
                 deriv[i, :] = np.nan
                 codelen[i] = np.inf
 
         except Exception:  # noqa: BLE001
-            params[i, :] = 0.
+            params[i, :] = 0.0
             deriv[i, :] = np.nan
             codelen[i] = np.inf
 
     n_nonposdef = np.sum(np.isinf(codelen))
     total_nonposdef = comm.reduce(int(n_nonposdef), op=MPI.SUM, root=0)
     if rank == 0 and total_nonposdef > 0:
-        print(f'Warning: {total_nonposdef} functions had non-positive-definite Hessian (codelen=inf)', flush=True)
+        print(
+            f"Warning: {total_nonposdef} functions had non-positive-definite Hessian (codelen=inf)",
+            flush=True,
+        )
 
     out_arr = np.transpose(
-        np.vstack([codelen, negloglike] + [params[:, i] for i in range(max_param)]))
+        np.vstack([codelen, negloglike] + [params[:, i] for i in range(max_param)])
+    )
 
     if deriv.shape[1] > 0:
         out_arr_deriv = np.transpose(
-            np.vstack([deriv[:, i] for i in range(deriv.shape[1])]))
+            np.vstack([deriv[:, i] for i in range(deriv.shape[1])])
+        )
     else:
         out_arr_deriv = np.empty((len(codelen), 0))
 
     paths = fitting_paths(comp, likelihood, rank=rank)
-    np.savetxt(paths['codelen_rank'], out_arr, fmt='%.7e')
-    np.savetxt(paths['derivs_rank'], out_arr_deriv, fmt='%.7e')
+    np.savetxt(paths["codelen_rank"], out_arr, fmt="%.7e")
+    np.savetxt(paths["derivs_rank"], out_arr_deriv, fmt="%.7e")
 
     comm.Barrier()
 
     if rank == 0:
         combine_temp_files(
-            likelihood.temp_dir,
-            paths['codelen_rank_pattern'],
-            paths['codelen'])
+            likelihood.temp_dir, paths["codelen_rank_pattern"], paths["codelen"]
+        )
         combine_temp_files(
-            likelihood.temp_dir,
-            paths['derivs_rank_pattern'],
-            paths['derivs'])
+            likelihood.temp_dir, paths["derivs_rank_pattern"], paths["derivs"]
+        )
         save_scoring_settings(
-            comp, likelihood, use_det_I, snap_choice,
-            catalogue_digest=test_all.catalogue_digest(comp, likelihood))
+            comp,
+            likelihood,
+            use_det_I,
+            snap_choice,
+            catalogue_digest=test_all.catalogue_digest(comp, likelihood),
+        )
 
     comm.Barrier()
-
