@@ -13,9 +13,9 @@ import pytest
 import esr.generation.duplicate_checker
 import esr.generation.generator as generator
 import esr.fitting.test_all
-import esr.fitting.test_all_Fisher
+import esr.fitting.test_all_fisher
 import esr.fitting.match
-import esr.fitting.combine_DL
+import esr.fitting.combine_dl
 import esr.fitting.plot
 from esr.fitting.likelihood import (
     CCLikelihood, PanthLikelihood, GaussLikelihood,
@@ -37,10 +37,10 @@ def test_cc(monkeypatch):
 
     for log_opt in [True, False]:
         esr.fitting.test_all.main(comp, likelihood, log_opt=log_opt)
-        esr.fitting.test_all_Fisher.main(comp, likelihood)
+        esr.fitting.test_all_fisher.main(comp, likelihood)
         esr.fitting.match.main(comp, likelihood)
         esr.fitting.match.check_match_results(comp, likelihood)
-        esr.fitting.combine_DL.main(comp, likelihood)
+        esr.fitting.combine_dl.main(comp, likelihood)
         esr.fitting.plot.main(comp, likelihood)
 
         # Test results match Table 1 of arXiv:2211.11461
@@ -99,10 +99,10 @@ def test_pantheon(monkeypatch):
     esr.generation.duplicate_checker.main('core_maths', comp)
     esr.fitting.test_all.main(
         comp, likelihood, Niter_params=[4], Nconv_params=[2])
-    esr.fitting.test_all_Fisher.main(comp, likelihood)
+    esr.fitting.test_all_fisher.main(comp, likelihood)
     esr.fitting.match.main(comp, likelihood)
     esr.fitting.match.check_match_results(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
     assert esr.plotting.plot.pareto_plot(
@@ -148,10 +148,10 @@ def test_gaussian(monkeypatch):
     comp = 3
     esr.generation.duplicate_checker.main('core_maths', comp)
     esr.fitting.test_all.main(comp, likelihood)
-    esr.fitting.test_all_Fisher.main(comp, likelihood)
+    esr.fitting.test_all_fisher.main(comp, likelihood)
     esr.fitting.match.main(comp, likelihood)
     esr.fitting.match.check_match_results(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
     return
@@ -369,10 +369,10 @@ def test_poisson(monkeypatch):
     comp = 3
     esr.generation.duplicate_checker.main('core_maths', comp)
     esr.fitting.test_all.main(comp, likelihood)
-    esr.fitting.test_all_Fisher.main(comp, likelihood)
+    esr.fitting.test_all_fisher.main(comp, likelihood)
     esr.fitting.match.main(comp, likelihood)
     esr.fitting.match.check_match_results(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
     # Plot the pareto front for the Poisson example
@@ -398,7 +398,7 @@ def test_mse():
     esr.fitting.test_all.main(comp, likelihood)
     unittest.TestCase().assertRaises(
         ValueError,
-        esr.fitting.test_all_Fisher.main,
+        esr.fitting.test_all_fisher.main,
         comp=comp,
         likelihood=likelihood
     )
@@ -531,7 +531,7 @@ def test_snap_choices():
 
 def test_compute_codelen():
     """Unit tests for _compute_codelen with known analytic cases."""
-    from esr.fitting.test_all_Fisher import _compute_codelen
+    from esr.fitting.test_all_fisher import _compute_codelen
     import math
 
     # 1-parameter case: both det and diagonal should agree (det of 1x1 = the element)
@@ -597,7 +597,7 @@ def test_compute_codelen():
 
 def test_compute_snap_mask():
     """Unit tests for _compute_snap_mask with known analytic cases."""
-    from esr.fitting.test_all_Fisher import _compute_snap_mask
+    from esr.fitting.test_all_fisher import _compute_snap_mask
 
     # Well-constrained 2-param case: no snapping for either supported mode
     H = np.array([[1000.0, 0.0], [0.0, 1000.0]])
@@ -656,8 +656,8 @@ def test_fisher_settings_are_persisted(tmp_path):
     class Likelihood:
         out_dir = str(tmp_path)
 
-    esr.fitting.test_all_Fisher.save_scoring_settings(7, Likelihood, True, 1)
-    assert esr.fitting.test_all_Fisher.load_scoring_settings(7, Likelihood) == {
+    esr.fitting.test_all_fisher.save_scoring_settings(7, Likelihood, True, 1)
+    assert esr.fitting.test_all_fisher.load_scoring_settings(7, Likelihood) == {
         'use_det_I': True, 'snap_choice': 1}
 
 
@@ -822,7 +822,7 @@ def test_likelihood_can_disable_likelihood_aware_catalogue(tmp_path):
 def test_likelihood_aware_match_uses_transformed_representatives(tmp_path):
     import sympy
     from esr.fitting.sympy_symbols import x
-    from esr.fitting import match, test_all, test_all_Fisher
+    from esr.fitting import match, test_all, test_all_fisher
 
     class NormalisingLikelihood:
         use_likelihood_catalogue = True
@@ -849,7 +849,7 @@ def test_likelihood_aware_match_uses_transformed_representatives(tmp_path):
     likelihood = NormalisingLikelihood()
     assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5,
                                                 try_integration=False)
-    test_all_Fisher.save_scoring_settings(comp, likelihood, True, 1)
+    test_all_fisher.save_scoring_settings(comp, likelihood, True, 1)
     # match.main needs a negloglike file only to infer the parameter-column width
     # in the likelihood-aware branch; it takes NLLs/parameters from codelen_comp.
     np.savetxt(tmp_path / 'out' / f'negloglike_comp{comp}.dat',
@@ -879,7 +879,7 @@ def test_unresolved_curvature_is_scored_independently_of_its_sign():
     a function is rejected as a saddle, snapped, or scored must not depend on
     which of those it happened to be.
     """
-    from esr.fitting.test_all_Fisher import (
+    from esr.fitting.test_all_fisher import (
         EIGENVALUE_REL_THRESHOLD,
         _compute_snap_mask,
         _has_negative_curvature,
@@ -1018,7 +1018,7 @@ def _straight_line_data(tmp_path, name='invariance.txt'):
 def _parametric_codelen(fcn, theta, likelihood, use_det_I, snap_choice=1):
     """Parametric codelength of one expression at a supplied parameter vector."""
     import sympy
-    from esr.fitting.test_all_Fisher import convert_params
+    from esr.fitting.test_all_fisher import convert_params
     from esr.fitting.sympy_symbols import x as xsym
 
     theta = np.asarray(theta, dtype=float)
@@ -1105,7 +1105,7 @@ def test_unremovable_degenerate_direction_gives_an_infinite_codelen(tmp_path):
     the fit is rejected outright.
     """
     import sympy
-    from esr.fitting.test_all_Fisher import convert_params
+    from esr.fitting.test_all_fisher import convert_params
     from esr.fitting.sympy_symbols import x as xsym
 
     #  A redundant parameterisation is only exactly flat when the residuals
@@ -1197,7 +1197,7 @@ def test_snap_removing_every_parameter_is_judged_by_description_length(
     win at 0.3 sigma (0.045 < ln 2) and lose at 1.5 sigma (1.125 > ln 2), and
     both outcomes are the description-length comparison, not a special case.
     """
-    from esr.fitting.test_all_Fisher import convert_params
+    from esr.fitting.test_all_fisher import convert_params
 
     fcn, eq, integrated, likelihood, a0_ml, negloglike_ml, negloglike_zero = \
         _null_slope_fit(tmp_path, offset)
@@ -1227,7 +1227,7 @@ def test_published_diagonal_snaps_every_parameter_below_one_precision_step(
     would then never win. The published method instead removes every such
     parameter, and these are the numbers the main branch gives for this fit.
     """
-    from esr.fitting.test_all_Fisher import convert_params
+    from esr.fitting.test_all_fisher import convert_params
 
     fcn, eq, integrated, likelihood, a0_ml, negloglike_ml, negloglike_zero = \
         _null_slope_fit(tmp_path, offset)
@@ -1315,7 +1315,7 @@ def test_determinant_with_diagonal_snapping_warns_but_is_allowed():
     diagonal snapping cannot remove an unconstrained direction from det(H), so
     it must say so.
     """
-    from esr.fitting.test_all_Fisher import (
+    from esr.fitting.test_all_fisher import (
         DiagonalSnapDeterminantWarning,
         _validate_snap_and_det,
     )
@@ -1340,7 +1340,7 @@ def test_degeneracy_verdict_does_not_depend_on_parameter_scaling():
     very different magnitudes (the Pantheon exponentials, say) get stripped of a
     parameter.
     """
-    from esr.fitting.test_all_Fisher import (
+    from esr.fitting.test_all_fisher import (
         _compute_snap_mask,
         _has_negative_curvature,
     )
@@ -1372,7 +1372,7 @@ def test_weakly_occupied_but_resolved_direction_is_not_forced_to_snap():
     nearly orthogonal to stays subject to the description-length comparison, so
     that ordinary fits are not stripped of a parameter.
     """
-    from esr.fitting.test_all_Fisher import (
+    from esr.fitting.test_all_fisher import (
         EIGENVALUE_REL_THRESHOLD,
         _compute_snap_mask,
     )
@@ -1398,7 +1398,7 @@ def test_snapping_refits_the_retained_parameters():
     they have to be re-optimised or the reduced model is evaluated at the wrong
     point and its likelihood collapses.
     """
-    from esr.fitting.test_all_Fisher import _refit_after_snap
+    from esr.fitting.test_all_fisher import _refit_after_snap
 
     #  Minimum of (a0 - 1)^2 + (a1 - 2 a0)^2 over a1, at a0 = 0, is a1 = 0.
     def negloglike(t):
@@ -1429,7 +1429,7 @@ def test_unresolved_intercept_is_snapped_without_destroying_the_fit(tmp_path):
     import sympy
 
     from esr.fitting.sympy_symbols import x as xsym
-    from esr.fitting.test_all_Fisher import convert_params
+    from esr.fitting.test_all_fisher import convert_params
 
     rng = np.random.default_rng(0)
     xvar = np.linspace(1.0e4, 1.0e4 + 40.0, 100)
@@ -1609,7 +1609,7 @@ def test_inverse_substitution_pair_mismatch_raises():
 
 def _combine_dl_test_likelihood(tmp_path, codelen_lines, aifeyn_lines,
                                 function_lines):
-    """Create the smallest single-rank input set for ``combine_DL.main``."""
+    """Create the smallest single-rank input set for ``combine_dl.main``."""
     comp = 1
     fn_dir = tmp_path / 'functions'
     comp_dir = fn_dir / f'compl_{comp}'
@@ -1641,11 +1641,11 @@ def test_combine_dl_warns_on_malformed_rows_and_preserves_parameter_width(
         'f0\nf1\nf2\n',
     )
     monkeypatch.setattr(
-        esr.fitting.combine_DL.test_all, 'get_functions',
+        esr.fitting.combine_dl.test_all, 'get_functions',
         lambda *args, **kwargs: ([], 0, 3))
 
     with pytest.warns(RuntimeWarning, match='non-numeric'):
-        esr.fitting.combine_DL.main(comp, likelihood)
+        esr.fitting.combine_dl.main(comp, likelihood)
 
     rows = (tmp_path / 'out' / 'final_1.dat').read_text().splitlines()
     assert len(rows) == 2
@@ -1659,11 +1659,11 @@ def test_combine_dl_rejects_unequal_companion_lengths(tmp_path, monkeypatch):
     comp, likelihood = _combine_dl_test_likelihood(
         tmp_path, '1 2 0\n', '1\n2\n', 'f0\n')
     monkeypatch.setattr(
-        esr.fitting.combine_DL.test_all, 'get_functions',
+        esr.fitting.combine_dl.test_all, 'get_functions',
         lambda *args, **kwargs: ([], 0, 1))
 
     with pytest.raises(ValueError, match='unequal line counts'):
-        esr.fitting.combine_DL.main(comp, likelihood)
+        esr.fitting.combine_dl.main(comp, likelihood)
 
 
 def test_combine_dl_clears_stale_final_when_no_rows_are_valid(tmp_path, monkeypatch):
@@ -1672,16 +1672,16 @@ def test_combine_dl_clears_stale_final_when_no_rows_are_valid(tmp_path, monkeypa
     final_path = tmp_path / 'out' / 'final_1.dat'
     final_path.write_text('stale result\n')
     monkeypatch.setattr(
-        esr.fitting.combine_DL.test_all, 'get_functions',
+        esr.fitting.combine_dl.test_all, 'get_functions',
         lambda *args, **kwargs: ([], 0, 1))
 
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
 
     assert final_path.read_text() == ''
 
 
 def _hessian_from_deriv(deriv, nparam, max_param):
-    """Rebuild a symmetric Hessian from ``test_all_Fisher``'s flattened upper
+    """Rebuild a symmetric Hessian from ``test_all_fisher``'s flattened upper
     triangle (the ``deriv`` row it writes per function)."""
     H = np.zeros((nparam, nparam))
     for i in range(nparam):
@@ -1713,7 +1713,7 @@ def test_convert_params_reconstructs_known_hessian_from_data(tmp_path):
     analytic design-matrix Gram matrix.
     """
     import sympy
-    from esr.fitting import test_all_Fisher
+    from esr.fitting import test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
     rng = np.random.default_rng(0)
@@ -1738,14 +1738,14 @@ def test_convert_params_reconstructs_known_hessian_from_data(tmp_path):
     eq_numpy = sympy.lambdify([xsym, a0s, a1s], eq, 'numpy')
     nll = likelihood.negloglike(theta_mle, eq_numpy)
 
-    params, nll_out, deriv, codelen = test_all_Fisher.convert_params(
+    params, nll_out, deriv, codelen = test_all_fisher.convert_params(
         'a0 + a1*x', eq, False, np.pad(theta_mle, (0, 2)), likelihood, nll,
         max_param=4, use_det_I=True, snap_choice=1)
 
     H = _hessian_from_deriv(deriv, 2, 4)
     np.testing.assert_allclose(H, Gram, rtol=1e-3)
     assert np.isfinite(codelen)
-    expected = test_all_Fisher._compute_codelen(
+    expected = test_all_fisher._compute_codelen(
         Gram, np.diag(Gram), theta_mle, np.ones(2, dtype=bool), True)
     assert np.isclose(codelen, expected, rtol=1e-3)
     # Well-constrained fit: no parameter should have been snapped away.
@@ -1762,7 +1762,7 @@ def test_determinant_survives_parameter_removal(tmp_path):
     finite and match an independent computation over the reduced parameters.
     """
     import sympy
-    from esr.fitting import test_all_Fisher
+    from esr.fitting import test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
     rng = np.random.default_rng(1)
@@ -1794,14 +1794,14 @@ def test_determinant_survives_parameter_removal(tmp_path):
         eq_numpy = sympy.lambdify([xsym, *syms], eq, 'numpy')
         nll = likelihood.negloglike(theta_mle, eq_numpy)
 
-        params, nll_out, deriv, codelen = test_all_Fisher.convert_params(
+        params, nll_out, deriv, codelen = test_all_fisher.convert_params(
             'reduced', eq, False, np.pad(theta_mle, (0, 4 - nparam)),
             likelihood, nll, max_param=4, use_det_I=True, snap_choice=1)
 
         H = _hessian_from_deriv(deriv, nparam, 4)
         np.testing.assert_allclose(H, Gram, rtol=1e-2)
         assert np.isfinite(codelen), f'{nparam}-param determinant codelen not finite'
-        expected = test_all_Fisher._compute_codelen(
+        expected = test_all_fisher._compute_codelen(
             Gram, np.diag(Gram), theta_mle, np.ones(nparam, dtype=bool), True)
         assert np.isclose(codelen, expected, rtol=1e-2)
         # Canonicalisation collapses the gapped labels to exactly nparam params.
@@ -1851,10 +1851,10 @@ def test_plot_uses_the_parameterisation_the_fit_was_stored_in(tmp_path, monkeypa
     (compl_dir / f'aifeyn_{comp}.txt').write_text('6.931472\n')
 
     test_all.main(comp, likelihood, Niter_params=[4], Nconv_params=[2])
-    esr.fitting.test_all_Fisher.main(
+    esr.fitting.test_all_fisher.main(
         comp, likelihood, use_det_I=True, snap_choice=1)
     esr.fitting.match.main(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
 
     drawn = []
     original_get_pred = likelihood.get_pred
@@ -1887,7 +1887,7 @@ def test_determinant_scoring_and_matching_with_parameter_removal(
     second (inverse-substitution) transformation applied.
     """
     import sympy
-    from esr.fitting import test_all, test_all_Fisher, match
+    from esr.fitting import test_all, test_all_fisher, match
     from esr.fitting.sympy_symbols import x as xsym
 
     if monkeypatch is not None:
@@ -1930,7 +1930,7 @@ def test_determinant_scoring_and_matching_with_parameter_removal(
 
     assert test_all.ensure_likelihood_catalogue(comp, likelihood, tmax=5)
     test_all.main(comp, likelihood, Niter_params=[4], Nconv_params=[2])
-    test_all_Fisher.main(comp, likelihood, use_det_I=True, snap_choice=1)
+    test_all_fisher.main(comp, likelihood, use_det_I=True, snap_choice=1)
     match.main(comp, likelihood)
 
     matched = np.atleast_2d(np.loadtxt(
@@ -1957,7 +1957,7 @@ def _fitted_cc_pipeline(tmp_path, comp=3):
     esr.generation.duplicate_checker.main(
         'core_maths', comp, fn_dir=likelihood.fn_dir)
     esr.fitting.test_all.main(comp, likelihood)
-    esr.fitting.test_all_Fisher.main(
+    esr.fitting.test_all_fisher.main(
         comp, likelihood, use_det_I=True, snap_choice=1)
     return likelihood
 
@@ -2038,14 +2038,14 @@ def test_outputs_from_a_rebuilt_catalogue_of_the_same_size_are_refused(tmp_path)
     with pytest.raises(ValueError, match='different catalogue'):
         esr.fitting.match.main(comp, likelihood)
     with pytest.raises(ValueError, match='different catalogue'):
-        esr.fitting.test_all_Fisher.main(
+        esr.fitting.test_all_fisher.main(
             comp, likelihood, use_det_I=True, snap_choice=1)
 
     #  Outputs written before digests were recorded can only be row-checked,
     #  which is a warning rather than a refusal.
     with open(unique_path, 'w') as f:
         f.writelines(original)
-    esr.fitting.test_all_Fisher.main(
+    esr.fitting.test_all_fisher.main(
         comp, likelihood, use_det_I=True, snap_choice=1)
     os.remove(fitting_paths(comp, likelihood)['fit_settings'])
     with pytest.warns(MissingCatalogueDigestWarning):
@@ -2058,18 +2058,18 @@ def test_interrupted_fisher_run_leaves_no_scoring_settings(tmp_path, monkeypatch
     the previous run's scores for match to accept."""
     comp = 3
     likelihood = _fitted_cc_pipeline(tmp_path, comp)
-    saved = esr.fitting.test_all_Fisher.load_scoring_settings(comp, likelihood)
+    saved = esr.fitting.test_all_fisher.load_scoring_settings(comp, likelihood)
     assert (saved['use_det_I'], saved['snap_choice']) == (True, 1)
 
     def interrupted(*args, **kwargs):
         raise RuntimeError('interrupted')
 
-    monkeypatch.setattr(esr.fitting.test_all_Fisher, 'combine_temp_files',
+    monkeypatch.setattr(esr.fitting.test_all_fisher, 'combine_temp_files',
                         interrupted)
     with pytest.raises(RuntimeError, match='interrupted'):
-        esr.fitting.test_all_Fisher.main(
+        esr.fitting.test_all_fisher.main(
             comp, likelihood, use_det_I=False, snap_choice=0)
-    assert esr.fitting.test_all_Fisher.load_scoring_settings(
+    assert esr.fitting.test_all_fisher.load_scoring_settings(
         comp, likelihood) is None
     with pytest.raises(ValueError, match='No saved Fisher settings'):
         esr.fitting.match.main(comp, likelihood)
@@ -2101,13 +2101,13 @@ def test_legacy_diagonal_settings_reproduce_published_values(
         'core_maths', comp, fn_dir=likelihood.fn_dir)
 
     esr.fitting.test_all.main(comp, likelihood)
-    esr.fitting.test_all_Fisher.main(
+    esr.fitting.test_all_fisher.main(
         comp, likelihood, use_det_I=False, snap_choice=0)
     esr.fitting.match.main(comp, likelihood)
     assert esr.fitting.match.check_match_results(comp, likelihood) == 0
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
 
-    settings = esr.fitting.test_all_Fisher.load_scoring_settings(comp, likelihood)
+    settings = esr.fitting.test_all_fisher.load_scoring_settings(comp, likelihood)
     assert (settings['use_det_I'], settings['snap_choice']) == (False, 0)
     assert settings['catalogue_digest'] == esr.fitting.test_all.catalogue_digest(
         comp, likelihood)
@@ -2141,7 +2141,7 @@ def test_legacy_diagonal_settings_reproduce_published_values(
     assert len(rows) > 5
     dl = np.array([float(r[2]) for r in rows])   # column 2 is already the total DL
     assert np.all(np.isfinite(dl))
-    assert np.all(np.diff(dl) >= -1e-6)          # combine_DL ranks by ascending DL
+    assert np.all(np.diff(dl) >= -1e-6)          # combine_dl ranks by ascending DL
     old_dl = {r[1]: float(r[2]) for r in rows}
 
     # Cross-check the whole range against the current method: complexity 3 has
@@ -2151,10 +2151,10 @@ def test_legacy_diagonal_settings_reproduce_published_values(
     # internal consistency check between two current code paths (old-method vs
     # det(I) settings), not a comparison against independently fixed historical
     # values: only the best row (above) is tied to published Table-1 numbers.
-    esr.fitting.test_all_Fisher.main(
+    esr.fitting.test_all_fisher.main(
         comp, likelihood, use_det_I=True, snap_choice=1)
     esr.fitting.match.main(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
     with open(fname, 'r') as f:
         new_rows = [line.rstrip('\n').split(';') for line in f if line.strip()]
     new_dl = {r[1]: float(r[2]) for r in new_rows}
@@ -2172,7 +2172,7 @@ def test_projected_eigenbasis_codelen_is_eigenbasis_consistent():
     because the precision floor is taken in the eigenbasis rather than against
     the original H_ii -- the point of Deaglan's README question.
     """
-    from esr.fitting.test_all_Fisher import (
+    from esr.fitting.test_all_fisher import (
         _score_projected_eigenbasis, _compute_codelen)
 
     H = np.array([[100.0, 40.0], [40.0, 60.0]])
@@ -2200,7 +2200,7 @@ def test_projected_eigenbasis_codelen_is_eigenbasis_consistent():
 def test_projected_eigenbasis_snaps_weak_direction():
     """A weakly-constrained projected coordinate is zeroed and the codelength is
     scored over the retained eigendirections only."""
-    from esr.fitting.test_all_Fisher import _score_projected_eigenbasis
+    from esr.fitting.test_all_fisher import _score_projected_eigenbasis
 
     c = 1.0 / np.sqrt(2.0)
     V = np.array([[c, -c], [c, c]])            # 45-degree rotation
@@ -2243,7 +2243,7 @@ def test_a_zero_curvature_direction_counts_as_flat_only_if_uncoupled(
     that, and snap_choice=2 -- which runs before the diagonal rejection used by
     the other modes -- would then score a saddle.
     """
-    from esr.fitting.test_all_Fisher import (
+    from esr.fitting.test_all_fisher import (
         _correlation_eigenvalues, _has_negative_curvature,
         _score_projected_eigenbasis)
 
@@ -2268,7 +2268,7 @@ def test_projected_eigenbasis_handles_exact_flat_direction():
     such a fit outright; the projected-eigenbasis branch runs before that check
     so it can legitimately remove the flat coordinate instead.
     """
-    from esr.fitting.test_all_Fisher import _score_projected_eigenbasis
+    from esr.fitting.test_all_fisher import _score_projected_eigenbasis
 
     # Zero diagonal element (flat direction aligned with the second parameter).
     H = np.diag([100.0, 0.0])
@@ -2282,7 +2282,7 @@ def test_projected_eigenbasis_handles_exact_flat_direction():
 
 def test_snap_choice_2_requires_determinant(tmp_path):
     """snap_choice=2 is rejected without det(I) scoring, and persists otherwise."""
-    from esr.fitting import test_all_Fisher as F
+    from esr.fitting import test_all_fisher as F
 
     class Likelihood:
         out_dir = str(tmp_path)
@@ -2310,13 +2310,13 @@ def test_snap_choice_2_end_to_end(monkeypatch, tmp_path):
         'core_maths', comp, fn_dir=likelihood.fn_dir)
 
     esr.fitting.test_all.main(comp, likelihood)
-    esr.fitting.test_all_Fisher.main(
+    esr.fitting.test_all_fisher.main(
         comp, likelihood, use_det_I=True, snap_choice=2)
     esr.fitting.match.main(comp, likelihood)
     assert esr.fitting.match.check_match_results(comp, likelihood) == 0
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
 
-    settings = esr.fitting.test_all_Fisher.load_scoring_settings(comp, likelihood)
+    settings = esr.fitting.test_all_fisher.load_scoring_settings(comp, likelihood)
     assert (settings['use_det_I'], settings['snap_choice']) == (True, 2)
 
     fname = os.path.join(likelihood.out_dir, f'final_{comp}.dat')
@@ -2374,11 +2374,11 @@ def test_snap_choice_2_match_multiparam_end_to_end(monkeypatch, tmp_path):
         return original(likelihood, fcn_i, theta_vec, *args, **kwargs)
     monkeypatch.setattr(esr.fitting.match, '_variant_negloglike', counting)
 
-    esr.fitting.test_all_Fisher.main(
+    esr.fitting.test_all_fisher.main(
         comp, likelihood, use_det_I=True, snap_choice=2)
     esr.fitting.match.main(comp, likelihood)
     assert esr.fitting.match.check_match_results(comp, likelihood) == 0
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
 
     assert calls['multi'] > 0  # a multi-parameter function's projected coordinate was re-evaluated
 
@@ -2403,7 +2403,7 @@ def test_projected_eigenbasis_correlated_scoring(tmp_path):
     directory.
     """
     import sympy
-    from esr.fitting import test_all_Fisher
+    from esr.fitting import test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
     rng = np.random.default_rng(7)
@@ -2427,14 +2427,14 @@ def test_projected_eigenbasis_correlated_scoring(tmp_path):
 
     common = ('a0*x + a1*x**2', eq, False, np.pad(theta_mle, (0, 2)),
               likelihood, nll)
-    _, _, _, cl2 = test_all_Fisher.convert_params(
+    _, _, _, cl2 = test_all_fisher.convert_params(
         *common, max_param=4, use_det_I=True, snap_choice=2)
-    _, _, _, cl1 = test_all_Fisher.convert_params(
+    _, _, _, cl1 = test_all_fisher.convert_params(
         *common, max_param=4, use_det_I=True, snap_choice=1)
 
     eigvals, V = np.linalg.eigh(Gram)
     b = V.T @ theta_mle
-    expected2 = test_all_Fisher._compute_codelen(
+    expected2 = test_all_fisher._compute_codelen(
         np.diag(eigvals), eigvals, b, np.ones(2, dtype=bool), True)
     assert np.isfinite(cl2)
     assert np.isclose(cl2, expected2, rtol=1e-2)
@@ -2453,7 +2453,7 @@ def test_old_method_codelen_matches_diagonal_formula_from_data(tmp_path):
     ``test_legacy_diagonal_settings_reproduce_published_values`` cannot.
     """
     import sympy
-    from esr.fitting import test_all_Fisher
+    from esr.fitting import test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
     rng = np.random.default_rng(11)
@@ -2483,12 +2483,12 @@ def test_old_method_codelen_matches_diagonal_formula_from_data(tmp_path):
         nll = likelihood.negloglike(theta, eqn)
 
         common = ('f', eq, False, np.pad(theta, (0, 4 - nparam)), likelihood, nll)
-        _, _, _, cl_old = test_all_Fisher.convert_params(
+        _, _, _, cl_old = test_all_fisher.convert_params(
             *common, max_param=4, use_det_I=False, snap_choice=0)
-        _, _, _, cl_new = test_all_Fisher.convert_params(
+        _, _, _, cl_new = test_all_fisher.convert_params(
             *common, max_param=4, use_det_I=True, snap_choice=1)
 
-        expected_diag = test_all_Fisher._compute_codelen(
+        expected_diag = test_all_fisher._compute_codelen(
             Gram, np.diag(Gram), theta, np.ones(nparam, dtype=bool), False)
         assert np.isfinite(cl_old)
         assert np.isclose(cl_old, expected_diag, rtol=1e-2)
@@ -2683,7 +2683,7 @@ def test_convert_params_snap2_flat_direction_from_pipeline(monkeypatch, tmp_path
     must run before it.
     """
     import sympy
-    from esr.fitting import test_all_Fisher
+    from esr.fitting import test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
     xvar = np.linspace(0.5, 3.0, 40)
@@ -2698,10 +2698,10 @@ def test_convert_params_snap2_flat_direction_from_pipeline(monkeypatch, tmp_path
     # Force the numerically-computed Hessian to be exactly diag(100, 0): a0
     # constrained, a1 an exact flat direction.
     monkeypatch.setattr(
-        test_all_Fisher.nd, 'Hessian',
+        test_all_fisher.nd, 'Hessian',
         lambda *a, **k: (lambda th: np.array([[100.0, 0.0], [0.0, 0.0]])))
 
-    params, nll, deriv, codelen = test_all_Fisher.convert_params(
+    params, nll, deriv, codelen = test_all_fisher.convert_params(
         'a0*x + a1', eq, False, np.array([2.0, 0.5, 0.0, 0.0]), likelihood, 5.0,
         max_param=4, use_det_I=True, snap_choice=2)
     assert np.isfinite(codelen)          # was nan before the fix
@@ -2834,7 +2834,7 @@ def test_likelihood_catalogue_retries_after_failed_transforms(tmp_path):
 def test_projected_eigenbasis_warns_on_degenerate_hessian():
     """snap_choice=2 warns for (near-)degenerate Hessian eigenvalues, where the
     eigenbasis -- and hence the codelength -- is ambiguous."""
-    from esr.fitting.test_all_Fisher import (
+    from esr.fitting.test_all_fisher import (
         _score_projected_eigenbasis, ProjectedEigenbasisWarning)
 
     with pytest.warns(ProjectedEigenbasisWarning, match='degenerate'):

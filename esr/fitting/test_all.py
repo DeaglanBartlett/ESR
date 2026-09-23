@@ -756,13 +756,13 @@ def check_catalogue_digest(recorded, comp, likelihood, what):
             f'{what} carry no catalogue digest, so they can only be checked '
             'against the number of equations in the catalogue, which cannot '
             'distinguish two catalogues of the same length. Rerun '
-            'test_all.main and test_all_Fisher.main to record one.',
+            'test_all.main and test_all_fisher.main to record one.',
             MissingCatalogueDigestWarning)
         return
     if digest != catalogue_digest(comp, likelihood):
         raise ValueError(
             f'{what} were produced from a different catalogue to the one now '
-            'active. Rerun test_all.main and test_all_Fisher.main with the '
+            'active. Rerun test_all.main and test_all_fisher.main with the '
             'current catalogue/settings.')
 
 

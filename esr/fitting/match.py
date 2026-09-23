@@ -6,7 +6,7 @@ import numpy as np
 import sympy
 from mpi4py import MPI
 
-from esr.fitting import test_all, test_all_Fisher
+from esr.fitting import test_all, test_all_fisher
 from esr.fitting.sympy_symbols import a0, x
 from esr.fitting.utils import (
     combine_temp_files,
@@ -18,7 +18,7 @@ from esr.generation import simplifier
 
 # Suppress the numpy/scipy RuntimeWarnings raised in bulk while re-evaluating
 # functions, but leave other categories (including unrelated user warnings)
-# untouched. Diagnostics use test_all_Fisher.emit_diagnostic_warning.
+# untouched. Diagnostics use test_all_fisher.emit_diagnostic_warning.
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 comm = MPI.COMM_WORLD
@@ -80,7 +80,7 @@ def _require_catalogue_rows(what, n_rows, n_unique):
     if n_rows != n_unique:
         raise ValueError(
             f'{what} has {n_rows} rows but the active catalogue has {n_unique} '
-            'unique equations. Rerun test_all.main and test_all_Fisher.main '
+            'unique equations. Rerun test_all.main and test_all_fisher.main '
             'with the current catalogue/settings.')
 
 
@@ -208,10 +208,10 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         :print_frequency (int, default=1000): the status of the fits will be printed every ``print_frequency`` number of iterations
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :use_det_I (bool, default=None): Fisher codelength setting. By default,
-            read the setting saved by ``test_all_Fisher.main``. A supplied
+            read the setting saved by ``test_all_fisher.main``. A supplied
             value must agree with that setting.
         :snap_choice (int, default=None): Parameter snapping setting. By
-            default, read the setting saved by ``test_all_Fisher.main``; a
+            default, read the setting saved by ``test_all_fisher.main``; a
             supplied value must agree with it. With 0, each parameter is
             assessed independently using its Hessian diagonal element. With 1,
             ESR diagonalises the full Hessian to identify directions with fewer
@@ -219,7 +219,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             largest projection onto each such direction. With 2 (projected
             eigenbasis), ESR zeros the weak projected coordinate itself and
             scores the codelength in the eigenbasis; this requires
-            ``use_det_I=True``. See ``test_all_Fisher.convert_params`` for the
+            ``use_det_I=True``. See ``test_all_fisher.convert_params`` for the
             detailed definitions.
 
     Returns:
@@ -248,11 +248,11 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
     fcn_list_proc, data_start, data_end = test_all.get_functions(
         comp, likelihood, unique=False)
 
-    recorded_settings = test_all_Fisher.load_scoring_settings(comp, likelihood)
+    recorded_settings = test_all_fisher.load_scoring_settings(comp, likelihood)
     if recorded_settings is None:
         if use_det_I is None or snap_choice is None:
             raise ValueError(
-                'No saved Fisher settings found. Rerun test_all_Fisher or '
+                'No saved Fisher settings found. Rerun test_all_fisher or '
                 'supply both use_det_I and snap_choice explicitly.')
     else:
         if use_det_I is not None and bool(use_det_I) != recorded_settings['use_det_I']:
@@ -261,14 +261,14 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             raise ValueError('match snap_choice does not agree with saved Fisher settings.')
         use_det_I = recorded_settings['use_det_I']
         snap_choice = recorded_settings['snap_choice']
-    test_all_Fisher._validate_snap_and_det(use_det_I, snap_choice)
+    test_all_fisher._validate_snap_and_det(use_det_I, snap_choice)
     test_all.check_catalogue_digest(
         test_all.load_fit_settings(comp, likelihood), comp, likelihood,
         'The test_all fits')
     test_all.check_catalogue_digest(
         recorded_settings, comp, likelihood, 'The Fisher outputs')
 
-    negloglike, params_meas = test_all_Fisher.load_loglike(
+    negloglike, params_meas = test_all_fisher.load_loglike(
         comp, likelihood, data_start, data_end, split=False)
     max_param = params_meas.shape[1]
     n_unique = test_all.get_function_count(comp, likelihood, unique=True)
@@ -297,7 +297,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         if len(matches_proc) != len(fcn_list_proc):
             raise ValueError(
                 'Likelihood-aware match file is inconsistent with all-equation '
-                'catalogue. Rerun test_all.main and test_all_Fisher.main.')
+                'catalogue. Rerun test_all.main and test_all_fisher.main.')
         codelen_unique = np.atleast_2d(
             np.genfromtxt(fit_paths['codelen']))
         if codelen_unique.size == 0:
@@ -307,7 +307,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         if len(matches_proc) and matches_proc.max() >= n_unique:
             raise ValueError(
                 'Likelihood-aware match file refers to equations beyond the '
-                'catalogue. Rerun test_all.main and test_all_Fisher.main.')
+                'catalogue. Rerun test_all.main and test_all_fisher.main.')
         codelen = np.full(len(fcn_list_proc), np.nan)
         negloglike_all = np.full(len(fcn_list_proc), np.nan)
         index_arr = np.zeros(len(fcn_list_proc))
@@ -351,7 +351,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         raise ValueError(
             'Match file refers to equations beyond the unique catalogue. '
             'Regenerate the catalogue, then rerun test_all.main and '
-            'test_all_Fisher.main.')
+            'test_all_fisher.main.')
 
     # 2D array of shape (# unique fcns, 10)
     all_fish = np.loadtxt(fit_paths['derivs'])
@@ -429,7 +429,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             # actually snapped.
             ptrue = np.asarray(p, dtype=float)
             theta_snapped, negloglike_all[i], _, codelen[i] = \
-                test_all_Fisher._score_projected_eigenbasis(
+                test_all_fisher._score_projected_eigenbasis(
                     fish_mat, ptrue, negloglike_all[i], use_det_I,
                     lambda tv, _f=fcn_i: _variant_negloglike(
                         likelihood, _f, tv, tmax, try_integration))
@@ -441,7 +441,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         if np.sum(fish_diag <= 0) > 0:
             codelen[i] = np.inf
             continue
-        if use_det_I and test_all_Fisher._has_negative_curvature(fish_mat):
+        if use_det_I and test_all_fisher._has_negative_curvature(fish_mat):
             codelen[i] = np.inf
             continue
 
@@ -469,10 +469,10 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
 
         # Compute unsnapped DL (for comparison if snapping is attempted)
         all_mask = np.ones(len(p), dtype=bool)
-        codelen_nosnap = test_all_Fisher._compute_codelen(fish_mat, fish_diag, p, all_mask, use_det_I)
+        codelen_nosnap = test_all_fisher._compute_codelen(fish_mat, fish_diag, p, all_mask, use_det_I)
         DL_nosnap = negloglike_all[i] + codelen_nosnap
 
-        Nsteps, has_degenerate_eig = test_all_Fisher._compute_snap_mask(fish_mat, fish_diag, p, Nsteps, snap_choice)
+        Nsteps, has_degenerate_eig = test_all_fisher._compute_snap_mask(fish_mat, fish_diag, p, Nsteps, snap_choice)
 
         # Should reevaluate -log(L) with the param(s) set to 0, but doesn't matter unless the fcn is a very good one
         if np.sum(Nsteps < 1) > 0:
@@ -588,13 +588,13 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             # If Hessian has degenerate eigenvalues (detected by _compute_snap_mask),
             # snap is mandatory — reverting would allow det(H)→0 to give
             # artificially low codelen.
-            codelen_snap = test_all_Fisher._compute_codelen(fish_mat, fish_diag, ptrue, kept_mask, use_det_I)
+            codelen_snap = test_all_fisher._compute_codelen(fish_mat, fish_diag, ptrue, kept_mask, use_det_I)
             DL_snap = negloglike_all[i] + codelen_snap
 
             if has_degenerate_eig:
                 pass  # mandatory snap — degenerate Hessian
             elif not use_det_I:
-                pass  # published rule, as in test_all_Fisher.convert_params
+                pass  # published rule, as in test_all_fisher.convert_params
             elif DL_snap >= DL_nosnap:
                 # Well-conditioned but snapping didn't help — revert
                 p = np.copy(ptrue)
@@ -611,16 +611,16 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
             try:
                 cond = np.linalg.cond(H_active)
                 if cond > 1e10:
-                    test_all_Fisher.emit_diagnostic_warning(
+                    test_all_fisher.emit_diagnostic_warning(
                         'One or more fitted Hessians are badly conditioned '
                         '(condition number > 1e10); their parameter codelengths '
                         'may be unreliable.',
-                        test_all_Fisher.HighConditionNumberWarning)
+                        test_all_fisher.HighConditionNumberWarning)
             except np.linalg.LinAlgError:
                 pass
 
         try:
-            codelen[i] = test_all_Fisher._compute_codelen(fish_mat, fish_diag, ptrue, kept_mask, use_det_I)
+            codelen[i] = test_all_fisher._compute_codelen(fish_mat, fish_diag, ptrue, kept_mask, use_det_I)
         except Exception:  # noqa: BLE001
             codelen[i] = np.inf
 

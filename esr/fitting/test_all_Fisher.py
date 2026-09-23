@@ -1,5 +1,3 @@
-# ruff: noqa: N999
-
 import itertools
 import json
 import math
@@ -289,7 +287,7 @@ def save_scoring_settings(comp, likelihood, use_det_I, snap_choice,
 def clear_scoring_settings(comp, likelihood):
     """Remove the saved Fisher scoring settings, if there are any.
 
-    ``test_all_Fisher.main`` calls this before it starts, and saves the new
+    ``test_all_fisher.main`` calls this before it starts, and saves the new
     settings only once its outputs are complete, so a run that is interrupted
     part way leaves no settings rather than new settings beside old scores.
 

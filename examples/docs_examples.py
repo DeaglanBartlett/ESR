@@ -20,9 +20,9 @@ from mpi4py import MPI
 
 import esr.generation.duplicate_checker
 import esr.fitting.test_all
-import esr.fitting.test_all_Fisher
+import esr.fitting.test_all_fisher
 import esr.fitting.match
-import esr.fitting.combine_DL
+import esr.fitting.combine_dl
 import esr.fitting.plot
 from esr.fitting.likelihood import CCLikelihood, Likelihood, PoissonLikelihood
 from esr.fitting.fit_single import single_function
@@ -41,9 +41,9 @@ size = comm.Get_size()
 comp = 5
 likelihood = CCLikelihood()
 esr.fitting.test_all.main(comp, likelihood)
-esr.fitting.test_all_Fisher.main(comp, likelihood)
+esr.fitting.test_all_fisher.main(comp, likelihood)
 esr.fitting.match.main(comp, likelihood)
-esr.fitting.combine_DL.main(comp, likelihood)
+esr.fitting.combine_dl.main(comp, likelihood)
 esr.fitting.plot.main(comp, likelihood)
 
 #  Define a custom likelihood class
@@ -98,9 +98,9 @@ likelihood = GaussLikelihood('data.txt', 'gauss_example', data_dir=os.getcwd())
 comm.Barrier()
 for comp in range(1, 6):
     esr.fitting.test_all.main(comp, likelihood)
-    esr.fitting.test_all_Fisher.main(comp, likelihood)
+    esr.fitting.test_all_fisher.main(comp, likelihood)
     esr.fitting.match.main(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
 # Run the Poisson examples
@@ -118,9 +118,9 @@ likelihood = PoissonLikelihood(
     'data.txt', 'poisson_example', data_dir=os.getcwd())
 for comp in range(1, 6):
     esr.fitting.test_all.main(comp, likelihood)
-    esr.fitting.test_all_Fisher.main(comp, likelihood)
+    esr.fitting.test_all_fisher.main(comp, likelihood)
     esr.fitting.match.main(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
 # Plot the pareto front for the Poisson example

@@ -61,7 +61,7 @@ class Likelihood:
         if not os.path.isdir(self.like_dir):
             os.makedirs(self.like_dir, exist_ok=True)
         self.fnprior_prefix = "aifeyn_"
-        self.combineDL_prefix = "combine_DL_"
+        self.combineDL_prefix = "combine_dl_"
         self.final_prefix = "final_"
 
         # Base directory for all fitting output. Override to isolate the output

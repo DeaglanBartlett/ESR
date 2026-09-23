@@ -7,14 +7,14 @@ esr.egg-info/dependency_links.txt
 esr.egg-info/requires.txt
 esr.egg-info/top_level.txt
 esr/fitting/__init__.py
-esr/fitting/combine_DL.py
+esr/fitting/combine_dl.py
 esr/fitting/fit_single.py
 esr/fitting/likelihood.py
 esr/fitting/match.py
 esr/fitting/plot.py
 esr/fitting/sympy_symbols.py
 esr/fitting/test_all.py
-esr/fitting/test_all_Fisher.py
+esr/fitting/test_all_fisher.py
 esr/fitting/utils.py
 esr/generation/__init__.py
 esr/generation/custom_printer.py

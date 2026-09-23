@@ -4,7 +4,7 @@ These utilities are shared by the fitting stages: they define the common file
 paths, handle natural-sort ordering and rank-local file concatenation, write the
 negative-log-likelihood output table, and raise Python's recursion limit for deep
 expression trees. This module is where they live, so that ``test_all``,
-``test_all_Fisher``, ``match``, ``combine_DL`` and ``plot`` can each import the
+``test_all_fisher``, ``match``, ``combine_dl`` and ``plot`` can each import the
 ones they need from here directly rather than reaching them through the
 ``test_all`` fitting driver. Each stage imports only the helpers it uses, so a
 given helper is not guaranteed to be reachable as ``test_all.<name>``.
@@ -84,7 +84,7 @@ def fitting_paths(comp, likelihood, rank=None):
     Returns:
         :paths (dict): semantic mapping of fitting filenames and glob patterns
     """
-    combine_prefix = getattr(likelihood, 'combineDL_prefix', 'combine_DL_')
+    combine_prefix = getattr(likelihood, 'combineDL_prefix', 'combine_dl_')
     final_prefix = getattr(likelihood, 'final_prefix', 'final_')
     out_dir = likelihood.out_dir
     temp_dir = getattr(likelihood, 'temp_dir', None)
@@ -140,7 +140,7 @@ def fitting_paths(comp, likelihood, rank=None):
 def emit_diagnostic_warning(message, category):
     """Emit an ESR diagnostic warning through the normal warnings machinery.
 
-    The fitting modules (``test_all``, ``test_all_Fisher``, ``match``, ``plot``)
+    The fitting modules (``test_all``, ``test_all_fisher``, ``match``, ``plot``)
     narrow their module-level suppression to ``RuntimeWarning`` -- the bulk
     numpy/scipy fitting noise -- so a diagnostic raised as a dedicated
     ``UserWarning`` subclass is not swallowed by it. This deliberately does NOT

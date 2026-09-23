@@ -41,9 +41,9 @@ from mpi4py import MPI
 
 import esr.generation.duplicate_checker
 import esr.fitting.test_all
-import esr.fitting.test_all_Fisher
+import esr.fitting.test_all_fisher
 import esr.fitting.match
-import esr.fitting.combine_DL
+import esr.fitting.combine_dl
 from esr.fitting.likelihood import GaussLikelihood
 from esr.fitting.sympy_symbols import x as xsym
 
@@ -123,10 +123,10 @@ for use_catalogue in [False, True]:
     esr.fitting.test_all.main(comp, likelihood)
     elapsed = time.time() - start
 
-    esr.fitting.test_all_Fisher.main(comp, likelihood,
+    esr.fitting.test_all_fisher.main(comp, likelihood,
                                      use_det_I=True, snap_choice=1)
     esr.fitting.match.main(comp, likelihood)
-    esr.fitting.combine_DL.main(comp, likelihood)
+    esr.fitting.combine_dl.main(comp, likelihood)
 
     if rank == 0:
         n_fitted = sum(1 for _ in open(

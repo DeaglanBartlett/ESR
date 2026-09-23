@@ -81,7 +81,7 @@ determinant with eigenbasis snapping:
 
 .. code:: python
 
-	esr.fitting.test_all_Fisher.main(comp, likelihood,
+	esr.fitting.test_all_fisher.main(comp, likelihood,
 	                                 use_det_I=True, snap_choice=1)
 
 This is the recommended setting for new runs because it accounts for
@@ -162,7 +162,7 @@ Fisher approximation remains available for comparison:
 
 .. code:: python
 
-	esr.fitting.test_all_Fisher.main(comp, likelihood,
+	esr.fitting.test_all_fisher.main(comp, likelihood,
 	                                 use_det_I=False, snap_choice=0)
 
 The comparison uses

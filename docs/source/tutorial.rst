@@ -86,9 +86,9 @@ The various ``fitting`` functions rely on the output of the previous script, so 
 .. code-block:: python
 
 	import esr.fitting.test_all
-	import esr.fitting.test_all_Fisher
+	import esr.fitting.test_all_fisher
 	import esr.fitting.match
-	import esr.fitting.combine_DL
+	import esr.fitting.combine_dl
 	import esr.fitting.plot
 	from esr.fitting.likelihood import CCLikelihood
 
@@ -96,9 +96,9 @@ The various ``fitting`` functions rely on the output of the previous script, so 
 	likelihood = CCLikelihood()
 
 	esr.fitting.test_all.main(comp, likelihood)
-	esr.fitting.test_all_Fisher.main(comp, likelihood)
+	esr.fitting.test_all_fisher.main(comp, likelihood)
 	esr.fitting.match.main(comp, likelihood)
-	esr.fitting.combine_DL.main(comp, likelihood)
+	esr.fitting.combine_dl.main(comp, likelihood)
 	esr.fitting.plot.main(comp, likelihood)
 
 
@@ -160,7 +160,7 @@ Published diagonal comparison
 
 To compare against the published diagonal
 parameter-codelength formula, run
-``test_all_Fisher.main(comp, likelihood, use_det_I=False, snap_choice=0)``
+``test_all_fisher.main(comp, likelihood, use_det_I=False, snap_choice=0)``
 and then ``match.main(comp, likelihood)``. This comparison uses the diagonal
 formula within ESR's current shared fitting pipeline. It is therefore not a
 byte-for-byte reproduction of an older ESR run.
@@ -207,7 +207,7 @@ fitted-function catalogue (named ``likelihood_catalogue`` in code identifiers
 and output files). The catalogue starts from the simplifier's *unique*
 equations and groups them by their exact symbolic transformed expression after
 canonical parameter relabelling; one representative is fitted for each
-transformed model family, while ``combine_DL`` still uses each generated
+transformed model family, while ``combine_dl`` still uses each generated
 expression's own tree complexity for the final description length.
 
 It builds on the simplifier's grouping rather than redoing it from
@@ -220,7 +220,7 @@ re-admit the redundant parameterisations the simplifier removed --
 where a near-degenerate Hessian earns such a form a shorter parametric
 codelength than the family it is a redundant copy of. If this catalogue changes,
 the code will fail loudly rather than reusing incompatible ``test_all`` or
-Fisher outputs; rerun ``test_all.main`` and ``test_all_Fisher.main`` with the
+Fisher outputs; rerun ``test_all.main`` and ``test_all_fisher.main`` with the
 current likelihood/settings. The outputs are read by position in the unique
 catalogue, so each stage records a digest of the catalogue it used and the next
 one checks it: a rebuilt catalogue is caught even when it has the same number of
@@ -439,9 +439,9 @@ We can then combine the above code with the below to fit a mock dataset
 .. code-block:: python
 
 	import esr.fitting.test_all
-        import esr.fitting.test_all_Fisher
+        import esr.fitting.test_all_fisher
         import esr.fitting.match
-        import esr.fitting.combine_DL
+        import esr.fitting.combine_dl
         import esr.fitting.plot
 
 	np.random.seed(123)
@@ -455,9 +455,9 @@ We can then combine the above code with the below to fit a mock dataset
 	comp = 5
 
 	esr.fitting.test_all.main(comp, likelihood)
-	esr.fitting.test_all_Fisher.main(comp, likelihood)
+	esr.fitting.test_all_fisher.main(comp, likelihood)
 	esr.fitting.match.main(comp, likelihood)
-	esr.fitting.combine_DL.main(comp, likelihood)
+	esr.fitting.combine_dl.main(comp, likelihood)
 	esr.fitting.plot.main(comp, likelihood)
 
 
@@ -470,9 +470,9 @@ We also have a Poisson likelihood already implemented, which can be run as
 	import os
 
 	import esr.fitting.test_all
-	import esr.fitting.test_all_Fisher
+	import esr.fitting.test_all_fisher
 	import esr.fitting.match
-	import esr.fitting.combine_DL
+	import esr.fitting.combine_dl
 	import esr.fitting.plot
 
 	np.random.seed(123)
@@ -485,7 +485,7 @@ We also have a Poisson likelihood already implemented, which can be run as
 	comp = 5
 
         esr.fitting.test_all.main(comp, likelihood)
-        esr.fitting.test_all_Fisher.main(comp, likelihood)
+        esr.fitting.test_all_fisher.main(comp, likelihood)
         esr.fitting.match.main(comp, likelihood)
-        esr.fitting.combine_DL.main(comp, likelihood)
+        esr.fitting.combine_dl.main(comp, likelihood)
         esr.fitting.plot.main(comp, likelihood)

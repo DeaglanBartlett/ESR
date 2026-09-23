@@ -1,7 +1,7 @@
 import numpy as np
 
 from esr.fitting.test_all import optimise_fun
-from esr.fitting.test_all_Fisher import convert_params
+from esr.fitting.test_all_fisher import convert_params
 from esr.generation import generator, simplifier
 
 
@@ -49,7 +49,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
             direction. With 2 (projected eigenbasis), ESR zeros the weak
             projected coordinate itself and scores the codelength in the
             eigenbasis; this requires ``use_det_I=True``. See
-            ``test_all_Fisher.convert_params`` for the detailed definitions.
+            ``test_all_fisher.convert_params`` for the detailed definitions.
 
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to
@@ -166,7 +166,7 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
             direction. With 2 (projected eigenbasis), ESR zeros the weak
             projected coordinate itself and scores the codelength in the
             eigenbasis; this requires ``use_det_I=True``. See
-            ``test_all_Fisher.convert_params`` for the detailed definitions.
+            ``test_all_fisher.convert_params`` for the detailed definitions.
 
     Returns:
          :negloglike (float): the minimum value of -log(likelihood) (corresponding to
