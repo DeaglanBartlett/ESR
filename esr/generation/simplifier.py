@@ -1436,23 +1436,23 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
         for i in range(len(all_a)):
             locs[f"a{i}"] = all_a[i]
 
-    for i in all_subs:
-        for j in range(len(all_subs[i])):
-            all_subs[i][j] = all_subs[i][j].replace("{", "{'")
-            all_subs[i][j] = all_subs[i][j].replace("}", "'}")
-            all_subs[i][j] = all_subs[i][j].replace(", ", "', '")
-            all_subs[i][j] = all_subs[i][j].replace(": ", "': '")
-            if all_subs[i][j] == 'nan':
-                all_subs[i][j] = np.nan
+    for i, subs in all_subs.items():
+        for j, sub in enumerate(subs):
+            sub = sub.replace("{", "{'")
+            sub = sub.replace("}", "'}")
+            sub = sub.replace(", ", "', '")
+            sub = sub.replace(": ", "': '")
+            if sub == 'nan':
+                subs[j] = np.nan
             else:
-                d = ast.literal_eval(all_subs[i][j])
+                d = ast.literal_eval(sub)
                 k = list(d.keys())
                 v = list(d.values())
                 k = [sympy.sympify(kk, locals=locs) for kk in k]
                 v = [sympy.sympify(vv, locals=locs) for vv in v]
-                all_subs[i][j] = dict(zip(k, v))
+                subs[j] = dict(zip(k, v))
                 if not use_sympy:
-                    all_subs[i][j] = str(all_subs[i][j])
+                    subs[j] = str(subs[j])
     comm.Barrier()
 
     if bcast_res:
@@ -1499,7 +1499,8 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4, full_fisher=False):
 
     max_param = len(p_meas)
 
-    if np.nan in inv_subs:
+    inv_subs_values = inv_subs.values() if isinstance(inv_subs, dict) else inv_subs
+    if any(isinstance(v, (float, np.floating)) and np.isnan(v) for v in inv_subs_values):
         invalid_fish = (np.full((max_param, max_param), np.nan)
                         if full_fisher else np.full(max_param, np.nan))
         return np.full(max_param, np.nan), invalid_fish
