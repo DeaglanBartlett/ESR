@@ -1,29 +1,43 @@
-import numpy as np
 import os
 import shutil
 import subprocess
 import sys
 import textwrap
-from types import SimpleNamespace
-import matplotlib.pyplot as plt
 import unittest
 import warnings
+from types import SimpleNamespace
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pytest
 
-import esr.generation.duplicate_checker
-import esr.generation.generator as generator
+import esr.fitting.combine_dl
+import esr.fitting.match
+import esr.fitting.plot
 import esr.fitting.test_all
 import esr.fitting.test_all_fisher
-import esr.fitting.match
-import esr.fitting.combine_dl
-import esr.fitting.plot
-from esr.fitting.likelihood import (
-    CCLikelihood, PanthLikelihood, GaussLikelihood,
-    PoissonLikelihood, MockLikelihood, MSE)
-from esr.fitting.fit_single import single_function, fit_from_string, tree_to_aifeyn, string_to_aifeyn
-from esr.fitting.utils import (
-    fitting_paths, likelihood_catalogue_paths, raw_catalogue_paths)
+import esr.generation.duplicate_checker
 import esr.plotting.plot
+from esr.fitting.fit_single import (
+    fit_from_string,
+    single_function,
+    string_to_aifeyn,
+    tree_to_aifeyn,
+)
+from esr.fitting.likelihood import (
+    MSE,
+    CCLikelihood,
+    GaussLikelihood,
+    MockLikelihood,
+    PanthLikelihood,
+    PoissonLikelihood,
+)
+from esr.fitting.utils import (
+    fitting_paths,
+    likelihood_catalogue_paths,
+    raw_catalogue_paths,
+)
+from esr.generation import generator
 
 
 def test_cc(monkeypatch):
@@ -86,7 +100,6 @@ def test_cc(monkeypatch):
     assert comp_0 == comp_1
     assert aifeyn_0 == aifeyn_1
 
-    return
 
 
 def test_pantheon(monkeypatch):
@@ -127,7 +140,6 @@ def test_pantheon(monkeypatch):
     assert np.isclose(float(best[6]), 6.93, atol=2e-2)   # Function
 
 
-    return
 
 
 def test_gaussian(monkeypatch):
@@ -154,7 +166,6 @@ def test_gaussian(monkeypatch):
     esr.fitting.combine_dl.main(comp, likelihood)
     esr.fitting.plot.main(comp, likelihood)
 
-    return
 
 
 def test_gaussian_dynamic_mpi(tmp_path):
@@ -234,7 +245,6 @@ def test_gaussian_dynamic_mpi(tmp_path):
     assert 'Dynamic scheduling:' in result.stdout
     assert 'MPI_DYNAMIC_SMOKE_OK' in result.stdout
 
-    return
 
 
 def test_likelihood_catalogue_parallel_matches_serial(tmp_path):
@@ -253,8 +263,9 @@ def test_likelihood_catalogue_parallel_matches_serial(tmp_path):
         pytest.skip('launches 3 ranks; needs >=3 cores or ESR_RUN_MPI_TESTS=1')
 
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     comp = 5
     compl_dir = tmp_path / 'functions' / f'compl_{comp}'
@@ -348,7 +359,6 @@ def test_likelihood_catalogue_parallel_matches_serial(tmp_path):
     assert any(8 <= i < 16 for i in group0)
     assert any(i >= 16 for i in group0)
 
-    return
 
 
 def test_poisson(monkeypatch):
@@ -379,7 +389,6 @@ def test_poisson(monkeypatch):
     esr.plotting.plot.pareto_plot(
         likelihood.out_dir, 'pareto.png', do_DL=True, do_logL=True)
 
-    return
 
 
 def test_mse():
@@ -403,7 +412,6 @@ def test_mse():
         likelihood=likelihood
     )
 
-    return
 
 
 def test_function_making():
@@ -416,7 +424,6 @@ def test_function_making():
         esr.generation.duplicate_checker.main(
             'core_maths', comp, track_memory=True)
 
-    return
 
 
 def test_node():
@@ -481,7 +488,7 @@ def test_node():
     # Check Node functions
     success, _, tree = generator.check_tree(s)
     assert success
-    assert all([t.is_used() for t in tree])
+    assert all(t.is_used() for t in tree)
     for i, lab in enumerate(labels):
         tree[i].assign_op(lab)
         tree[i] = tree[i].copy()
@@ -491,7 +498,6 @@ def test_node():
     check_used = [t.is_used() for t in tree]
     assert all(check_used[:-3]) and not any(check_used[-3:])
 
-    return
 
 
 def test_snap_choices():
@@ -526,13 +532,13 @@ def test_snap_choices():
         single_function(labels, basis_functions, likelihood,
                         verbose=False, use_det_I=True, snap_choice=-1)
 
-    return
 
 
 def test_compute_codelen():
     """Unit tests for _compute_codelen with known analytic cases."""
-    from esr.fitting.test_all_fisher import _compute_codelen
     import math
+
+    from esr.fitting.test_all_fisher import _compute_codelen
 
     # 1-parameter case: both det and diagonal should agree (det of 1x1 = the element)
     H = np.array([[100.0]])
@@ -592,7 +598,6 @@ def test_compute_codelen():
     expected_1 = -0.5 * math.log(3.) + 0.5 * math.log(100.) + math.log(3.)
     assert np.isclose(cl, expected_1)
 
-    return
 
 
 def test_compute_snap_mask():
@@ -638,14 +643,14 @@ def test_compute_snap_mask():
     with pytest.raises(ValueError, match="snap_choice must be 0, 1 or 2"):
         _compute_snap_mask(H, diag, theta, Nsteps_diag.copy(), -1)
 
-    return
 
 
 def test_reduced_parameters_are_canonicalized():
     import sympy
+
     from esr.fitting.sympy_symbols import x
 
-    a0, a1 = sympy.symbols('a0 a1', real=True)
+    _a0, a1 = sympy.symbols('a0 a1', real=True)
     eq, active = esr.fitting.test_all.canonicalize_parameter_symbols(
         (a1 + x) / (a1 + 1))
     assert [symbol.name for symbol in active] == ['a1']
@@ -730,8 +735,9 @@ def test_fitting_path_helpers_centralize_shared_filenames(tmp_path):
 
 def test_likelihood_aware_catalogue_groups_transformed_models(tmp_path):
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     class NormalisingLikelihood:
         use_likelihood_catalogue = True
@@ -767,9 +773,11 @@ def test_likelihood_aware_catalogue_groups_transformed_models(tmp_path):
 
 def test_likelihood_can_disable_likelihood_aware_catalogue(tmp_path):
     import json
+
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     class DirectLikelihood:
         is_mse = False
@@ -821,8 +829,9 @@ def test_likelihood_can_disable_likelihood_aware_catalogue(tmp_path):
 
 def test_likelihood_aware_match_uses_transformed_representatives(tmp_path):
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import match, test_all, test_all_fisher
+    from esr.fitting.sympy_symbols import x
 
     class NormalisingLikelihood:
         use_likelihood_catalogue = True
@@ -1018,8 +1027,9 @@ def _straight_line_data(tmp_path, name='invariance.txt'):
 def _parametric_codelen(fcn, theta, likelihood, use_det_I, snap_choice=1):
     """Parametric codelength of one expression at a supplied parameter vector."""
     import sympy
-    from esr.fitting.test_all_fisher import convert_params
+
     from esr.fitting.sympy_symbols import x as xsym
+    from esr.fitting.test_all_fisher import convert_params
 
     theta = np.asarray(theta, dtype=float)
     _, eq, integrated = likelihood.run_sympify(fcn, tmax=5, try_integration=False)
@@ -1105,8 +1115,9 @@ def test_unremovable_degenerate_direction_gives_an_infinite_codelen(tmp_path):
     the fit is rejected outright.
     """
     import sympy
-    from esr.fitting.test_all_fisher import convert_params
+
     from esr.fitting.sympy_symbols import x as xsym
+    from esr.fitting.test_all_fisher import convert_params
 
     #  A redundant parameterisation is only exactly flat when the residuals
     #  vanish: with noisy data the residual curvature term lifts the null
@@ -1159,6 +1170,7 @@ def _null_slope_fit(tmp_path, offset):
     Returns what convert_params needs, plus -log(L) at the fit and at a0 = 0.
     """
     import sympy
+
     from esr.fitting.sympy_symbols import x as xsym
 
     rng = np.random.default_rng(1)
@@ -1254,8 +1266,9 @@ def test_likelihood_catalogue_cache_invalidates_on_grouping_change(tmp_path):
     not notice. Runs isolated in temporary directories.
     """
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     class NormalisingLikelihood:
         use_likelihood_catalogue = True
@@ -1466,6 +1479,7 @@ def test_unresolved_intercept_is_snapped_without_destroying_the_fit(tmp_path):
 def test_convert_params_preserves_diagonal_default_and_supports_full_fisher():
     """The correlated Fisher path is opt-in; the public default is diagonal."""
     import sympy
+
     from esr.generation.simplifier import convert_params
 
     a0, a1 = sympy.symbols('a0 a1', real=True)
@@ -1492,9 +1506,12 @@ def test_convert_params_preserves_diagonal_default_and_supports_full_fisher():
 def test_numerical_fingerprint():
     """Unit tests for the numerical fingerprint diagnostic."""
     import sympy
+
     from esr.generation.simplifier import (
-        fingerprint_to_hash, numerical_duplicate_candidates,
-        numerical_fingerprint)
+        fingerprint_to_hash,
+        numerical_duplicate_candidates,
+        numerical_fingerprint,
+    )
 
     x = sympy.Symbol('x', positive=True)
     a0, a1 = sympy.symbols('a0 a1', real=True)
@@ -1561,7 +1578,6 @@ def test_numerical_fingerprint():
         'Abs(a1)/(a0 + x)',
     ]
 
-    return
 
 
 def test_numerical_duplicate_diagnostic_does_not_change_catalogue():
@@ -1597,7 +1613,6 @@ def test_numerical_duplicate_diagnostic_does_not_change_catalogue():
     assert '\nGROUP 0 HASH ' in report
     assert "'" not in report
 
-    return
 
 
 def test_inverse_substitution_pair_mismatch_raises():
@@ -1713,6 +1728,7 @@ def test_convert_params_reconstructs_known_hessian_from_data(tmp_path):
     analytic design-matrix Gram matrix.
     """
     import sympy
+
     from esr.fitting import test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
@@ -1738,7 +1754,7 @@ def test_convert_params_reconstructs_known_hessian_from_data(tmp_path):
     eq_numpy = sympy.lambdify([xsym, a0s, a1s], eq, 'numpy')
     nll = likelihood.negloglike(theta_mle, eq_numpy)
 
-    params, nll_out, deriv, codelen = test_all_fisher.convert_params(
+    params, _nll_out, deriv, codelen = test_all_fisher.convert_params(
         'a0 + a1*x', eq, False, np.pad(theta_mle, (0, 2)), likelihood, nll,
         max_param=4, use_det_I=True, snap_choice=1)
 
@@ -1762,6 +1778,7 @@ def test_determinant_survives_parameter_removal(tmp_path):
     finite and match an independent computation over the reduced parameters.
     """
     import sympy
+
     from esr.fitting import test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
@@ -1794,7 +1811,7 @@ def test_determinant_survives_parameter_removal(tmp_path):
         eq_numpy = sympy.lambdify([xsym, *syms], eq, 'numpy')
         nll = likelihood.negloglike(theta_mle, eq_numpy)
 
-        params, nll_out, deriv, codelen = test_all_fisher.convert_params(
+        params, _nll_out, deriv, codelen = test_all_fisher.convert_params(
             'reduced', eq, False, np.pad(theta_mle, (0, 4 - nparam)),
             likelihood, nll, max_param=4, use_det_I=True, snap_choice=1)
 
@@ -1819,6 +1836,7 @@ def test_plot_uses_the_parameterisation_the_fit_was_stored_in(tmp_path, monkeypa
     fitted model.
     """
     import sympy
+
     from esr.fitting import test_all
     from esr.fitting.sympy_symbols import x as xsym
 
@@ -1887,7 +1905,8 @@ def test_determinant_scoring_and_matching_with_parameter_removal(
     second (inverse-substitution) transformation applied.
     """
     import sympy
-    from esr.fitting import test_all, test_all_fisher, match
+
+    from esr.fitting import match, test_all, test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
     if monkeypatch is not None:
@@ -2173,7 +2192,9 @@ def test_projected_eigenbasis_codelen_is_eigenbasis_consistent():
     the original H_ii -- the point of Deaglan's README question.
     """
     from esr.fitting.test_all_fisher import (
-        _score_projected_eigenbasis, _compute_codelen)
+        _compute_codelen,
+        _score_projected_eigenbasis,
+    )
 
     H = np.array([[100.0, 40.0], [40.0, 60.0]])
     theta = np.array([20.0, 20.0])
@@ -2244,8 +2265,10 @@ def test_a_zero_curvature_direction_counts_as_flat_only_if_uncoupled(
     the other modes -- would then score a saddle.
     """
     from esr.fitting.test_all_fisher import (
-        _correlation_eigenvalues, _has_negative_curvature,
-        _score_projected_eigenbasis)
+        _correlation_eigenvalues,
+        _has_negative_curvature,
+        _score_projected_eigenbasis,
+    )
 
     H = np.array(H)
     assert (np.linalg.eigvalsh(H).min() < -1e-8) == indefinite   # ground truth
@@ -2273,7 +2296,7 @@ def test_projected_eigenbasis_handles_exact_flat_direction():
     # Zero diagonal element (flat direction aligned with the second parameter).
     H = np.diag([100.0, 0.0])
     theta = np.array([2.0, 3.0])
-    theta_f, nll_f, k, cl = _score_projected_eigenbasis(
+    theta_f, _nll_f, k, cl = _score_projected_eigenbasis(
         H, theta, 8.0, True, lambda t: 8.0)
     assert k == 1                              # the flat direction is removed
     assert np.isfinite(cl)
@@ -2403,6 +2426,7 @@ def test_projected_eigenbasis_correlated_scoring(tmp_path):
     directory.
     """
     import sympy
+
     from esr.fitting import test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
@@ -2453,6 +2477,7 @@ def test_old_method_codelen_matches_diagonal_formula_from_data(tmp_path):
     ``test_legacy_diagonal_settings_reproduce_published_values`` cannot.
     """
     import sympy
+
     from esr.fitting import test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
@@ -2504,8 +2529,9 @@ def test_likelihood_catalogue_cache_invalidates_on_equation_change(tmp_path):
     Runs isolated in temporary directories.
     """
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     class NormalisingLikelihood:
         use_likelihood_catalogue = True
@@ -2561,8 +2587,9 @@ def test_likelihood_catalogue_versioned_cache_hit_skips_rebuild(tmp_path, monkey
     catalogue test.
     """
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     class NormalisingLikelihood:
         use_likelihood_catalogue = True
@@ -2683,6 +2710,7 @@ def test_convert_params_snap2_flat_direction_from_pipeline(monkeypatch, tmp_path
     must run before it.
     """
     import sympy
+
     from esr.fitting import test_all_fisher
     from esr.fitting.sympy_symbols import x as xsym
 
@@ -2701,7 +2729,7 @@ def test_convert_params_snap2_flat_direction_from_pipeline(monkeypatch, tmp_path
         test_all_fisher.nd, 'Hessian',
         lambda *a, **k: (lambda th: np.array([[100.0, 0.0], [0.0, 0.0]])))
 
-    params, nll, deriv, codelen = test_all_fisher.convert_params(
+    params, _nll, _deriv, codelen = test_all_fisher.convert_params(
         'a0*x + a1', eq, False, np.array([2.0, 0.5, 0.0, 0.0]), likelihood, 5.0,
         max_param=4, use_det_I=True, snap_choice=2)
     assert np.isfinite(codelen)          # was nan before the fix
@@ -2713,8 +2741,9 @@ def test_likelihood_catalogue_cache_invalidates_on_transform_change(tmp_path):
     must invalidate the cache rather than reuse the previous transform's
     catalogue -- caught by the probe-based transform fingerprint."""
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     comp = 1
     compl_dir = tmp_path / 'functions' / f'compl_{comp}'
@@ -2766,6 +2795,7 @@ def test_variant_negloglike_reevaluates_correctly(tmp_path):
     the correct -log(L) -- the callback the snap_choice=2 match path invokes when
     a projected coordinate is snapped."""
     import sympy
+
     from esr.fitting import match
     from esr.fitting.sympy_symbols import x as xsym
 
@@ -2792,8 +2822,9 @@ def test_likelihood_catalogue_retries_after_failed_transforms(tmp_path):
     """A cached catalogue with failed_count > 0 is not reused: the build (and its
     warning) is repeated so failures are not silently cached."""
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     comp = 1
     compl_dir = tmp_path / 'functions' / f'compl_{comp}'
@@ -2835,7 +2866,9 @@ def test_projected_eigenbasis_warns_on_degenerate_hessian():
     """snap_choice=2 warns for (near-)degenerate Hessian eigenvalues, where the
     eigenbasis -- and hence the codelength -- is ambiguous."""
     from esr.fitting.test_all_fisher import (
-        _score_projected_eigenbasis, ProjectedEigenbasisWarning)
+        ProjectedEigenbasisWarning,
+        _score_projected_eigenbasis,
+    )
 
     with pytest.warns(ProjectedEigenbasisWarning, match='degenerate'):
         _score_projected_eigenbasis(
@@ -2848,6 +2881,7 @@ def test_transform_version_tuple_does_not_force_rebuild():
     freshly-built settings still compare equal to the stored copy (otherwise the
     cache would be rebuilt on every call)."""
     import json
+
     from esr.fitting import test_all
 
     s = test_all._likelihood_catalogue_settings(5, False, 'h', ('a', 1), 'fp')
@@ -2862,8 +2896,9 @@ def test_likelihood_catalogue_activates_on_transformed_collision(tmp_path):
     expressions onto the same transformed model (a dedup benefit), even with no
     parameter-layout change -- not only on layout changes."""
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     comp = 1
     compl_dir = tmp_path / 'functions' / f'compl_{comp}'
@@ -2902,8 +2937,9 @@ def test_versionless_transform_is_not_cached(tmp_path, monkeypatch):
     every call (its cache is never reused) and warns, so a stale mapping cannot
     survive a transform change the probes miss."""
     import sympy
-    from esr.fitting.sympy_symbols import x
+
     from esr.fitting import test_all
+    from esr.fitting.sympy_symbols import x
 
     comp = 1
     compl_dir = tmp_path / 'functions' / f'compl_{comp}'
