@@ -376,9 +376,9 @@ class MockLikelihood(Likelihood):
     def __init__(self, nz, yfracerr, data_dir=None, fn_dir=None,
                  base_out_dir=None):
         super().__init__(
-            '/mock/CC_Hubble_%i_' % nz + str(yfracerr) + '.dat',
-            '/mock/CC_Hubble_%i_' % nz + str(yfracerr) + '.dat',
-            'mock_%i_' % nz + str(yfracerr),
+            f'/mock/CC_Hubble_{nz}_{yfracerr}.dat',
+            f'/mock/CC_Hubble_{nz}_{yfracerr}.dat',
+            f'mock_{nz}_{yfracerr}',
             data_dir=data_dir, fn_dir=fn_dir, base_out_dir=base_out_dir
         )
 

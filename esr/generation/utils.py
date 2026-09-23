@@ -95,7 +95,7 @@ def pprint_ntuple(nt):
         value = getattr(nt, name)
         if name != 'percent':
             value = bytes2human(value)
-        print('\t%-10s : %7s' % (name.capitalize(), value))
+        print(f'\t{name.capitalize():<10} : {value:>7}')
     sys.stdout.flush()
 
 
@@ -109,7 +109,7 @@ def using_mem(point=""):
         None
 
     """
-    print('\n%s:' % point)
+    print(f'\n{point}:')
     pprint_ntuple(psutil.virtual_memory())
 
 
@@ -136,11 +136,11 @@ def locals_size(loc):
     j = np.argsort(-mem)
 
     value = bytes2human(mem.sum())
-    print('\n\t%-15s : %7s' % ('LOCALS', value))
+    print(f'\n\t{"LOCALS":<15} : {value:>7}')
     for i in j:
         if mem[i] > 0:
             value = bytes2human(mem[i])
-            print('\t%-15s : %7s' % (keys[i], value))
+            print(f'\t{keys[i]:<15} : {value:>7}')
         sys.stdout.flush()
 
 

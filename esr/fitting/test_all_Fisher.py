@@ -2,6 +2,7 @@ import itertools
 import json
 import math
 import os
+import sys
 import warnings
 
 import numdifftools as nd
@@ -960,7 +961,7 @@ def convert_params(fcn_i, eq, integrated, theta_ML, likelihood, negloglike, max_
 
         if k < 0:
             print("This shouldn't have happened", flush=True)
-            quit()
+            sys.exit()
 
         # Compute snapped codelen and compare DL. theta_ML is theta_ML_orig with
         # the snapped entries zeroed, plus any re-fit of the retained ones, and

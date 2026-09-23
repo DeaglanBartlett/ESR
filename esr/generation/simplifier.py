@@ -271,7 +271,7 @@ def get_max_param(all_fun, verbose=True):
     with_ai = all_fun.copy()
     while len(with_ai) > 0:
         max_param += 1
-        with_ai = [f for f in with_ai if 'a%i' % max_param in f]
+        with_ai = [f for f in with_ai if f'a{max_param}' in f]
     max_param = max(max_param, 0)
     if verbose and rank == 0:
         print('\nMax number of parameters:', max_param)
@@ -292,7 +292,7 @@ def count_params(all_fun, max_param):
     """
 
     nparam = np.zeros(len(all_fun), dtype=int)
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f'a{i}' for i in range(max_param)]
 
     for i in range(len(nparam)):
         for j in range(max_param-1, -1, -1):
@@ -389,7 +389,7 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
 
     x, x0, y = sympy.symbols('x x0 y', positive=True)
     if max_param > 0:
-        param_list = ['a%i' % i for i in range(max_param)]
+        param_list = [f'a{i}' for i in range(max_param)]
         all_a = sympy.symbols(" ".join(param_list), real=True)
         if max_param == 1:
             all_a = [all_a]
@@ -401,7 +401,7 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
 
     if max_param > 0:
         for i in range(len(all_a)):
-            locs["a%i" % i] = all_a[i]
+            locs[f"a{i}"] = all_a[i]
 
     if parallel:
         i = np.atleast_1d(utils.split_idx(len(all_fun), rank, size))
@@ -422,12 +422,11 @@ def initial_sympify(all_fun, max_param, verbose=True, parallel=True, track_memor
         try:
             s = sympy.sympify(str_fun[i], locals=locs)
         except Exception:
-            print('Making %s a zoo' % str_fun[i])
+            print(f'Making {str_fun[i]} a zoo')
             s = sympy.zoo
         str_fun[i] = p.doprint(s)
-        if save_sympy:
-            if str_fun[i] not in sym_fun:
-                sym_fun[str_fun[i]] = s
+        if save_sympy and str_fun[i] not in sym_fun:
+            sym_fun[str_fun[i]] = s
 
     # We have to gather these, although won't do this again
     if parallel:
@@ -489,7 +488,7 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
     esrp = ESRPrinter()
 
     if max_param > 0:
-        param_list = ['a%i' % i for i in range(max_param)]
+        param_list = [f'a{i}' for i in range(max_param)]
         all_a = sympy.symbols(" ".join(param_list), real=True)
         if max_param == 1:
             all_a = [all_a]
@@ -773,7 +772,7 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
             try:
                 with time_limit(tmax):
                     for p in range(len(try_subs)):
-                        if all([a in sym_fun[i].free_symbols for a in list(try_subs[p].keys())]):
+                        if all(a in sym_fun[i].free_symbols for a in list(try_subs[p].keys())):
                             expr = sym_fun[i].subs(
                                 try_subs[p], simultaneous=True)
                             if expand_fun:
@@ -901,7 +900,7 @@ def sympy_simplify(all_fun, all_sym, all_inv_subs, max_param, expand_fun=True, t
                 with time_limit(tmax):
                     vars = list(sym_fun[i].free_symbols)
                     vars = [str(v) for v in vars]
-                    param_list = ['a%i' % i for i in range(max_param)]
+                    param_list = [f'a{j}' for j in range(max_param)]
                     common = list(set(param_list).intersection(vars))
                     if len(common) > 0:
                         common.sort()
@@ -1064,7 +1063,7 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
         nparam = count_params(uniq_fun, max_param)
         for i in range(max_param+1):
             if rank == 0:
-                print('\t\tnparam = %i' % i)
+                print(f'\t\tnparam = {i}')
             sys.stdout.flush()
 
             check_perm = (count != 0)
@@ -1121,13 +1120,13 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
             print('\tPrinting inv_subs to file')
             data = [i for i in range(len(all_inv_subs))
                     if all_inv_subs[i] is not None]
-            with open(dirname + '/inv_idx_%i_round_%i.txt' % (compl, count), "w") as f:
+            with open(f'{dirname}/inv_idx_{compl}_round_{count}.txt', "w") as f:
                 for i in data:
                     print(i, file=f)
 
             print('\tPrinting inv to file')
             data = [all_inv_subs[i] for i in data]
-            with open(dirname + '/inv_subs_%i_round_%i.txt' % (compl, count), "w") as f:
+            with open(f'{dirname}/inv_subs_{compl}_round_{count}.txt', "w") as f:
                 writer = csv.writer(f, delimiter=';')
                 writer.writerows(data)
 
@@ -1203,7 +1202,7 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
         nparam = count_params(uniq_fun, max_param)
         for i in range(max_param+1):
             if rank == 0:
-                print('\t\tnparam = %i' % i)
+                print(f'\t\tnparam = {i}')
             sys.stdout.flush()
 
             check_perm = True
@@ -1260,13 +1259,13 @@ def do_sympy(all_fun, all_sym, compl, search_tmax, expand_tmax, dirname, track_m
             print('\tPrinting inv_subs to file')
             data = [i for i in range(len(all_inv_subs))
                     if all_inv_subs[i] is not None]
-            with open(dirname + '/inv_idx_%i_round_%i.txt' % (compl, round1_count + count), "w") as f:
+            with open(f'{dirname}/inv_idx_{compl}_round_{round1_count + count}.txt', "w") as f:
                 for i in data:
                     print(i, file=f)
 
             print('\tPrinting inv to file')
             data = [all_inv_subs[i] for i in data]
-            with open(dirname + '/inv_subs_%i_round_%i.txt' % (compl, round1_count + count), "w") as f:
+            with open(f'{dirname}/inv_subs_{compl}_round_{round1_count + count}.txt', "w") as f:
                 writer = csv.writer(f, delimiter=';')
                 writer.writerows(data)
 
@@ -1304,7 +1303,7 @@ def get_all_dup(max_param):
 
     if max_param == 0:
         return []
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f'a{i}' for i in range(max_param)]
     all_a = sympy.symbols(" ".join(param_list), real=True)
     if max_param == 1:
         all_a = [all_a]
@@ -1425,7 +1424,7 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
                 if sub != ['']:
                     all_subs[i] = sub
 
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f'a{i}' for i in range(max_param)]
     all_a = sympy.symbols(" ".join(param_list), real=True)
     if max_param == 1:
         all_a = [all_a]
@@ -1434,7 +1433,7 @@ def load_subs(fname, max_param, use_sympy=True, bcast_res=True):
 
     if max_param > 0:
         for i in range(len(all_a)):
-            locs["a%i" % i] = all_a[i]
+            locs[f"a{i}"] = all_a[i]
 
     for i in all_subs:
         for j in range(len(all_subs[i])):
@@ -1509,7 +1508,7 @@ def convert_params(p_meas, fish_meas, inv_subs, n=4, full_fisher=False):
     fish = (fish + fish.T) - np.diag(np.diag(fish))
     fish = fish[:max_param, :max_param]
 
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f'a{i}' for i in range(max_param)]
     all_a = sympy.symbols(" ".join(param_list), real=True)
     if max_param == 1:
         all_a = [all_a]
@@ -1553,7 +1552,7 @@ def check_results(dirname, compl, tmax=10):
 
     if rank == 0:
         print('\tLoading all equations', flush=True)
-        with open(dirname + '/all_equations_%i.txt' % compl, 'r') as f:
+        with open(f'{dirname}/all_equations_{compl}.txt', 'r') as f:
             all_fun = f.read().splitlines()
         max_param = get_max_param(all_fun)
     else:
@@ -1563,7 +1562,7 @@ def check_results(dirname, compl, tmax=10):
 
     if rank == 0:
         print('\tLoading inverse subs')
-        with open(dirname + '/inv_subs_%i.txt' % compl, 'r') as f:
+        with open(f'{dirname}/inv_subs_{compl}.txt', 'r') as f:
             reader = csv.reader(f, delimiter=';')
             inv_subs = [row for row in reader]
 
@@ -1600,7 +1599,7 @@ def check_results(dirname, compl, tmax=10):
 
     if rank == 0:
         print('\tLoading unique equations', flush=True)
-        with open(dirname + '/unique_equations_%i.txt' % compl, 'r') as f:
+        with open(f'{dirname}/unique_equations_{compl}.txt', 'r') as f:
             uniq_fun = f.read().splitlines()
     else:
         uniq_fun = None
@@ -1609,21 +1608,21 @@ def check_results(dirname, compl, tmax=10):
 
     if rank == 0:
         print('\tLoading matches')
-        matches = np.loadtxt(dirname + '/matches_%i.txt' % compl).astype(int)
+        matches = np.loadtxt(f'{dirname}/matches_{compl}.txt').astype(int)
         matches = matches[shufidx]
         matches = np.array_split(matches, size)
     else:
         matches = None
     matches = comm.scatter(matches, root=0)
 
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f'a{i}' for i in range(max_param)]
     all_a = sympy.symbols(" ".join(param_list), real=True)
     if max_param == 1:
         all_a = [all_a]
     locs = sympy_locs
     if max_param > 0:
         for i in range(len(all_a)):
-            locs["a%i" % i] = all_a[i]
+            locs[f"a{i}"] = all_a[i]
 
     to_change = []
     imin, imax = utils.split_idx(nfun, rank, size)
@@ -1679,12 +1678,12 @@ def check_results(dirname, compl, tmax=10):
             r[0] = shufidx[r[0]]
         del shufidx
 
-        print('\nNeed to change %i functions' % len(to_change))
+        print(f'\nNeed to change {len(to_change)} functions')
         for r in to_change:
             print(r)
 
         print('\nLoading all equations', flush=True)
-        with open(dirname + '/all_equations_%i.txt' % compl, 'r') as f:
+        with open(f'{dirname}/all_equations_{compl}.txt', 'r') as f:
             all_fun = f.read().splitlines()
         for r in to_change:
             r[1] = all_fun[r[0]]
@@ -1692,7 +1691,7 @@ def check_results(dirname, compl, tmax=10):
         gc.collect()
 
         print('\nAppending new unique equations')
-        with open(dirname + '/unique_equations_%i.txt' % compl, 'r') as f:
+        with open(f'{dirname}/unique_equations_{compl}.txt', 'r') as f:
             uniq_fun = f.read().splitlines()
         nuniq = len(uniq_fun)
 
@@ -1700,7 +1699,7 @@ def check_results(dirname, compl, tmax=10):
         new_uniq, new_match = utils.get_unique_indexes(new_fun)
         new_uniq_fun = list(new_uniq.keys())
 
-        with open(dirname + '/unique_equations_%i.txt' % compl, 'w') as f:
+        with open(f'{dirname}/unique_equations_{compl}.txt', 'w') as f:
             w = 80
             pp = pprint.PrettyPrinter(width=w, stream=f)
 
@@ -1717,28 +1716,26 @@ def check_results(dirname, compl, tmax=10):
                 pp.pprint(s)
         del uniq_fun
         gc.collect()
-        s = "sed 's/.$//; s/^.//' %s/%s%i.txt > %s/temp_%i.txt" % (
-            dirname, 'unique_equations_', compl, dirname, compl)
+        s = f"sed 's/.$//; s/^.//' {dirname}/unique_equations_{compl}.txt > {dirname}/temp_{compl}.txt"
         os.system(s)
-        s = "mv %s/temp_%i.txt %s/%s%i.txt" % (dirname,
-                                               compl, dirname, 'unique_equations_', compl)
+        s = f"mv {dirname}/temp_{compl}.txt {dirname}/unique_equations_{compl}.txt"
         os.system(s)
 
         print('\nChanging inverse subs')
-        with open(dirname + '/inv_subs_%i.txt' % compl, 'r') as f:
+        with open(f'{dirname}/inv_subs_{compl}.txt', 'r') as f:
             reader = csv.reader(f, delimiter=';')
             inv_subs = [row for row in reader]
         for r in to_change:
             inv_subs[r[0]] = ""
-        with open(dirname + '/inv_subs_%i.txt' % compl, 'w') as f:
+        with open(f'{dirname}/inv_subs_{compl}.txt', 'w') as f:
             writer = csv.writer(f, delimiter=';')
             writer.writerows(inv_subs)
         del inv_subs
         gc.collect()
 
         print('\nChanging matches')
-        matches = np.loadtxt(dirname + '/matches_%i.txt' % compl).astype(int)
+        matches = np.loadtxt(f'{dirname}/matches_{compl}.txt').astype(int)
         for i in range(len(to_change)):
             matches[to_change[i][0]] = nuniq + new_match[to_change[i][1]]
-        np.savetxt(dirname + '/matches_%i.txt' % compl, matches)
+        np.savetxt(f'{dirname}/matches_{compl}.txt', matches)
 

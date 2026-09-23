@@ -112,7 +112,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
 
         fcn_i = fcn_list[i].replace('\'', '')
 
-        print('%i of %i:' % (i+1, len(fcn_list)), fcn_i)
+        print(f'{i+1} of {len(fcn_list)}:', fcn_i)
 
         try:
             fcn_i, eq, integrated = likelihood.run_sympify(
@@ -188,7 +188,7 @@ def main(comp, likelihood, tmax=5, try_integration=False, xscale='linear', yscal
         ax2, cmap=cmap, norm=norm, orientation='vertical')
     cb1.set_label(r'$\exp \left( MDL - DL \right)$')
     fig.tight_layout()
-    fig.savefig(likelihood.fig_dir + '/plot_%i.png' % comp)
+    fig.savefig(f'{likelihood.fig_dir}/plot_{comp}.png')
     fig.clf()
     plt.close(fig)
 

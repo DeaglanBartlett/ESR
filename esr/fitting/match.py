@@ -1,4 +1,5 @@
 import itertools
+import sys
 import warnings
 
 import numpy as np
@@ -581,7 +582,7 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
 
             if k < 0:
                 print("This shouldn't have happened", flush=True)
-                quit()
+                sys.exit()
 
             # Compute snapped codelen and compare DL.
             # If Hessian has degenerate eigenvalues (detected by _compute_snap_mask),

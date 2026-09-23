@@ -23,9 +23,9 @@ def _validate_inverse_substitution_pairs(round_index, idx, inv):
     """
     if len(idx) != len(inv):
         raise ValueError(
-            'inv_idx/inv_subs length mismatch in round %i: len(idx)=%i '
-            'len(inv)=%i. Delete the incomplete round artifacts and rerun '
-            'duplicate_checker.' % (round_index, len(idx), len(inv)))
+            f'inv_idx/inv_subs length mismatch in round {round_index}: '
+            f'len(idx)={len(idx)} len(inv)={len(inv)}. Delete the incomplete '
+            'round artifacts and rerun duplicate_checker.')
 
 
 def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
@@ -96,7 +96,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
     sys.stdout.flush()
     comm.Barrier()
 
-    dirname += 'compl_%i/' % compl
+    dirname += f'compl_{compl}/'
     if (rank == 0) and (not os.path.isdir(dirname)):
         print('Making output directory:', dirname)
         os.makedirs(dirname, exist_ok=True)
@@ -113,7 +113,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
     max_param = simplifier.get_max_param(all_fun)
     nparam = simplifier.count_params(all_fun, max_param)
     nparam = [np.sum(nparam == i) for i in range(max_param+1)]
-    param_list = ['a%i' % i for i in range(max_param)]
+    param_list = [f'a{i}' for i in range(max_param)]
 
     if rank == 0 and track_memory:
         utils.using_mem("pre sympify")
@@ -153,7 +153,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
     if rank == 0:
         print('\nSaving all equations')
         sys.stdout.flush()
-        with utils.atomic_write(dirname + '/all_equations_%i.txt' % compl) as f:
+        with utils.atomic_write(f'{dirname}/all_equations_{compl}.txt') as f:
             w = 80
             pp = pprint.PrettyPrinter(width=w, stream=f)
             for s in all_fun:
@@ -204,16 +204,14 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
 
         stars = '\n' + ''.join(['*']*35) + '\n'
         print(stars)
-        print('For complexity %i:' % compl)
-        print('Total unique: %i (%i)' % (len(uniq_fun), ntot))
+        print(f'For complexity {compl}:')
+        print(f'Total unique: {len(uniq_fun)} ({ntot})')
 
         for i in range(max_param+1):
             if i == 1:
-                print('Functions with 1 parameter: %i (%i)' %
-                      (np.sum(uniq_nparam == 1), nparam[1]))
+                print(f'Functions with 1 parameter: {np.sum(uniq_nparam == 1)} ({nparam[1]})')
             else:
-                print('Functions with %i parameters: %i (%i)' %
-                      (i, np.sum(uniq_nparam == i), nparam[i]))
+                print(f'Functions with {i} parameters: {np.sum(uniq_nparam == i)} ({nparam[i]})')
         del uniq_nparam, nparam
         gc.collect()
         print(stars)
@@ -222,7 +220,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
         sys.stdout.flush()
 
         print('\tUnique equations')
-        with utils.atomic_write(dirname + '/unique_equations_%i.txt' % compl) as f:
+        with utils.atomic_write(f'{dirname}/unique_equations_{compl}.txt') as f:
             w = 80
             pp = pprint.PrettyPrinter(width=w, stream=f)
             for s in uniq_fun:
@@ -234,7 +232,7 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
         gc.collect()
 
         print('\tMatches')
-        with utils.atomic_write(dirname + '/matches_%i.txt' % compl) as f:
+        with utils.atomic_write(f'{dirname}/matches_{compl}.txt') as f:
             for i in range(len(match_idx)):
                 print(match_idx[i], file=f)
         del match_idx
@@ -251,17 +249,17 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
 
     for r in range(nround):
         if rank == 0:
-            print('Round %i of %i' % (r+1, nround))
+            print(f'Round {r+1} of {nround}')
             sys.stdout.flush()
 
-        inv = simplifier.load_subs(dirname + '/inv_subs_%i_round_%i.txt' % (compl, r),
+        inv = simplifier.load_subs(f'{dirname}/inv_subs_{compl}_round_{r}.txt',
                                    max_param,
                                    use_sympy=False)
 
         if rank == 0:
             if len(inv) != 0:
                 idx = np.atleast_1d(np.loadtxt(
-                    dirname + '/inv_idx_%i_round_%i.txt' % (compl, r), dtype=int))
+                    f'{dirname}/inv_idx_{compl}_round_{r}.txt', dtype=int))
             else:
                 idx = []
 
@@ -289,18 +287,16 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
         for i in range(len(all_inv_subs)):
             if all_inv_subs[i] is None:
                 all_inv_subs[i] = []
-        with utils.atomic_write(dirname + '/inv_subs_%i.txt' % compl) as f:
+        with utils.atomic_write(f'{dirname}/inv_subs_{compl}.txt') as f:
             writer = csv.writer(f, delimiter=';')
             writer.writerows(all_inv_subs)
 
         all_fname = ['unique_equations_', 'all_equations_',
                      'trees_', 'orig_trees_', 'extra_trees_']
         for fname in all_fname:
-            s = "sed 's/.$//; s/^.//' %s/%s%i.txt > %s/temp_%i.txt" % (
-                dirname, fname, compl, dirname, compl)
+            s = f"sed 's/.$//; s/^.//' {dirname}/{fname}{compl}.txt > {dirname}/temp_{compl}.txt"
             os.system(s)
-            s = "mv %s/temp_%i.txt %s/%s%i.txt" % (
-                dirname, compl, dirname, fname, compl)
+            s = f"mv {dirname}/temp_{compl}.txt {dirname}/{fname}{compl}.txt"
             os.system(s)
 
         del all_inv_subs
@@ -312,12 +308,12 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
         simplifier.check_results(dirname, compl)
 
     if rank == 0 and diagnose_numerical_duplicates:
-        with open(dirname + '/unique_equations_%i.txt' % compl, 'r') as f:
+        with open(f'{dirname}/unique_equations_{compl}.txt', 'r') as f:
             final_uniq_fun = f.read().splitlines()
         candidate_groups = simplifier.numerical_duplicate_candidates(
             final_uniq_fun, max_param=max_param)
         report_file = os.path.join(
-            dirname, 'numerical_duplicate_candidates_%i.txt' % compl)
+            dirname, f'numerical_duplicate_candidates_{compl}.txt')
         with utils.atomic_write(report_file) as f:
             f.write('# Candidate numerical fingerprint collisions only.\n')
             f.write('# No equations were removed or remapped by this diagnostic.\n')
@@ -325,9 +321,9 @@ def main(runname, compl, track_memory=False, search_tmax=60, expand_tmax=1,
                     'parameter domains, including boundaries and singularities, '
                     'before merging any expressions.\n')
             for group_id, (fingerprint, indexes) in enumerate(candidate_groups):
-                f.write('\nGROUP %i HASH %s\n' % (group_id, fingerprint))
+                f.write(f'\nGROUP {group_id} HASH {fingerprint}\n')
                 for index in indexes:
-                    f.write('%i\t%s\n' % (index, final_uniq_fun[index]))
+                    f.write(f'{index}\t{final_uniq_fun[index]}\n')
         print('Wrote numerical duplicate candidate report:', report_file, flush=True)
 
     sys.stdout.flush()

@@ -52,9 +52,7 @@ class Node:
         return new_node
 
     def is_used(self):
-        if (self.type == 0) and (self.parent is None) or (self.type == 1) and (self.left is None) or (self.type == 2) and (self.left is None) and (self.right is None):
-            return False
-        return True
+        return not (self.type == 0 and self.parent is None or self.type == 1 and self.left is None or self.type == 2 and self.left is None and self.right is None)
 
     def assign_op(self, op):
         self.op = op
@@ -371,7 +369,7 @@ def get_allowed_shapes(compl):
         for i in range(cand.shape[0]):
             if not msk[i]:
                 pass
-            success, part_considered, tree = check_tree(cand[i, :])
+            success, part_considered, _tree = check_tree(cand[i, :])
             if not success:
                 msk[i] = False
 
@@ -489,7 +487,7 @@ def check_operators(nodes, basis_functions):
             labels[i] = labels[i].lower()
 
     flat_basis = [item for sublist in basis_functions for item in sublist]
-    all_in_basis = all([ll in flat_basis for ll in labels])
+    all_in_basis = all(ll in flat_basis for ll in labels)
 
     return all_in_basis
 
@@ -1147,9 +1145,9 @@ def update_sums(tree, labels, try_idx, basis_functions):
     s = []
     for ss in all_s:
         if len(ss) > 0 and isinstance(ss[0], list):
-            s.append(tuple(list(**s)))
+            s.append(tuple(**s))
         else:
-            s.append(tuple(list(ss)))
+            s.append(tuple(ss))
     s = sorted(set(s), key=s.index)
     s = [list(ss) for ss in s]
 
@@ -1585,9 +1583,9 @@ def shape_to_functions(s, basis_functions):
     for i in range(len(t0)):
         indices = [j for j, x in enumerate(t0[i]) if x == 'a']
         for j in range(len(indices)):
-            t0[i][indices[j]] = 'a%i' % j
+            t0[i][indices[j]] = f'a{j}'
 
-    success, part_considered, tree = check_tree(s)
+    _success, _part_considered, tree = check_tree(s)
 
     all_fun = [None] * (len(t0) * len(t1) * len(t2))
     if rank == 0:
@@ -1748,7 +1746,7 @@ def generate_equations(compl, basis_functions, dirname):
     # Clear the files
     if rank == 0:
         for fname in ['orig_trees', 'extra_trees', 'orig_aifeyn', 'extra_aifeyn']:
-            with open(dirname + '/%s_%i.txt' % (fname, compl), 'w') as f:
+            with open(f'{dirname}/{fname}_{compl}.txt', 'w') as f:
                 pass
 
     ntree = 0
@@ -1756,7 +1754,7 @@ def generate_equations(compl, basis_functions, dirname):
 
     for i in range(len(shapes)):
         if rank == 0:
-            print('%i of %i' % (i+1, len(shapes)))
+            print(f'{i+1} of {len(shapes)}')
             sys.stdout.flush()
         all_fun[i], all_tree, extra_fun[i], extra_tree, extra_orig[i] = shape_to_functions(
             shapes[i], basis_functions)
@@ -1766,11 +1764,11 @@ def generate_equations(compl, basis_functions, dirname):
             nextratree += len(extra_tree)
 
         max_param = simplifier.get_max_param(all_fun[i], verbose=False)
-        param_list = ['a%i' % j for j in range(max_param)]
+        param_list = [f'a{j}' for j in range(max_param)]
 
         if rank == 0:
 
-            with open(dirname + '/orig_trees_%i.txt' % compl, 'a') as f:
+            with open(f'{dirname}/orig_trees_{compl}.txt', 'a') as f:
                 w = 80
                 pp = pprint.PrettyPrinter(width=w, stream=f)
                 for t in all_tree:
@@ -1780,7 +1778,7 @@ def generate_equations(compl, basis_functions, dirname):
                         pp = pprint.PrettyPrinter(width=w, stream=f)
                     pp.pprint(s)
 
-            with open(dirname + '/extra_trees_%i.txt' % compl, 'a') as f:
+            with open(f'{dirname}/extra_trees_{compl}.txt', 'a') as f:
                 w = 80
                 pp = pprint.PrettyPrinter(width=w, stream=f)
                 for t in extra_tree:
@@ -1790,21 +1788,19 @@ def generate_equations(compl, basis_functions, dirname):
                         pp = pprint.PrettyPrinter(width=w, stream=f)
                     pp.pprint(s)
 
-            with open(dirname + '/orig_aifeyn_%i.txt' % compl, 'a') as f:
+            with open(f'{dirname}/orig_aifeyn_{compl}.txt', 'a') as f:
                 for tree in all_tree:
                     print(aifeyn_complexity(tree, param_list), file=f)
 
-            with open(dirname + '/extra_aifeyn_%i.txt' % compl, 'a') as f:
+            with open(f'{dirname}/extra_aifeyn_{compl}.txt', 'a') as f:
                 for tree in extra_tree:
                     print(aifeyn_complexity(tree, param_list), file=f)
 
     if rank == 0:
-        s = 'cat %s/orig_trees_%i.txt %s/extra_trees_%i.txt > %s/trees_%i.txt' % (
-            dirname, compl, dirname, compl, dirname, compl)
+        s = f'cat {dirname}/orig_trees_{compl}.txt {dirname}/extra_trees_{compl}.txt > {dirname}/trees_{compl}.txt'
         sys.stdout.flush()
         os.system(s)
-        s = 'cat %s/orig_aifeyn_%i.txt %s/extra_aifeyn_%i.txt > %s/aifeyn_%i.txt' % (
-            dirname, compl, dirname, compl, dirname, compl)
+        s = f'cat {dirname}/orig_aifeyn_{compl}.txt {dirname}/extra_aifeyn_{compl}.txt > {dirname}/aifeyn_{compl}.txt'
         sys.stdout.flush()
         os.system(s)
 

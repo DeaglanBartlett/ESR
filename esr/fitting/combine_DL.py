@@ -211,8 +211,8 @@ def main(comp, likelihood, print_frequency=1000):
                 negloglike = float(d[1][-3])
                 codelen = float(d[1][-2])
                 aifeyn = float(d[1][-1])
-                ptab.add_row([i+1, fcn, '%.2f' % DL, '%.2e' % Prel[i], '%.2f' % negloglike,
-                             '%.2f' % codelen, '%.2e' % aifeyn] + ['%.2e' % p for p in params])
+                ptab.add_row([i+1, fcn, f'{DL:.2f}', f'{Prel[i]:.2e}', f'{negloglike:.2f}',
+                             f'{codelen:.2f}', f'{aifeyn:.2e}'] + [f'{p:.2e}' for p in params])
 
             with open(fit_paths['final'], 'a') as f:
                 writer = csv.writer(f, delimiter=';')

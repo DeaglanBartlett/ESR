@@ -247,9 +247,9 @@ def _transform_fingerprint(likelihood, tmax, try_integration):
         try:
             _, eq, integrated = likelihood.run_sympify(
                 probe, tmax=tmax, try_integration=try_integration)
-            token = '%s:%s' % (bool(integrated), sympy.srepr(eq))
+            token = f'{bool(integrated)}:{sympy.srepr(eq)}'
         except Exception as exc:
-            token = 'ERR:%s' % type(exc).__name__
+            token = f'ERR:{type(exc).__name__}'
         h.update(token.encode('utf-8'))
         h.update(b'\x00')
     return h.hexdigest()
@@ -1063,7 +1063,7 @@ def _main_dynamic(comp, likelihood, fcn_list, tmax, pmin, pmax,
     comm.Barrier()
 
 
-def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=[40, 60], Nconv_params=[5, 20], test_success=False, ignore_previous_eqns=True):
+def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=False, log_opt=False, max_param=4, Niter_params=None, Nconv_params=None, test_success=False, ignore_previous_eqns=True):
     """Optimise the parameters of a function to fit data
 
     The list of parameters, P, passed as Niter_params and Nconv_params compute these values, N, to be
@@ -1092,6 +1092,10 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
 
     """
 
+    if Nconv_params is None:
+        Nconv_params = [5, 20]
+    if Niter_params is None:
+        Niter_params = [40, 60]
     xvar = getattr(likelihood, 'xvar', None)
 
     params = np.zeros(max_param)
@@ -1297,7 +1301,7 @@ def optimise_fun(fcn_i, likelihood, tmax, pmin, pmax, comp=0, try_integration=Fa
     return chi2_i, params
 
 
-def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=[40, 60], Nconv_params=[5, 20], ignore_previous_eqns=False, dynamic=True):
+def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integration=False, log_opt=False, Niter_params=None, Nconv_params=None, ignore_previous_eqns=False, dynamic=True):
     """Optimise all functions for a given complexity and save results to file.
 
     This can optimise in log-space, with separate +ve and -ve branch (except when there are >=3 params in which case it does it in linear)
@@ -1326,6 +1330,10 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
 
     """
 
+    if Nconv_params is None:
+        Nconv_params = [5, 20]
+    if Niter_params is None:
+        Niter_params = [40, 60]
     if rank == 0:
         print('\nRunning fits', flush=True)
 

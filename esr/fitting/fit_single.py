@@ -62,7 +62,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
 
     # (1) Convert the string to a sympy function
     s = generator.labels_to_shape(labels, basis_functions)
-    success, _, tree = generator.check_tree(s)
+    _success, _, tree = generator.check_tree(s)
     fstr = generator.node_to_string(0, tree, labels)
     max_param = simplifier.get_max_param([fstr], verbose=verbose)
     fstr, fsym = simplifier.initial_sympify(
@@ -91,7 +91,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
         fcn, eq, integrated = likelihood.run_sympify(fstr,
                                                      tmax=tmax,
                                                      try_integration=try_integration)
-        params, negloglike, deriv, codelen = convert_params(
+        params, negloglike, _deriv, codelen = convert_params(
             fcn, eq, integrated, params, likelihood, chi2, max_param=max_param, use_det_I=use_det_I, snap_choice=snap_choice)
         if verbose:
             print('\ntheta_ML:', params)
@@ -99,7 +99,7 @@ def single_function(labels, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
             print('Parameter:', codelen)
 
         # (4) Get the functional complexity
-        param_list = ['a%i' % j for j in range(max_param)]
+        param_list = [f'a{j}' for j in range(max_param)]
         aifeyn = generator.aifeyn_complexity(labels, param_list)
         if verbose:
             print('Function:', aifeyn)
@@ -178,7 +178,7 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
 
     """
 
-    expr, nodes, complexity = generator.string_to_node(
+    _expr, nodes, _complexity = generator.string_to_node(
         fun, basis_functions, evalf=True)
     labels = nodes.to_list(basis_functions)
 
@@ -208,13 +208,12 @@ def fit_from_string(fun, basis_functions, likelihood, pmin=0, pmax=5, tmax=5,
 
     # Get parent operators
     s = generator.labels_to_shape(new_labels, basis_functions)
-    success, _, tree = generator.check_tree(s)
+    _success, _, tree = generator.check_tree(s)
     parents = [None] + [labels[p.parent] for p in tree[1:]]
 
     # Replace floats with symbols (except exponents)
     if replace_floats:
-        param_idx = [j for j, lab in enumerate(labels) if (generator.is_float(lab) and not (
-            parents[j].lower() == 'pow')) or (lab.startswith('a') and generator.is_float(lab[1:]))]
+        param_idx = [j for j, lab in enumerate(labels) if (generator.is_float(lab) and parents[j].lower() != 'pow') or (lab.startswith('a') and generator.is_float(lab[1:]))]
         for k, j in enumerate(param_idx):
             labels[j] = f'a{k}'
     print(labels)
@@ -260,12 +259,12 @@ def tree_to_aifeyn(labels, basis_functions, verbose=True):
 
     # Convert the string to a sympy function
     s = generator.labels_to_shape(labels, basis_functions)
-    success, _, tree = generator.check_tree(s)
+    _success, _, tree = generator.check_tree(s)
     fstr = generator.node_to_string(0, tree, labels)
     max_param = simplifier.get_max_param([fstr], verbose=verbose)
 
     # Get the functional complexity
-    param_list = ['a%i' % j for j in range(max_param)]
+    param_list = [f'a{j}' for j in range(max_param)]
     aifeyn = generator.aifeyn_complexity(labels, param_list)
     if verbose:
         print('Function:', aifeyn)
@@ -295,7 +294,7 @@ def string_to_aifeyn(fun, basis_functions, maxvar=20, verbose=True,
         :complexity (int): the number of nodes in the function
     """
 
-    expr, nodes, complexity = generator.string_to_node(
+    _expr, nodes, _complexity = generator.string_to_node(
         fun, basis_functions, evalf=True)
     labels = nodes.to_list(basis_functions)
 
@@ -325,13 +324,12 @@ def string_to_aifeyn(fun, basis_functions, maxvar=20, verbose=True,
 
     # Get parent operators
     s = generator.labels_to_shape(new_labels, basis_functions)
-    success, _, tree = generator.check_tree(s)
+    _success, _, tree = generator.check_tree(s)
     parents = [None] + [labels[p.parent] for p in tree[1:]]
 
     # Replace floats with symbols (except exponents)
     if replace_floats:
-        param_idx = [j for j, lab in enumerate(labels) if (generator.is_float(lab) and not (
-            parents[j].lower() == 'pow')) or (lab.startswith('a') and generator.is_float(lab[1:]))]
+        param_idx = [j for j, lab in enumerate(labels) if (generator.is_float(lab) and parents[j].lower() != 'pow') or (lab.startswith('a') and generator.is_float(lab[1:]))]
         for k, j in enumerate(param_idx):
             labels[j] = f'a{k}'
 
