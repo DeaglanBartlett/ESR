@@ -215,9 +215,13 @@ re-admit the redundant parameterisations the simplifier removed --
 ``pow(x,(a0*a1))`` alongside ``pow(x,a0)`` -- and fit them as separate models,
 where a near-degenerate Hessian earns such a form a shorter parametric
 codelength than the family it is a redundant copy of. If this catalogue changes,
-the code will fail loudly on stale row counts rather than reusing incompatible
-``test_all`` or Fisher outputs; rerun ``test_all.main`` and
-``test_all_Fisher.main`` with the current likelihood/settings.
+the code will fail loudly rather than reusing incompatible ``test_all`` or
+Fisher outputs; rerun ``test_all.main`` and ``test_all_Fisher.main`` with the
+current likelihood/settings. The outputs are read by position in the unique
+catalogue, so each stage records a digest of the catalogue it used and the next
+one checks it: a rebuilt catalogue is caught even when it has the same number of
+equations as the one before. Outputs written before digests were recorded carry
+none, and are checked on their row counts alone with a warning.
 
 Building this catalogue is **opt-in**: ``use_likelihood_catalogue`` defaults to
 ``False`` on ``Likelihood``, so the built-in likelihoods (which do not change the

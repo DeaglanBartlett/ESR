@@ -241,7 +241,8 @@ def _has_negative_curvature(Hmat):
     return _is_saddle(*_correlation_eigenvalues(Hmat))
 
 
-def save_scoring_settings(comp, likelihood, use_det_I, snap_choice):
+def save_scoring_settings(comp, likelihood, use_det_I, snap_choice,
+                          catalogue_digest=None):
     """Record Fisher scoring settings so matching cannot silently change them.
 
     Args:
@@ -251,10 +252,17 @@ def save_scoring_settings(comp, likelihood, use_det_I, snap_choice):
         :snap_choice (int): snapping mode: 0 = diagonal, 1 = eigenbasis
             identification with original-parameter zeroing, 2 = projected
             eigenbasis. See :func:`convert_params` for details
+        :catalogue_digest (str or None): digest of the unique catalogue these
+            outputs were scored from, from ``test_all.catalogue_digest``. The
+            pipeline always supplies one; it is optional so that the settings
+            can be recorded on their own
     """
     _validate_snap_and_det(use_det_I, snap_choice)
+    settings = {'use_det_I': bool(use_det_I), 'snap_choice': int(snap_choice)}
+    if catalogue_digest is not None:
+        settings['catalogue_digest'] = catalogue_digest
     with atomic_write(fitting_paths(comp, likelihood)['fisher_settings']) as f:
-        json.dump({'use_det_I': bool(use_det_I), 'snap_choice': int(snap_choice)}, f)
+        json.dump(settings, f)
 
 
 def clear_scoring_settings(comp, likelihood):
@@ -1032,6 +1040,9 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
     if rank == 0:
         clear_scoring_settings(comp, likelihood)
     comm.Barrier()
+    test_all.check_catalogue_digest(
+        test_all.load_fit_settings(comp, likelihood), comp, likelihood,
+        'The test_all fits')
     negloglike, params_proc = load_loglike(
         comp, likelihood, data_start, data_end)
     max_param = params_proc.shape[1]
@@ -1106,7 +1117,9 @@ def main(comp, likelihood, tmax=5, print_frequency=50, try_integration=False, us
             likelihood.temp_dir,
             paths['derivs_rank_pattern'],
             paths['derivs'])
-        save_scoring_settings(comp, likelihood, use_det_I, snap_choice)
+        save_scoring_settings(
+            comp, likelihood, use_det_I, snap_choice,
+            catalogue_digest=test_all.catalogue_digest(comp, likelihood))
 
     comm.Barrier()
 

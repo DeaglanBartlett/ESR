@@ -1919,14 +1919,56 @@ def test_match_rejects_outputs_from_a_different_catalogue(tmp_path):
     esr.fitting.match.main(comp, likelihood)
 
 
+def test_outputs_from_a_rebuilt_catalogue_of_the_same_size_are_refused(tmp_path):
+    """Two catalogues of the same length are not the same catalogue.
+
+    The fitting outputs are read by position, and the catalogue is rebuilt at
+    every stage, so a changed transform can put different expressions at the
+    same positions without changing how many there are. Each stage therefore
+    records the digest of the catalogue it used.
+    """
+    from esr.fitting.test_all import MissingCatalogueDigestWarning
+    from esr.fitting.utils import fitting_paths
+
+    comp = 3
+    likelihood = _fitted_cc_pipeline(tmp_path, comp)
+    esr.fitting.match.main(comp, likelihood)
+
+    #  Reorder the catalogue: same equations, same number of rows, different
+    #  expression at each position -- invisible to a row-count check.
+    unique_path = esr.fitting.test_all.function_catalogue_path(
+        comp, likelihood, unique=True)
+    with open(unique_path) as f:
+        original = f.readlines()
+    with open(unique_path, 'w') as f:
+        f.writelines(original[::-1])
+    assert len(original[::-1]) == len(original)
+
+    with pytest.raises(ValueError, match='different catalogue'):
+        esr.fitting.match.main(comp, likelihood)
+    with pytest.raises(ValueError, match='different catalogue'):
+        esr.fitting.test_all_Fisher.main(
+            comp, likelihood, use_det_I=True, snap_choice=1)
+
+    #  Outputs written before digests were recorded can only be row-checked,
+    #  which is a warning rather than a refusal.
+    with open(unique_path, 'w') as f:
+        f.writelines(original)
+    esr.fitting.test_all_Fisher.main(
+        comp, likelihood, use_det_I=True, snap_choice=1)
+    os.remove(fitting_paths(comp, likelihood)['fit_settings'])
+    with pytest.warns(MissingCatalogueDigestWarning):
+        esr.fitting.match.main(comp, likelihood)
+
+
 def test_interrupted_fisher_run_leaves_no_scoring_settings(tmp_path, monkeypatch):
     """The saved settings describe the codelength files, so a Fisher run that
     stops before those files are complete must not leave its new settings beside
     the previous run's scores for match to accept."""
     comp = 3
     likelihood = _fitted_cc_pipeline(tmp_path, comp)
-    assert esr.fitting.test_all_Fisher.load_scoring_settings(
-        comp, likelihood) == {'use_det_I': True, 'snap_choice': 1}
+    saved = esr.fitting.test_all_Fisher.load_scoring_settings(comp, likelihood)
+    assert (saved['use_det_I'], saved['snap_choice']) == (True, 1)
 
     def interrupted(*args, **kwargs):
         raise RuntimeError('interrupted')
@@ -1975,7 +2017,9 @@ def test_legacy_diagonal_settings_reproduce_published_values(
     esr.fitting.combine_DL.main(comp, likelihood)
 
     settings = esr.fitting.test_all_Fisher.load_scoring_settings(comp, likelihood)
-    assert settings == {'use_det_I': False, 'snap_choice': 0}
+    assert (settings['use_det_I'], settings['snap_choice']) == (False, 0)
+    assert settings['catalogue_digest'] == esr.fitting.test_all.catalogue_digest(
+        comp, likelihood)
 
     # final_<comp>.dat columns are: rank; function; total DL; rel. probability;
     # negloglike; parameter codelength; function codelength; params...
@@ -2146,8 +2190,8 @@ def test_snap_choice_2_end_to_end(monkeypatch, tmp_path):
     assert esr.fitting.match.check_match_results(comp, likelihood) == 0
     esr.fitting.combine_DL.main(comp, likelihood)
 
-    assert esr.fitting.test_all_Fisher.load_scoring_settings(comp, likelihood) == {
-        'use_det_I': True, 'snap_choice': 2}
+    settings = esr.fitting.test_all_Fisher.load_scoring_settings(comp, likelihood)
+    assert (settings['use_det_I'], settings['snap_choice']) == (True, 2)
 
     fname = os.path.join(likelihood.out_dir, f'final_{comp}.dat')
     with open(fname, 'r') as f:

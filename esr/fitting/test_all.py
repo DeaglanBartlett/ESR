@@ -27,6 +27,17 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 
+class MissingCatalogueDigestWarning(UserWarning):
+    """Diagnostic that a stage's outputs carry no catalogue digest.
+
+    Outputs written before digests were recorded can only be checked by row
+    count, which cannot tell two catalogues of the same length apart.
+
+    A ``UserWarning`` subclass so it is not swallowed by the module-level
+    ``filterwarnings('ignore', category=RuntimeWarning)``.
+    """
+
+
 class LikelihoodCatalogueWarning(UserWarning):
     """Diagnostic about the likelihood-aware catalogue build (transformation
     failures, or a transforming likelihood with no catalogue_transform_version).
@@ -660,6 +671,94 @@ def ensure_likelihood_catalogue(comp, likelihood, tmax=5, try_integration=False)
     return bool(metadata is not None and metadata.get('active', False))
 
 
+def catalogue_digest(comp, likelihood):
+    """Digest of the unique catalogue the fitting outputs are indexed by.
+
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): provides the catalogue paths
+
+    Returns:
+        :digest (str): hex SHA-1 digest of the active unique catalogue
+    """
+    return _hash_file(function_catalogue_path(comp, likelihood, unique=True))
+
+
+def save_fit_settings(comp, likelihood):
+    """Record which catalogue ``test_all.main``'s outputs were fitted from.
+
+    Written only once the combined negloglike file is complete, so an
+    interrupted run leaves no marker rather than a misleading one.
+
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object providing ``out_dir``
+    """
+    with atomic_write(fitting_paths(comp, likelihood)['fit_settings']) as f:
+        json.dump({'catalogue_digest': catalogue_digest(comp, likelihood)}, f)
+
+
+def load_fit_settings(comp, likelihood):
+    """Read the marker written by :func:`save_fit_settings`.
+
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object providing ``out_dir``
+
+    Returns:
+        :settings (dict or None): the parsed marker, or None if absent
+    """
+    try:
+        with open(fitting_paths(comp, likelihood)['fit_settings'], 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+
+
+def clear_fit_settings(comp, likelihood):
+    """Remove the marker written by :func:`save_fit_settings`, if present.
+
+    Args:
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): object providing ``out_dir``
+    """
+    try:
+        os.remove(fitting_paths(comp, likelihood)['fit_settings'])
+    except FileNotFoundError:
+        pass
+
+
+def check_catalogue_digest(recorded, comp, likelihood, what):
+    """Check outputs against the catalogue they are about to be indexed by.
+
+    The fitting outputs are read by position in the unique catalogue, and the
+    catalogue is rebuilt at each stage, so a changed transform or a regenerated
+    catalogue can put different expressions at the same positions. Row counts
+    cannot see that when the two catalogues are the same length, so each stage
+    records the digest of the catalogue it used and the next one checks it.
+
+    Args:
+        :recorded (dict or None): the saved settings for that stage, or None
+        :comp (int): complexity of functions to consider
+        :likelihood (fitting.likelihood object): provides the catalogue paths
+        :what (str): which outputs are being checked, for the message
+    """
+    digest = recorded.get('catalogue_digest') if recorded else None
+    if digest is None:
+        emit_diagnostic_warning(
+            f'{what} carry no catalogue digest, so they can only be checked '
+            'against the number of equations in the catalogue, which cannot '
+            'distinguish two catalogues of the same length. Rerun '
+            'test_all.main and test_all_Fisher.main to record one.',
+            MissingCatalogueDigestWarning)
+        return
+    if digest != catalogue_digest(comp, likelihood):
+        raise ValueError(
+            f'{what} were produced from a different catalogue to the one now '
+            'active. Rerun test_all.main and test_all_Fisher.main with the '
+            'current catalogue/settings.')
+
+
 def get_functions(comp, likelihood, unique=True):
     """Load all functions for a given complexity to use and distribute among ranks
 
@@ -1226,6 +1325,11 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
 
     ensure_likelihood_catalogue(comp, likelihood, tmax, try_integration)
 
+    # The marker says which catalogue these fits belong to, so it is withdrawn
+    # before they are rewritten and saved once they are complete (below).
+    if rank == 0:
+        clear_fit_settings(comp, likelihood)
+
     if rank == 0 and ignore_previous_eqns:
         previous_unifn_list = []
         if comp > 1:
@@ -1296,6 +1400,7 @@ def main(comp, likelihood, tmax=5, pmin=0, pmax=3, print_frequency=50, try_integ
             likelihood.temp_dir,
             paths['negloglike_rank_pattern'],
             paths['negloglike'])
+        save_fit_settings(comp, likelihood)
 
     comm.Barrier()
 

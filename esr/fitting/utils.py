@@ -93,6 +93,8 @@ def fitting_paths(comp, likelihood, rank=None):
         'negloglike': os.path.join(out_dir, f'negloglike_comp{comp}.dat'),
         'negloglike_checkpoint': os.path.join(
             out_dir, f'negloglike_comp{comp}.checkpoint.dat'),
+        'fit_settings': os.path.join(
+            out_dir, f'fit_settings_comp{comp}.json'),
         'fisher_settings': os.path.join(
             out_dir, f'fisher_settings_comp{comp}.json'),
         'codelen': os.path.join(out_dir, f'codelen_comp{comp}_deriv.dat'),

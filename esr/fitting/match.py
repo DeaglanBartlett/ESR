@@ -257,6 +257,11 @@ def main(comp, likelihood, tmax=5, print_frequency=1000, try_integration=False, 
         use_det_I = recorded_settings['use_det_I']
         snap_choice = recorded_settings['snap_choice']
     test_all_Fisher._validate_snap_and_det(use_det_I, snap_choice)
+    test_all.check_catalogue_digest(
+        test_all.load_fit_settings(comp, likelihood), comp, likelihood,
+        'The test_all fits')
+    test_all.check_catalogue_digest(
+        recorded_settings, comp, likelihood, 'The Fisher outputs')
 
     negloglike, params_meas = test_all_Fisher.load_loglike(
         comp, likelihood, data_start, data_end, split=False)
