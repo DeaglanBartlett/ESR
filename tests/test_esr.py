@@ -613,6 +613,43 @@ def test_snap_choices():
         )
 
 
+def test_time_limit_restores_numpy_error_state():
+    """A timeout must not leave numpy raising on floating-point errors.
+
+    The timeout fires asynchronously, so it can interrupt code that is changing
+    numpy's error state (scipy's line search wraps itself in
+    ``np.errstate(over='raise', ...)``). If the state is not restored, every
+    later overflow in the process raises FloatingPointError: fits fail
+    silently, and an uncaught overflow in match.main kills one MPI rank while
+    the others wait forever.
+    """
+    from esr.generation.simplifier import TimeoutException, time_limit
+
+    default = np.geterr()
+    try:
+        # Interrupted after changing the state, before it could be restored.
+        with pytest.raises(TimeoutException), time_limit(0.01):
+            np.seterr(all="raise")
+            while True:
+                pass
+        assert np.geterr() == default
+
+        # Interrupted at random points of errstate's enter and exit.
+        for _ in range(2000):
+            try:
+                with time_limit(2e-5):
+                    while True:
+                        with np.errstate(
+                            over="raise", divide="raise", invalid="raise"
+                        ):
+                            pass
+            except TimeoutException:
+                pass
+            assert np.geterr() == default
+    finally:
+        np.seterr(**default)
+
+
 def test_compute_codelen():
     """Unit tests for _compute_codelen with known analytic cases."""
     import math
