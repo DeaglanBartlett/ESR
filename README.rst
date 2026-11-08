@@ -71,6 +71,24 @@ If you are unable to clone the repo with the above, try the https version instea
 
 	git clone https://github.com/DeaglanBartlett/ESR.git
 
+Functions of several variables
+==============================
+
+ESR searches over functions of a single variable ``x`` by default. To search
+over functions of several variables, pass their names to both the generation
+and the likelihood:
+
+.. code:: python
+
+	esr.generation.duplicate_checker.main("core_maths", comp,
+	                                      variables=["x", "y"])
+	likelihood = GaussLikelihood("data.txt", "my_run",
+	                             variables=["x", "y"])  # columns: x, y, f, f_err
+
+The variables become nullary basis functions alongside ``a``, and
+``likelihood.xvar`` has shape ``(nvar, ndata)``. See "Functions of several
+variables" in the tutorial and ``examples/multivariable.py``.
+
 Fisher scoring and parameter snapping
 =====================================
 

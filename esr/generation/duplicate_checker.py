@@ -7,6 +7,12 @@ import sys
 import numpy as np
 from mpi4py import MPI
 
+from esr.fitting.sympy_symbols import (
+    function_set_dirname,
+    get_variables,
+    register_variables,
+    validate_variables,
+)
 from esr.generation import generator, simplifier, utils
 
 comm = MPI.COMM_WORLD
@@ -29,6 +35,44 @@ def _validate_inverse_substitution_pairs(round_index, idx, inv):
         )
 
 
+def _apply_variables(basis_functions, variables, custom=False):
+    """Put the requested input variables into the nullary basis.
+
+    Args:
+        :basis_functions (list): ``[nullary, unary, binary]`` basis functions
+        :variables (list or None): requested variable names
+        :custom (bool): whether ``basis_functions`` was supplied by the user
+            (its variables are then taken as given) or is a built-in set
+            written in terms of ``x`` (which is replaced by ``variables``)
+
+    Returns:
+        :basis_functions (list): basis with the variables in the nullary set
+        :variables (tuple): the validated variable names
+    """
+    basis_functions = [list(b) for b in basis_functions]
+    if custom:
+        found = get_variables(basis_functions)
+        if variables is None:
+            return basis_functions, found
+        variables = validate_variables(variables)
+        if found != variables:
+            raise ValueError(
+                f"variables={list(variables)} do not match the variables "
+                f"{list(found)} in the nullary basis functions"
+            )
+        return basis_functions, variables
+
+    variables = validate_variables(variables)
+    nullary = []
+    for f in basis_functions[0]:
+        if f == "x":
+            nullary += list(variables)
+        else:
+            nullary.append(f)
+    basis_functions[0] = nullary
+    return basis_functions, variables
+
+
 def main(
     runname,
     compl,
@@ -38,6 +82,8 @@ def main(
     seed=1234,
     diagnose_numerical_duplicates=False,
     fn_dir=None,
+    variables=None,
+    basis_functions=None,
 ):
     """Run the generation of functions for a given complexity and set of basis functions
 
@@ -60,13 +106,29 @@ def main(
             used. Pass ``likelihood.fn_dir`` here to generate straight into the
             location a likelihood object reads from (e.g. an isolated directory
             for a test), keeping generation and fitting consistent.
+        :variables (list, default=None): names of the input variables, e.g.
+            ``["x", "y"]`` to generate functions of two variables. Each name
+            replaces ``"x"`` in the nullary basis of ``runname``. If None, the
+            single variable ``x`` is used. For anything other than ``["x"]``
+            the default output directory is
+            ``function_library/<runname>_<var1>_<var2>...`` (see
+            ``sympy_symbols.function_set_dirname``), which is also where a
+            likelihood with the same ``fn_set`` and ``variables`` looks.
+        :basis_functions (list, default=None): custom basis functions
+            ``[nullary, unary, binary]`` to use instead of those defined by
+            ``runname`` (``runname`` then only names the output directory).
+            Any nullary entry other than ``"a"`` and numbers is an input
+            variable; if ``variables`` is also given the two must agree.
 
     Returns:
         None
 
     """
 
-    if runname == "keep_duplicates":
+    custom_basis = basis_functions is not None
+    if custom_basis:
+        basis_functions = [list(b) for b in basis_functions]
+    elif runname == "keep_duplicates":
         basis_functions = [
             ["x", "a"],  #  type0
             ["square", "exp", "inv", "sqrt_abs", "log_abs"],  # type1
@@ -102,6 +164,20 @@ def main(
             ["inv", "exp", "log_abs"],  # type1
             ["+", "*", "-", "/", "pow"],
         ]  # type2
+    elif basis_functions is None:
+        raise ValueError(
+            f"Unknown runname {runname!r}: pass basis_functions to define a "
+            "custom function set"
+        )
+
+    basis_functions, variables = _apply_variables(
+        basis_functions, variables, custom=custom_basis
+    )
+    # Every rank parses function strings with sympy_locs, so the variables
+    # must be the same positive symbols as used in fitting
+    register_variables(variables)
+    if rank == 0:
+        print("Input variables:", ", ".join(variables), flush=True)
 
     if fn_dir is None:
         dirname = os.path.abspath(
@@ -109,7 +185,7 @@ def main(
         )
         if (not os.path.isdir(dirname)) and (rank == 0):
             os.makedirs(dirname, exist_ok=True)
-        dirname += "/" + runname + "/"
+        dirname += "/" + function_set_dirname(runname, variables) + "/"
     else:
         dirname = os.path.abspath(fn_dir) + "/"
     if (rank == 0) and (not os.path.isdir(dirname)):

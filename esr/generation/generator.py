@@ -612,6 +612,9 @@ def check_operators(nodes, basis_functions):
     labels = nodes.to_list(basis_functions)
 
     for i in range(len(labels)):
+        if labels[i] in basis_functions[0]:
+            # Input variables (e.g. "x", "y") are kept as they are
+            continue
         if labels[i] == "Add" and "+" in basis_functions[2]:
             labels[i] = "+"
         elif labels[i] == "Sub" and "-" in basis_functions[2]:

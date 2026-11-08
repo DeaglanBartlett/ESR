@@ -8,7 +8,21 @@ import scipy.integrate
 import sympy
 
 import esr.generation.simplifier
-from esr.fitting.sympy_symbols import a0, a1, a2, cube, inv, log, pow, sqrt, square, x
+from esr.fitting.sympy_symbols import (
+    a0,
+    a1,
+    a2,
+    cube,
+    function_set_dirname,
+    inv,
+    log,
+    pow,
+    register_variables,
+    sqrt,
+    square,
+    validate_variables,
+    x,
+)
 from esr.generation.simplifier import time_limit
 
 
@@ -23,6 +37,7 @@ class Likelihood:
         :fn_set (str, default='core_maths'): The name of the function set to use with the likelihood. Must match one of those defined in ``generation.duplicate_checker``
         :fn_dir (str, default=None): Directory holding the generated function catalogue this likelihood reads from. If None, the default ``function_library/<fn_set>`` is used. Pass the same path to ``duplicate_checker.main(..., fn_dir=...)`` to generate into, and fit from, a private location (e.g. an isolated test directory)
         :base_out_dir (str, default=None): Base directory for all fitting output. If None, it is derived from ``data_dir`` (or the package location). Override to isolate the output of concurrent runs
+        :variables (list, default=None): names of the input variables, e.g. ``["x", "y"]``. If None, the single variable ``x`` is used. With more than one variable ``self.xvar`` must have shape ``(nvar, ndata)``, and the default ``fn_dir`` is ``function_library/<fn_set>_<var1>_<var2>...``, matching ``duplicate_checker.main(fn_set, ..., variables=variables)``
 
     """
 
@@ -44,7 +59,14 @@ class Likelihood:
         fn_set="core_maths",
         fn_dir=None,
         base_out_dir=None,
+        variables=None,
     ):
+
+        self.variables = validate_variables(variables)
+        self.nvar = len(self.variables)
+        # Make sure strings read from the catalogue are parsed with the same
+        # (positive) variable symbols as were used to generate it
+        register_variables(self.variables)
 
         esr_dir = (
             os.path.abspath(
@@ -65,7 +87,12 @@ class Likelihood:
         # ``duplicate_checker.main(..., fn_dir=...)``) to keep generation and
         # fitting in a private location, e.g. for an isolated test.
         if fn_dir is None:
-            self.fn_dir = esr_dir + "function_library/" + fn_set + "/"
+            self.fn_dir = (
+                esr_dir
+                + "function_library/"
+                + function_set_dirname(fn_set, self.variables)
+                + "/"
+            )
         else:
             self.fn_dir = os.path.abspath(fn_dir) + "/"
         if data_dir is None:
@@ -96,7 +123,7 @@ class Likelihood:
         """Return the predicted y(x)
 
         Args:
-            :x (float or np.array): x value being used
+            :x (float or np.array): x value being used. For several variables this has shape ``(nvar, ndata)``
             :a (list): parameters to subsitute into equation considered
             :eq_numpy (numpy function): function to use which gives H^2
 
@@ -128,22 +155,47 @@ class Likelihood:
         fcn_i = fcn_i.replace("\n", "")
         fcn_i = fcn_i.replace("'", "")
 
-        eq = sympy.sympify(
-            fcn_i,
-            locals={
-                "inv": inv,
-                "square": square,
-                "cube": cube,
-                "sqrt": sqrt,
-                "log": log,
-                "pow": pow,
-                "x": x,
-                "a0": a0,
-                "a1": a1,
-                "a2": a2,
-            },
-        )
+        locs = {
+            "inv": inv,
+            "square": square,
+            "cube": cube,
+            "sqrt": sqrt,
+            "log": log,
+            "pow": pow,
+            "x": x,
+            "a0": a0,
+            "a1": a1,
+            "a2": a2,
+        }
+        register_variables(self.variables, locs)
+        eq = sympy.sympify(fcn_i, locals=locs)
         return fcn_i, eq, False
+
+    def load_data_columns(self, ncols_after):
+        """Load whitespace-separated columns ``var_1 ... var_nvar, y, ...``
+
+        The first ``self.nvar`` columns are the input variables, in the order
+        of ``self.variables``, and are stored as ``self.xvar``: a 1D array for
+        a single variable (as before) or an array of shape ``(nvar, ndata)``.
+
+        Args:
+            :ncols_after (int): number of columns after the variables (e.g. 2 for y and its error)
+
+        Returns:
+            :cols (list): the ``ncols_after`` remaining columns as 1D arrays
+        """
+        data = np.loadtxt(self.data_file, unpack=True, ndmin=2)
+        if data.shape[0] != self.nvar + ncols_after:
+            raise ValueError(
+                f"{self.data_file} has {data.shape[0]} columns but "
+                f"{self.nvar + ncols_after} were expected: one per variable "
+                f"{list(self.variables)} followed by {ncols_after}"
+            )
+        if self.nvar == 1:
+            self.xvar = data[0]
+        else:
+            self.xvar = data[: self.nvar]
+        return [data[self.nvar + i] for i in range(ncols_after)]
 
 
 class CCLikelihood(Likelihood):
@@ -473,6 +525,7 @@ class MSE(Likelihood):
         :fn_set (str, default='core_maths'): The name of the function set to use with the likelihood. Must match one of those defined in ``generation.duplicate_checker``
         :fn_dir (str, default=None): Directory holding the generated function catalogue this likelihood reads from. If None, the default ``function_library/<fn_set>`` is used. Pass the same path to ``duplicate_checker.main(..., fn_dir=...)`` to generate into, and fit from, a private location (e.g. an isolated test directory)
         :base_out_dir (str, default=None): Base directory for all fitting output. If None, it is derived from ``data_dir`` (or the package location). Override to isolate the output of concurrent runs
+        :variables (list, default=None): names of the input variables, e.g. ``["x", "y"]``. The data file then has one column per variable (in this order) before the y column(s). If None, the single variable ``x`` is used
 
     """
 
@@ -484,6 +537,7 @@ class MSE(Likelihood):
         fn_set="core_maths",
         fn_dir=None,
         base_out_dir=None,
+        variables=None,
     ):
 
         super().__init__(
@@ -494,9 +548,10 @@ class MSE(Likelihood):
             fn_set=fn_set,
             fn_dir=fn_dir,
             base_out_dir=base_out_dir,
+            variables=variables,
         )
         self.ylabel = r"$y$"  # for plotting
-        self.xvar, self.yvar, self.yerr = np.loadtxt(self.data_file, unpack=True)
+        self.yvar, self.yerr = self.load_data_columns(2)
         self.yerr = 0.0
 
         warnings.warn(
@@ -537,6 +592,7 @@ class GaussLikelihood(Likelihood):
         :fn_set (str, default='core_maths'): The name of the function set to use with the likelihood. Must match one of those defined in ``generation.duplicate_checker``
         :fn_dir (str, default=None): Directory holding the generated function catalogue this likelihood reads from. If None, the default ``function_library/<fn_set>`` is used. Pass the same path to ``duplicate_checker.main(..., fn_dir=...)`` to generate into, and fit from, a private location (e.g. an isolated test directory)
         :base_out_dir (str, default=None): Base directory for all fitting output. If None, it is derived from ``data_dir`` (or the package location). Override to isolate the output of concurrent runs
+        :variables (list, default=None): names of the input variables, e.g. ``["x", "y"]``. The data file then has one column per variable (in this order) before the y column(s). If None, the single variable ``x`` is used
 
     """
 
@@ -548,6 +604,7 @@ class GaussLikelihood(Likelihood):
         fn_set="core_maths",
         fn_dir=None,
         base_out_dir=None,
+        variables=None,
     ):
 
         super().__init__(
@@ -558,9 +615,10 @@ class GaussLikelihood(Likelihood):
             fn_set=fn_set,
             fn_dir=fn_dir,
             base_out_dir=base_out_dir,
+            variables=variables,
         )
         self.ylabel = r"$y$"  # for plotting
-        self.xvar, self.yvar, self.yerr = np.loadtxt(self.data_file, unpack=True)
+        self.yvar, self.yerr = self.load_data_columns(2)
 
     def negloglike(self, a, eq_numpy, **kwargs):
         """Negative log-likelihood for a given function.
@@ -598,6 +656,7 @@ class PoissonLikelihood(Likelihood):
         :fn_set (str, default='core_maths'): The name of the function set to use with the likelihood. Must match one of those defined in ``generation.duplicate_checker``
         :fn_dir (str, default=None): Directory holding the generated function catalogue this likelihood reads from. If None, the default ``function_library/<fn_set>`` is used. Pass the same path to ``duplicate_checker.main(..., fn_dir=...)`` to generate into, and fit from, a private location (e.g. an isolated test directory)
         :base_out_dir (str, default=None): Base directory for all fitting output. If None, it is derived from ``data_dir`` (or the package location). Override to isolate the output of concurrent runs
+        :variables (list, default=None): names of the input variables, e.g. ``["x", "y"]``. The data file then has one column per variable (in this order) before the y column(s). If None, the single variable ``x`` is used
 
     """
 
@@ -609,6 +668,7 @@ class PoissonLikelihood(Likelihood):
         fn_set="core_maths",
         fn_dir=None,
         base_out_dir=None,
+        variables=None,
     ):
 
         super().__init__(
@@ -619,9 +679,10 @@ class PoissonLikelihood(Likelihood):
             fn_set=fn_set,
             fn_dir=fn_dir,
             base_out_dir=base_out_dir,
+            variables=variables,
         )
         self.ylabel = r"$y$"  # for plotting
-        self.xvar, self.yvar = np.loadtxt(self.data_file, unpack=True)
+        (self.yvar,) = self.load_data_columns(1)
         self.yerr = np.sqrt(self.yvar)
 
     def negloglike(self, a, eq_numpy, **kwargs):

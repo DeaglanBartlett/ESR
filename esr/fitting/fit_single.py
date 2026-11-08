@@ -1,5 +1,6 @@
 import numpy as np
 
+from esr.fitting.sympy_symbols import get_variables, register_variables
 from esr.fitting.test_all import optimise_fun
 from esr.fitting.test_all_fisher import convert_params
 from esr.generation import generator, simplifier
@@ -74,6 +75,7 @@ def single_function(
     """
 
     # (1) Convert the string to a sympy function
+    register_variables(get_variables(basis_functions))
     s = generator.labels_to_shape(labels, basis_functions)
     _success, _, tree = generator.check_tree(s)
     fstr = generator.node_to_string(0, tree, labels)
@@ -217,6 +219,7 @@ def fit_from_string(
 
     """
 
+    register_variables(get_variables(basis_functions))
     _expr, nodes, _complexity = generator.string_to_node(
         fun, basis_functions, evalf=True
     )
@@ -237,6 +240,9 @@ def fit_from_string(
         elif lab == "Sub":
             new_labels[j] = "-"
             labels[j] = "-"
+        elif lab in basis_functions[0]:
+            # Input variables keep their (case-sensitive) names
+            new_labels[j] = lab
         else:
             new_labels[j] = lab.lower()
             labels[j] = lab.lower()
@@ -344,6 +350,7 @@ def string_to_aifeyn(
         :complexity (int): the number of nodes in the function
     """
 
+    register_variables(get_variables(basis_functions))
     _expr, nodes, _complexity = generator.string_to_node(
         fun, basis_functions, evalf=True
     )
@@ -364,6 +371,9 @@ def string_to_aifeyn(
         elif lab == "Sub":
             new_labels[j] = "-"
             labels[j] = "-"
+        elif lab in basis_functions[0]:
+            # Input variables keep their (case-sensitive) names
+            new_labels[j] = lab
         else:
             new_labels[j] = lab.lower()
             labels[j] = lab.lower()

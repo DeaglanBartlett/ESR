@@ -7,6 +7,7 @@ import os
 import pprint
 import signal
 import sys
+import zlib
 from collections import OrderedDict
 from contextlib import contextmanager
 
@@ -43,6 +44,23 @@ _FPRINT_PARAM_POINTS = {
     f"a{i}": _FPRINT_RNG.uniform(0.5, 3.0, _FPRINT_N_POINTS)
     for i in range(_FPRINT_MAX_PARAMS)
 }
+_FPRINT_VARIABLE_POINTS = {_fprint_x_sym.name: _FPRINT_X_POINTS}
+
+
+def _fprint_variable_points(name):
+    """Fixed evaluation points for the input variable called ``name``.
+
+    ``x`` keeps the historical points. Every other variable gets its own
+    points from a generator seeded by its name, so they are reproducible
+    across runs and ranks, and independent of the other variables (otherwise
+    e.g. ``x - y`` would vanish at every point).
+    """
+    if name not in _FPRINT_VARIABLE_POINTS:
+        seed = zlib.crc32(name.encode("utf-8"))
+        _FPRINT_VARIABLE_POINTS[name] = np.random.RandomState(seed).uniform(
+            0.2, 5.0, _FPRINT_N_POINTS
+        )
+    return _FPRINT_VARIABLE_POINTS[name]
 
 
 def numerical_fingerprint(expr, max_param=None):
@@ -77,7 +95,12 @@ def numerical_fingerprint(expr, max_param=None):
         ],
         key=lambda s: int(s.name[1:]),
     )
-    has_x = _fprint_x_sym in expr.free_symbols
+    # Every other free symbol is an input variable (x, or the extra variables
+    # of a multivariable run). Sort by name so the argument order is fixed.
+    var_symbols = sorted(
+        [s for s in expr.free_symbols if s not in param_symbols],
+        key=lambda s: s.name,
+    )
 
     # Fixed evaluation points only exist for a0..a{_FPRINT_MAX_PARAMS-1}. An
     # explicit max_param over the table, or an expression whose highest a*
@@ -90,9 +113,7 @@ def numerical_fingerprint(expr, max_param=None):
         return None
 
     # Build lambdified function for fast numpy evaluation
-    args = []
-    if has_x:
-        args.append(_fprint_x_sym)
+    args = list(var_symbols)
     args.extend(param_symbols)
 
     try:
@@ -101,9 +122,7 @@ def numerical_fingerprint(expr, max_param=None):
         return None
 
     # Evaluate at all points at once (vectorized)
-    call_args = []
-    if has_x:
-        call_args.append(_FPRINT_X_POINTS)
+    call_args = [_fprint_variable_points(v.name) for v in var_symbols]
     for p in param_symbols:
         call_args.append(_FPRINT_PARAM_POINTS[p.name])
 

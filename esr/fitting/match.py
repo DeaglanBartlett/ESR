@@ -7,7 +7,7 @@ import sympy
 from mpi4py import MPI
 
 from esr.fitting import test_all, test_all_fisher
-from esr.fitting.sympy_symbols import a0, x
+from esr.fitting.sympy_symbols import a0, likelihood_xarg
 from esr.fitting.utils import (
     combine_temp_files,
     fitting_paths,
@@ -59,10 +59,14 @@ def _variant_negloglike(likelihood, fcn_i, theta_vec, tmax, try_integration):
             fcn_i, tmax=tmax, try_integration=False
         )
     if n == 1:
-        eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+        eq_numpy = sympy.lambdify(
+            [likelihood_xarg(likelihood), a0], eq, modules=["numpy"]
+        )
     else:
         all_a = list(sympy.symbols(" ".join(f"a{j}" for j in range(n)), real=True))
-        eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+        eq_numpy = sympy.lambdify(
+            [likelihood_xarg(likelihood)] + all_a, eq, modules=["numpy"]
+        )
     return likelihood.negloglike(list(theta_vec), eq_numpy, integrated=integrated)
 
 
@@ -178,13 +182,19 @@ def check_match_results(
                 continue
 
             if k == 0:
-                eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
+                eq_numpy = sympy.lambdify(
+                    [likelihood_xarg(likelihood)], eq, modules=["numpy"]
+                )
             elif k > 1:
                 all_a = " ".join([f"a{j}" for j in range(k)])
                 all_a = list(sympy.symbols(all_a, real=True))
-                eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+                eq_numpy = sympy.lambdify(
+                    [likelihood_xarg(likelihood)] + all_a, eq, modules=["numpy"]
+                )
             else:
-                eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+                eq_numpy = sympy.lambdify(
+                    [likelihood_xarg(likelihood), a0], eq, modules=["numpy"]
+                )
             new_negloglike = likelihood.negloglike(
                 measured, eq_numpy, integrated=integrated
             )
@@ -550,13 +560,17 @@ def main(
                     fcn_i, tmax=tmax, try_integration=try_integration
                 )
                 if k == 1:
-                    eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+                    eq_numpy = sympy.lambdify(
+                        [likelihood_xarg(likelihood), a0], eq, modules=["numpy"]
+                    )
                     # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                     negloglike_all[i] = f1(p)
                 else:
                     all_a = " ".join([f"a{j}" for j in range(nparams)])
                     all_a = list(sympy.symbols(all_a, real=True))
-                    eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+                    eq_numpy = sympy.lambdify(
+                        [likelihood_xarg(likelihood)] + all_a, eq, modules=["numpy"]
+                    )
                     negloglike_all[i] = fop(p)
 
             except NameError:
@@ -565,13 +579,17 @@ def main(
                         fcn_i, tmax=tmax, try_integration=False
                     )
                     if k == 1:
-                        eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+                        eq_numpy = sympy.lambdify(
+                            [likelihood_xarg(likelihood), a0], eq, modules=["numpy"]
+                        )
                         # Modified here for this variant, but if this doesn't happen it stays the same as the unique eq
                         negloglike_all[i] = f1(p)
                     else:
                         all_a = " ".join([f"a{j}" for j in range(nparams)])
                         all_a = list(sympy.symbols(all_a, real=True))
-                        eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+                        eq_numpy = sympy.lambdify(
+                            [likelihood_xarg(likelihood)] + all_a, eq, modules=["numpy"]
+                        )
                         negloglike_all[i] = fop(p)
                 else:
                     negloglike_all[i] = np.nan
