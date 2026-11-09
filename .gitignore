@@ -65,3 +65,6 @@ Plots/
 log.md
 log-summary.md
 .claude/
+# Output of the multivariable examples
+multivariable_data.txt
+feynman_multivariable/

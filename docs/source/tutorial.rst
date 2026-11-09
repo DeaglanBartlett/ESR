@@ -445,7 +445,10 @@ nullary basis:
 	basis_functions = [["x", "y", "a"], ["inv"], ["+", "*", "-", "/", "pow"]]
 	logl, dl, labels = fit_from_string("a0 * x * y", basis_functions, likelihood)
 
-A complete example is given in ``examples/multivariable.py``. The number of
+A complete example is given in ``examples/multivariable.py``, and
+``examples/feynman_multivariable.py`` recovers 11 laws from the AI Feynman
+dataset with two or three variables, such as :math:`U = k x^2 / 2` and
+:math:`c = \sqrt{\gamma p / \rho}`, each at its expected complexity. The number of
 trees grows quickly with the number of nullary basis functions, so each extra
 variable makes every complexity substantially more expensive to generate and
 fit.

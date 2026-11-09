@@ -88,6 +88,8 @@ and the likelihood:
 The variables become nullary basis functions alongside ``a``, and
 ``likelihood.xvar`` has shape ``(nvar, ndata)``. See "Functions of several
 variables" in the tutorial and ``examples/multivariable.py``.
+``examples/feynman_multivariable.py`` recovers 11 laws from the AI Feynman
+dataset with up to three variables.
 
 Fisher scoring and parameter snapping
 =====================================
