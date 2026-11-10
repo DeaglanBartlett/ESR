@@ -250,9 +250,18 @@ def time_limit(seconds):
 
     Raises:
         TimeoutException if time exceeds seconds
+
+    numpy's floating-point error state is restored on exit. The timeout is an
+    exception raised asynchronously by a signal handler, so it can interrupt
+    code that is switching that state, e.g. scipy's line search entering or
+    leaving ``np.errstate(over='raise', divide='raise', invalid='raise')``.
+    The old state would then never be restored, and every later overflow in
+    the process would raise FloatingPointError instead of warning.
     """
+    np_err = np.geterr()
 
     def signal_handler(signum, frame):
+        np.seterr(**np_err)
         raise TimeoutException("Timed out")
 
     signal.signal(signal.SIGALRM, signal_handler)
@@ -262,7 +271,10 @@ def time_limit(seconds):
     try:
         yield
     finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
+        try:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+        finally:
+            np.seterr(**np_err)
 
 
 def get_max_param(all_fun, verbose=True):
