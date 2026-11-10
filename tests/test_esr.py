@@ -1928,6 +1928,43 @@ def test_combine_dl_clears_stale_final_when_no_rows_are_valid(tmp_path, monkeypa
     assert final_path.read_text() == ""
 
 
+def test_combine_dl_writes_final_file_in_one_open(tmp_path, monkeypatch):
+    """The final file is opened once per complexity rather than once per row (each open
+    is slow on network filesystems), replaces a stale file and is sorted by DL."""
+    import builtins
+
+    comp, likelihood = _combine_dl_test_likelihood(
+        tmp_path,
+        "5 1 0 10\n1 1 1 20\n3 1 2 30\n",
+        "1\n1\n1\n",
+        "f0\nf1\nf2\n",
+    )
+    final_path = tmp_path / "out" / "final_1.dat"
+    final_path.write_text("stale result\n")
+    monkeypatch.setattr(
+        esr.fitting.combine_dl.test_all,
+        "get_functions",
+        lambda *args, **kwargs: ([], 0, 3),
+    )
+    real_open = builtins.open
+    modes = []
+
+    def counting_open(file, *args, **kwargs):
+        if os.path.abspath(os.fspath(file)) == str(final_path):
+            modes.append(args[0] if args else kwargs.get("mode", "r"))
+        return real_open(file, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", counting_open)
+    esr.fitting.combine_dl.main(comp, likelihood)
+    monkeypatch.setattr(builtins, "open", real_open)
+
+    assert modes == ["a"]
+    rows = [row.split(";") for row in final_path.read_text().splitlines()]
+    assert [row[1] for row in rows] == ["f1", "f2", "f0"]
+    assert [float(row[2]) for row in rows] == [3.0, 5.0, 7.0]
+    assert [float(row[-1]) for row in rows] == [20.0, 30.0, 10.0]
+
+
 def _hessian_from_deriv(deriv, nparam, max_param):
     """Rebuild a symmetric Hessian from ``test_all_fisher``'s flattened upper
     triangle (the ``deriv`` row it writes per function)."""
