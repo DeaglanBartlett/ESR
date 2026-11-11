@@ -9,7 +9,7 @@ import sympy
 from mpi4py import MPI
 from scipy.optimize import minimize
 
-from esr.fitting.sympy_symbols import a0, x
+from esr.fitting.sympy_symbols import a0, likelihood_xarg, x
 from esr.fitting.utils import (
     atomic_write,
     combine_temp_files,
@@ -257,7 +257,13 @@ def _transform_fingerprint(likelihood, tmax, try_integration):
         :fingerprint (str): hex SHA-1 digest identifying the transform behaviour
     """
     h = hashlib.sha1()
-    for probe in _TRANSFORM_PROBES:
+    # Multivariable likelihoods also probe each extra variable; single-variable
+    # likelihoods get exactly the historical probes (and so the same hash).
+    extra_vars = [v for v in getattr(likelihood, "variables", ("x",)) if v != "x"]
+    probes = _TRANSFORM_PROBES + tuple(
+        f"a0*x + a1*{v} + a2*pow({v}, 2)" for v in extra_vars
+    )
+    for probe in probes:
         try:
             _, eq, integrated = likelihood.run_sympify(
                 probe, tmax=tmax, try_integration=try_integration
@@ -1210,7 +1216,9 @@ def optimise_fun(
             raise ValueError("Nconv and/or Niter have unacceptable values")
 
         if nparam == 0:
-            eq_numpy = sympy.lambdify(x, eq, modules=["numpy"])
+            eq_numpy = sympy.lambdify(
+                [likelihood_xarg(likelihood)], eq, modules=["numpy"]
+            )
             chi2_i = likelihood.negloglike([], eq_numpy, integrated=integrated)
             return chi2_i, params
 
@@ -1223,9 +1231,13 @@ def optimise_fun(
         if nparam > 1:
             all_a = " ".join([f"a{i}" for i in range(nparam)])
             all_a = list(sympy.symbols(all_a, real=True))
-            eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+            eq_numpy = sympy.lambdify(
+                [likelihood_xarg(likelihood)] + all_a, eq, modules=["numpy"]
+            )
         else:
-            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+            eq_numpy = sympy.lambdify(
+                [likelihood_xarg(likelihood), a0], eq, modules=["numpy"]
+            )
 
         bad_fun = True
         if xvar is not None:

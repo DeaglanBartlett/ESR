@@ -378,6 +378,82 @@ length, but does provide an upper limit on the DL of a function.
                                                         verbose=True)
 
 
+Functions of several variables
+------------------------------
+
+ESR can also search over functions of more than one input variable. Every
+input variable is a nullary basis function, so a run with variables ``x`` and
+``y`` uses ``[["x", "y", "a"], ...]`` as its nullary set and the complexity of
+a tree is counted in the same way as before. Pass the variable names to both
+the generation and the likelihood:
+
+.. code-block:: python
+
+	import esr.generation.duplicate_checker
+	import esr.fitting.test_all, esr.fitting.test_all_fisher
+	import esr.fitting.match, esr.fitting.combine_dl, esr.fitting.plot
+	from esr.fitting.likelihood import GaussLikelihood
+
+	variables = ["x", "y"]
+
+	# Columns of data.txt: x, y, f, f_err
+	likelihood = GaussLikelihood("data.txt", "my_2d_run", data_dir=os.getcwd(),
+	                             variables=variables)
+
+	for comp in range(1, 6):
+	    esr.generation.duplicate_checker.main("core_maths", comp,
+	                                          variables=variables)
+	    esr.fitting.test_all.main(comp, likelihood)
+	    esr.fitting.test_all_fisher.main(comp, likelihood)
+	    esr.fitting.match.main(comp, likelihood)
+	    esr.fitting.combine_dl.main(comp, likelihood)
+	    esr.fitting.plot.main(comp, likelihood)
+
+``variables`` replaces ``x`` in the nullary basis of the named function set.
+To use a basis of your own instead, pass ``basis_functions=[nullary, unary,
+binary]`` to ``duplicate_checker.main``; every nullary entry other than ``"a"``
+and numbers is then taken to be a variable. The rules are:
+
+* Like ``x``, every variable is treated as a positive real number when
+  simplifying functions, so e.g. ``pow(x, y)`` needs no absolute value.
+* Names must be valid Python identifiers that cannot be confused with a
+  parameter (so they may not start with ``a`` or contain ``a`` followed by a
+  digit) or a function name (``pow``, ``exp``, ``E``, ``pi``, ...).
+* Catalogues for single-variable ``x`` keep their usual location
+  ``function_library/<fn_set>``. Any other choice of variables is stored in
+  ``function_library/<fn_set>_<var1>_<var2>...`` (e.g. ``core_maths_x_y``),
+  which is where a likelihood with the same ``fn_set`` and ``variables``
+  looks by default, so catalogues for different variables never mix.
+* The data are held in ``likelihood.xvar`` with shape ``(nvar, ndata)``, rows
+  in the order of ``variables``. Compiled functions are called as
+  ``eq_numpy(likelihood.xvar, *params)`` and unpack the first argument into
+  the individual variables, so ``get_pred`` and ``negloglike`` of a custom
+  likelihood work unchanged. The built-in ``GaussLikelihood``,
+  ``PoissonLikelihood`` and ``MSE`` read one column per variable followed by
+  the usual columns.
+* ``esr.fitting.plot.main`` cannot draw the functions against a single x
+  axis, so for several variables it plots the predicted against the observed
+  y values.
+
+Single functions are fitted in the same way, listing the variables in the
+nullary basis:
+
+.. code-block:: python
+
+	from esr.fitting.fit_single import fit_from_string
+
+	basis_functions = [["x", "y", "a"], ["inv"], ["+", "*", "-", "/", "pow"]]
+	logl, dl, labels = fit_from_string("a0 * x * y", basis_functions, likelihood)
+
+A complete example is given in ``examples/multivariable.py``, and
+``examples/feynman_multivariable.py`` recovers 11 laws from the AI Feynman
+dataset with two or three variables, such as :math:`U = k x^2 / 2` and
+:math:`c = \sqrt{\gamma p / \rho}`, each at its expected complexity. The number of
+trees grows quickly with the number of nullary basis functions, so each extra
+variable makes every complexity substantially more expensive to generate and
+fit.
+
+
 Custom Likelihoods
 ------------------
 

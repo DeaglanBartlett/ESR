@@ -13,7 +13,7 @@ from scipy.optimize import minimize
 from scipy.stats import mode
 
 from esr.fitting import test_all
-from esr.fitting.sympy_symbols import a0, x
+from esr.fitting.sympy_symbols import a0, likelihood_xarg
 from esr.fitting.utils import (
     atomic_write,
     combine_temp_files,
@@ -823,9 +823,13 @@ def convert_params(
         if nparam > 1:
             all_a = " ".join([f"a{i}" for i in range(nparam)])
             all_a = list(sympy.symbols(all_a, real=True))
-            eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+            eq_numpy = sympy.lambdify(
+                [likelihood_xarg(likelihood)] + all_a, eq, modules=["numpy"]
+            )
         else:
-            eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+            eq_numpy = sympy.lambdify(
+                [likelihood_xarg(likelihood), a0], eq, modules=["numpy"]
+            )
     except Exception:  # noqa: BLE001
         print("BAD:", fcn_i, negloglike, np.isfinite(negloglike))
         deriv[:] = np.nan

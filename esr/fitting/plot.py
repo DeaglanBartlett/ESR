@@ -10,7 +10,7 @@ from matplotlib import cm
 from mpi4py import MPI
 
 from esr.fitting import test_all
-from esr.fitting.sympy_symbols import a0, x
+from esr.fitting.sympy_symbols import a0, likelihood_xarg
 from esr.fitting.utils import fitting_paths, set_recursionlimit_for_comp
 
 # Suppress the numpy/scipy RuntimeWarnings raised while evaluating functions for
@@ -35,6 +35,10 @@ def main(
         :try_integration (bool, default=False): when likelihood requires integral, whether to try to analytically integrate (True) or just numerically integrate (False)
         :xscale (str), default='linear'): Scaling for x-axis
         :yscale (str), default='linear'): Scaling for y-axis
+
+    For a likelihood with several input variables (``likelihood.xvar`` of shape
+    ``(nvar, ndata)``) the functions cannot be drawn against a single x axis,
+    so the predictions are instead plotted against the observed y values.
 
     Returns:
         None
@@ -105,6 +109,17 @@ def main(
     params = params[m, :]
     alpha = alpha[m]
 
+    # With several variables, plot predicted against observed y instead
+    multivar = np.ndim(likelihood.xvar) > 1
+    if multivar:
+        xplot = np.asarray(likelihood.yvar)
+        order = np.argsort(xplot)
+        line_kw = {"ls": "", "marker": ".", "ms": 3}
+    else:
+        xplot = likelihood.xvar
+        order = slice(None)
+        line_kw = {}
+
     fig = plt.figure(figsize=(7, 5))
     ax1 = fig.add_axes([0.10, 0.10, 0.70, 0.85])
     cmap = cm.hot_r
@@ -130,13 +145,19 @@ def main(
             measured = params[i, :k]
 
             if k == 0:
-                eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
+                eq_numpy = sympy.lambdify(
+                    [likelihood_xarg(likelihood)], eq, modules=["numpy"]
+                )
             elif k > 1:
                 all_a = " ".join([f"a{i}" for i in range(k)])
                 all_a = list(sympy.symbols(all_a, real=True))
-                eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+                eq_numpy = sympy.lambdify(
+                    [likelihood_xarg(likelihood)] + all_a, eq, modules=["numpy"]
+                )
             else:
-                eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+                eq_numpy = sympy.lambdify(
+                    [likelihood_xarg(likelihood), a0], eq, modules=["numpy"]
+                )
             ypred = likelihood.get_pred(
                 likelihood.xvar, measured, eq_numpy, integrated=integrated
             )
@@ -154,14 +175,20 @@ def main(
                 k = len(active_params)
                 measured = params[i, :k]
                 if k == 0:
-                    eq_numpy = sympy.lambdify([x], eq, modules=["numpy"])
+                    eq_numpy = sympy.lambdify(
+                        [likelihood_xarg(likelihood)], eq, modules=["numpy"]
+                    )
                 elif k > 1:
                     all_a = list(
                         sympy.symbols(" ".join(f"a{j}" for j in range(k)), real=True)
                     )
-                    eq_numpy = sympy.lambdify([x] + all_a, eq, modules=["numpy"])
+                    eq_numpy = sympy.lambdify(
+                        [likelihood_xarg(likelihood)] + all_a, eq, modules=["numpy"]
+                    )
                 else:
-                    eq_numpy = sympy.lambdify([x, a0], eq, modules=["numpy"])
+                    eq_numpy = sympy.lambdify(
+                        [likelihood_xarg(likelihood), a0], eq, modules=["numpy"]
+                    )
                 ypred = likelihood.get_pred(
                     likelihood.xvar, measured, eq_numpy, integrated=integrated
                 )
@@ -169,24 +196,19 @@ def main(
                 print(f"Failed to plot {fcn_i}: {e}", flush=True)
                 continue
 
-        if np.isscalar(ypred):
-            ax1.plot(
-                likelihood.xvar,
-                [ypred] * len(likelihood.xvar),
-                color=cmap(norm(alpha[i])),
-                zorder=len(fcn_list) - i,
-            )
-        else:
-            ax1.plot(
-                likelihood.xvar,
-                ypred,
-                color=cmap(norm(alpha[i])),
-                zorder=len(fcn_list) - i,
-            )
+        if np.isscalar(ypred) or np.ndim(ypred) == 0:
+            ypred = np.full(len(xplot), float(np.real(ypred)))
+        ax1.plot(
+            xplot[order],
+            np.asarray(ypred)[order],
+            color=cmap(norm(alpha[i])),
+            zorder=len(fcn_list) - i,
+            **line_kw,
+        )
 
     if hasattr(likelihood, "yerr"):
         ax1.errorbar(
-            likelihood.xvar,
+            xplot,
             likelihood.yvar,
             yerr=likelihood.yerr,
             fmt=".",
@@ -199,7 +221,7 @@ def main(
         )
     else:
         ax1.plot(
-            likelihood.xvar,
+            xplot,
             likelihood.yvar,
             ".",
             color="k",
@@ -207,11 +229,15 @@ def main(
             zorder=len(fcn_list) + 1,
             alpha=1,
         )
-    ax1.set_xlabel(r"$x$")
-    ax1.set_ylabel(likelihood.ylabel)
+    if multivar:
+        ax1.set_xlabel("Observed " + likelihood.ylabel)
+        ax1.set_ylabel("Predicted " + likelihood.ylabel)
+    else:
+        ax1.set_xlabel(r"$x$")
+        ax1.set_ylabel(likelihood.ylabel)
     ax1.set_xscale(xscale)
     ax1.set_yscale(yscale)
-    if xscale != "log":
+    if xscale != "log" and not multivar:
         ax1.set_xlim(0, None)
     ax1.set_ylim(likelihood.yvar.min() * 0.9, likelihood.yvar.max() * 1.1)
 
