@@ -213,36 +213,38 @@ def main(comp, likelihood, print_frequency=1000):
         if os.path.exists(fit_paths["final"]):
             os.remove(fit_paths["final"])
 
-        for i, d in enumerate(data_entries):  # Only print the top 10 functions
-            if i < Nfuncs:
-                fcn = d[-1]
-                DL = d[0]
-                params = [float(pp) for pp in d[1][:-3]]
-                # Pad params to num_params (0-param functions have fewer columns)
-                while len(params) < num_params:
-                    params.append(0.0)
-                if len(params) > num_params:
-                    raise RuntimeError(
-                        "Parameter width exceeds the combined-file maximum."
+        # Open the output once: reopening it for every row costs one open/close per
+        # function, which dominates the run time on network filesystems
+        with open(fit_paths["final"], "a") as f:
+            writer = csv.writer(f, delimiter=";")
+            for i, d in enumerate(data_entries):  # Only print the top 10 functions
+                if i < Nfuncs:
+                    fcn = d[-1]
+                    DL = d[0]
+                    params = [float(pp) for pp in d[1][:-3]]
+                    # Pad params to num_params (0-param functions have fewer columns)
+                    while len(params) < num_params:
+                        params.append(0.0)
+                    if len(params) > num_params:
+                        raise RuntimeError(
+                            "Parameter width exceeds the combined-file maximum."
+                        )
+                    negloglike = float(d[1][-3])
+                    codelen = float(d[1][-2])
+                    aifeyn = float(d[1][-1])
+                    ptab.add_row(
+                        [
+                            i + 1,
+                            fcn,
+                            f"{DL:.2f}",
+                            f"{Prel[i]:.2e}",
+                            f"{negloglike:.2f}",
+                            f"{codelen:.2f}",
+                            f"{aifeyn:.2e}",
+                        ]
+                        + [f"{p:.2e}" for p in params]
                     )
-                negloglike = float(d[1][-3])
-                codelen = float(d[1][-2])
-                aifeyn = float(d[1][-1])
-                ptab.add_row(
-                    [
-                        i + 1,
-                        fcn,
-                        f"{DL:.2f}",
-                        f"{Prel[i]:.2e}",
-                        f"{negloglike:.2f}",
-                        f"{codelen:.2f}",
-                        f"{aifeyn:.2e}",
-                    ]
-                    + [f"{p:.2e}" for p in params]
-                )
 
-            with open(fit_paths["final"], "a") as f:
-                writer = csv.writer(f, delimiter=";")
                 # Pad params to num_params for consistent column count
                 row_params = list(d[1][:-3])
                 if len(row_params) > num_params:
